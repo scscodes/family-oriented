@@ -9,6 +9,8 @@ import { GameQuestion, GameType } from "@/utils/gameUtils";
 import { GameSettings } from "@/utils/settingsUtils";
 import { Box, Typography, Button } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
+import QuestionDisplay from "./QuestionDisplay";
+import FillInTheBlankFooter from "@/app/games/fill-in-the-blank/components/FillInTheBlankFooter";
 
 interface GameBoardProps {
   title: string;
@@ -39,6 +41,7 @@ export default function GameBoard({
   const [disabledOptions, setDisabledOptions] = useState<string[]>([]);
   const [incorrectOptions, setIncorrectOptions] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [attempts, setAttempts] = useState<{letter: string; word: string; isCorrect: boolean}[]>([]);
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -50,6 +53,7 @@ export default function GameBoard({
     if (questions.length > 0) {
       setDisabledOptions([]);
       setIncorrectOptions([]);
+      setAttempts([]);
     }
   }, [questions, currentQuestion]);
   
@@ -59,6 +63,19 @@ export default function GameBoard({
     
     setSelectedOption(option);
     const correct = option === questions[currentQuestion].correctAnswer;
+    
+    // Add to attempts history
+    const word = questions[currentQuestion].focus;
+    const underscoreIndex = word.indexOf('_');
+    const completedWord = underscoreIndex !== -1 
+      ? word.slice(0, underscoreIndex) + option + word.slice(underscoreIndex + 1)
+      : word;
+    
+    setAttempts(prev => [...prev, {
+      letter: option,
+      word: completedWord,
+      isCorrect: correct
+    }]);
     
     if (correct) {
       // For correct answer
@@ -76,7 +93,7 @@ export default function GameBoard({
           setSelectedOption(null);
           setDisabledOptions([]);
           setIncorrectOptions([]);
-        }, 1000);
+        }, 3000);
       } else {
         setIsGameComplete(true);
       }
@@ -208,15 +225,7 @@ export default function GameBoard({
         {renderQuestion ? (
           renderQuestion(question)
         ) : (
-          <Typography 
-            variant="h4" 
-            component="div" 
-            align="center" 
-            gutterBottom
-            sx={{ mb: 4 }}
-          >
-            {question.question}
-          </Typography>
+          <QuestionDisplay question={question} />
         )}
         
         <Box 
@@ -293,6 +302,10 @@ export default function GameBoard({
             ))}
           </Box>
         </Box>
+        
+        {gameType === 'fill-in-the-blank' && (
+          <FillInTheBlankFooter attempts={attempts} />
+        )}
         
         <Toast
           show={toast.show}

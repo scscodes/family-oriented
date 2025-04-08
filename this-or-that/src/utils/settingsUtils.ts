@@ -65,6 +65,14 @@ export const DEFAULT_SETTINGS: Record<string, GameSettings> = {
     },
     questionCount: 10,
     optionsCount: 4
+  },
+  'fill-in-the-blank': {
+    numberRange: {
+      min: 0,
+      max: 0 // Not applicable
+    },
+    questionCount: 10,
+    optionsCount: 4
   }
 };
 

@@ -1,13 +1,15 @@
 /**
  * Game types supported by the application
  */
-export type GameType = 'numbers' | 'letters' | 'shapes' | 'colors' | 'patterns' | 'math' | 'geography';
+export type GameType = 'numbers' | 'letters' | 'shapes' | 'colors' | 'patterns' | 'math' | 'geography' | 'fill-in-the-blank';
 
 /**
  * Basic structure for all game questions
  */
 export interface GameQuestion {
-  question: string;
+  prompt: string;  // Muted text for adult/supervisor
+  focus: string;   // Main focus of the question
+  visual?: string; // Optional visual element (emoji, image, etc.)
   options: string[];
   correctAnswer: string;
   type: GameType;
@@ -55,7 +57,8 @@ export function generateNumberQuestions(count: number = 5, minNumber: number = 1
     );
     
     questions.push({
-      question: `Which number is ${numberToWord(num)}?`,
+      prompt: `Which number is...`,
+      focus: `${numberToWord(num)}`,
       options,
       correctAnswer: num.toString(),
       type: 'numbers'
@@ -90,7 +93,8 @@ export function generateLetterQuestions(count: number = 5, optionsCount: number 
     );
     
     questions.push({
-      question: `Which is the ${askForCase} letter ${isUppercase ? letter : letter.toUpperCase()}?`,
+      prompt: `Which is the ${askForCase} letter ${isUppercase ? letter : letter.toUpperCase()}?`,
+      focus: ``,
       options,
       correctAnswer: displayLetter,
       type: 'letters'
@@ -138,7 +142,8 @@ export function generateShapeQuestions(count: number = 5, optionsCount: number =
     );
     
     questions.push({
-      question: `Which one is a ${shape}?`,
+      prompt: `Which one is a...`,
+      focus: shape,
       options,
       correctAnswer: shape,
       type: 'shapes'
@@ -164,7 +169,8 @@ export function generateColorQuestions(count: number = 5, optionsCount: number =
     );
     
     questions.push({
-      question: `Which one is ${color}?`,
+      prompt: `Which one is...`,
+      focus: color,
       options,
       correctAnswer: color,
       type: 'colors'
@@ -207,7 +213,8 @@ export function generatePatternQuestions(count: number = 5, optionsCount: number
     ].slice(0, optionsCount);
     
     questions.push({
-      question: `What comes next? ${pattern.sequence}`,
+      prompt: `What comes next?`,
+      focus: pattern.sequence,
       options: limitedOptions.sort(() => 0.5 - Math.random()),
       correctAnswer: pattern.answer,
       type: 'patterns'
@@ -250,7 +257,8 @@ export function generateMathQuestions(count: number = 5, optionsCount: number = 
     );
     
     questions.push({
-      question,
+      prompt: `What is the answer?`,
+      focus: question,
       options,
       correctAnswer: result.toString(),
       type: 'math'
@@ -296,4 +304,126 @@ function generateUniqueOptions(correctAnswer: string, numOptions: number, option
   
   // Shuffle the options
   return options.sort(() => 0.5 - Math.random());
+}
+
+/**
+ * Word list for fill-in-the-blank game with associated emojis
+ */
+export const fillInTheBlankWords = [
+  // Animals
+  { word: 'DOG', emoji: '🐕', missingIndex: 1 },
+  { word: 'CAT', emoji: '🐈', missingIndex: 1 },
+  { word: 'FISH', emoji: '🐟', missingIndex: 1 },
+  { word: 'BIRD', emoji: '🐦', missingIndex: 1 },
+  { word: 'PIG', emoji: '🐷', missingIndex: 1 },
+  { word: 'COW', emoji: '🐮', missingIndex: 1 },
+  { word: 'BEE', emoji: '🐝', missingIndex: 1 },
+  { word: 'ANT', emoji: '🐜', missingIndex: 1 },
+  
+  // Vehicles
+  { word: 'CAR', emoji: '🚗', missingIndex: 1 },
+  { word: 'BUS', emoji: '🚌', missingIndex: 1 },
+  { word: 'PLANE', emoji: '✈️', missingIndex: 2 },
+  { word: 'BOAT', emoji: '⛵', missingIndex: 1 },
+  { word: 'TRAIN', emoji: '🚂', missingIndex: 2 },
+  
+  // Colors
+  { word: 'RED', emoji: '🔴', missingIndex: 1 },
+  { word: 'BLUE', emoji: '🔵', missingIndex: 2 },
+  { word: 'GREEN', emoji: '🟢', missingIndex: 2 },
+  { word: 'PINK', emoji: '💗', missingIndex: 1 },
+  { word: 'BLACK', emoji: '⚫', missingIndex: 2 },
+  
+  // Numbers (1-10)
+  { word: 'ONE', emoji: '1️⃣', missingIndex: 1 },
+  { word: 'TWO', emoji: '2️⃣', missingIndex: 1 },
+  { word: 'THREE', emoji: '3️⃣', missingIndex: 2 },
+  { word: 'FOUR', emoji: '4️⃣', missingIndex: 2 },
+  { word: 'FIVE', emoji: '5️⃣', missingIndex: 1 },
+  { word: 'SIX', emoji: '6️⃣', missingIndex: 1 },
+  { word: 'SEVEN', emoji: '7️⃣', missingIndex: 2 },
+  { word: 'EIGHT', emoji: '8️⃣', missingIndex: 1 },
+  { word: 'NINE', emoji: '9️⃣', missingIndex: 1 },
+  { word: 'TEN', emoji: '🔟', missingIndex: 1 },
+  
+  // Food
+  { word: 'CAKE', emoji: '🍰', missingIndex: 1 },
+  { word: 'PIE', emoji: '🥧', missingIndex: 1 },
+  { word: 'BREAD', emoji: '🍞', missingIndex: 2 },
+  { word: 'MILK', emoji: '🥛', missingIndex: 1 },
+  { word: 'EGG', emoji: '🥚', missingIndex: 1 },
+  
+  // Nature
+  { word: 'TREE', emoji: '🌳', missingIndex: 2 },
+  { word: 'MOON', emoji: '🌙', missingIndex: 2 },
+  { word: 'SUN', emoji: '☀️', missingIndex: 1 },
+  { word: 'STAR', emoji: '⭐', missingIndex: 2 },
+  { word: 'RAIN', emoji: '🌧️', missingIndex: 1 },
+  { word: 'SNOW', emoji: '❄️', missingIndex: 2 },
+  
+  // Objects
+  { word: 'BOOK', emoji: '📚', missingIndex: 2 },
+  { word: 'HOUSE', emoji: '🏠', missingIndex: 2 },
+  { word: 'BALL', emoji: '⚽', missingIndex: 1 },
+  { word: 'DOLL', emoji: '🧸', missingIndex: 1 },
+  { word: 'CUP', emoji: '🥤', missingIndex: 1 },
+  { word: 'HAT', emoji: '🧢', missingIndex: 1 },
+  { word: 'SHOE', emoji: '👟', missingIndex: 2 },
+  { word: 'BED', emoji: '🛏️', missingIndex: 1 },
+  
+  // Weather
+  { word: 'WIND', emoji: '💨', missingIndex: 1 },
+  { word: 'CLOUD', emoji: '☁️', missingIndex: 2 },
+  { word: 'STORM', emoji: '⛈️', missingIndex: 2 },
+  
+  // Time
+  { word: 'CLOCK', emoji: '⏰', missingIndex: 2 },
+  { word: 'WATCH', emoji: '⌚', missingIndex: 1 },
+  { word: 'DAY', emoji: '🌞', missingIndex: 1 },
+  { word: 'NIGHT', emoji: '🌙', missingIndex: 1 }
+];
+
+/**
+ * Generates fill-in-the-blank questions with options
+ */
+export function generateFillInTheBlankQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
+  const questions: GameQuestion[] = [];
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  
+  // Select random words from the list
+  const selectedWords = [...fillInTheBlankWords]
+    .sort(() => 0.5 - Math.random())
+    .slice(0, count);
+  
+  for (const word of selectedWords) {
+    // Create the word with underscore for missing letter
+    const wordWithBlank = word.word
+      .split('')
+      .map((letter, index) => index === word.missingIndex ? '_' : letter)
+      .join('');
+    
+    // Generate options that are different from the correct letter
+    const options = generateUniqueOptions(
+      word.word[word.missingIndex],
+      optionsCount - 1,
+      () => {
+        let letter;
+        do {
+          letter = alphabet[Math.floor(Math.random() * alphabet.length)];
+        } while (letter === word.word[word.missingIndex]);
+        return letter;
+      }
+    );
+    
+    questions.push({
+      prompt: 'Which letter completes the word?',
+      focus: wordWithBlank,
+      visual: word.emoji,
+      options,
+      correctAnswer: word.word[word.missingIndex],
+      type: 'fill-in-the-blank'
+    });
+  }
+  
+  return questions;
 } 

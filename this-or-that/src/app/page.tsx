@@ -81,6 +81,14 @@ export default function Home() {
         </Box>
         <Box>
           <GameCard 
+            title="Fill in the Blank" 
+            description="Complete the missing letters in words"
+            href="/games/fill-in-the-blank"
+            emoji="✏️"
+          />
+        </Box>
+        <Box>
+          <GameCard 
             title="Geography" 
             description="Learn about continents and US states"
             href="/games/geography"
