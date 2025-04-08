@@ -79,6 +79,14 @@ export default function Home() {
             emoji="➕"
           />
         </Box>
+        <Box>
+          <GameCard 
+            title="Geography" 
+            description="Learn about continents and US states"
+            href="/games/geography"
+            emoji="🌍"
+          />
+        </Box>
       </Box>
     </Container>
   );

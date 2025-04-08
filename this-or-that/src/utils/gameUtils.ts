@@ -1,7 +1,7 @@
 /**
  * Game types supported by the application
  */
-export type GameType = 'numbers' | 'letters' | 'shapes' | 'colors' | 'patterns' | 'math';
+export type GameType = 'numbers' | 'letters' | 'shapes' | 'colors' | 'patterns' | 'math' | 'geography';
 
 /**
  * Basic structure for all game questions
