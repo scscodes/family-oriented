@@ -171,6 +171,8 @@ export default function ChoiceCard({
   const getContent = () => {
     if (gameType === 'shapes' && typeof children === 'string') {
       return getShapeIcon(children);
+    } else if (gameType === 'colors') {
+      return null; // Hide text for colors game
     }
     return children;
   };
