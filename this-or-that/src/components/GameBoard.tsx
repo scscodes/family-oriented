@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import GameContainer from "./GameContainer";
 import ChoiceCard from "./ChoiceCard";
 import SettingsPanel from "./SettingsPanel";
+import Toast from "./Toast";
 import { GameQuestion, GameType } from "@/utils/gameUtils";
 import { GameSettings } from "@/utils/settingsUtils";
 import { Box, Typography, Button } from '@mui/material';
@@ -36,12 +37,19 @@ export default function GameBoard({
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [disabledOptions, setDisabledOptions] = useState<string[]>([]);
+  const [incorrectOptions, setIncorrectOptions] = useState<string[]>([]);
   const [showSettings, setShowSettings] = useState(false);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ show: false, message: '', severity: 'success' });
   
   // Initialize disabled options when question changes
   useEffect(() => {
     if (questions.length > 0) {
       setDisabledOptions([]);
+      setIncorrectOptions([]);
     }
   }, [questions, currentQuestion]);
   
@@ -55,33 +63,62 @@ export default function GameBoard({
     if (correct) {
       // For correct answer
       setScore(score + 1);
+      setToast({
+        show: true,
+        message: 'Correct! Well done!',
+        severity: 'success'
+      });
       
       // Move to next question
       if (currentQuestion < questions.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setSelectedOption(null);
+        setTimeout(() => {
+          setCurrentQuestion(currentQuestion + 1);
+          setSelectedOption(null);
+          setDisabledOptions([]);
+          setIncorrectOptions([]);
+        }, 1000);
       } else {
         setIsGameComplete(true);
       }
     } else {
       // For wrong answer
-      // Add the incorrect option to disabled options
+      setToast({
+        show: true,
+        message: 'Try again!',
+        severity: 'error'
+      });
+      
+      // Add the incorrect option to both incorrect and disabled options immediately
+      setIncorrectOptions([...incorrectOptions, option]);
       setDisabledOptions([...disabledOptions, option]);
       
-      // If all incorrect options are disabled, show the correct answer
-      if (disabledOptions.length + 1 === questions[currentQuestion].options.length - 1) {
+      // If all incorrect options have been tried, show the correct answer
+      if (incorrectOptions.length + 1 === questions[currentQuestion].options.length - 1) {
+        // Disable all incorrect options
+        const allIncorrectOptions = questions[currentQuestion].options.filter(
+          opt => opt !== questions[currentQuestion].correctAnswer
+        );
+        setDisabledOptions(allIncorrectOptions);
+        
         setSelectedOption(questions[currentQuestion].correctAnswer);
+        setToast({
+          show: true,
+          message: `The correct answer is ${questions[currentQuestion].correctAnswer}`,
+          severity: 'info'
+        });
         
         // Move to next question after showing the correct answer
-        if (currentQuestion < questions.length - 1) {
+        setTimeout(() => {
           setCurrentQuestion(currentQuestion + 1);
           setSelectedOption(null);
-        } else {
-          setIsGameComplete(true);
-        }
+          setDisabledOptions([]);
+          setIncorrectOptions([]);
+        }, 2000);
       } else {
-        // Allow retry with disabled options
-        setSelectedOption(null);
+        // Just reset the selected state after animation
+        setTimeout(() => {
+          setSelectedOption(null);
+        }, 1000);
       }
     }
   };
@@ -91,6 +128,7 @@ export default function GameBoard({
     setScore(0);
     setSelectedOption(null);
     setDisabledOptions([]);
+    setIncorrectOptions([]);
     setIsGameComplete(false);
   };
   
@@ -208,7 +246,7 @@ export default function GameBoard({
               <Box key={option}>
                 <ChoiceCard
                   onClick={() => handleOptionClick(option)}
-                  isSelected={selectedOption === option}
+                  isSelected={selectedOption === option || incorrectOptions.includes(option)}
                   isCorrect={selectedOption === option && option === question.correctAnswer}
                   isDisabled={disabledOptions.includes(option)}
                   gameType={gameType}
@@ -240,7 +278,7 @@ export default function GameBoard({
               <Box key={option}>
                 <ChoiceCard
                   onClick={() => handleOptionClick(option)}
-                  isSelected={selectedOption === option}
+                  isSelected={selectedOption === option || incorrectOptions.includes(option)}
                   isCorrect={selectedOption === option && option === question.correctAnswer}
                   isDisabled={disabledOptions.includes(option)}
                   gameType={gameType}
@@ -255,6 +293,13 @@ export default function GameBoard({
             ))}
           </Box>
         </Box>
+        
+        <Toast
+          show={toast.show}
+          message={toast.message}
+          severity={toast.severity}
+          onClose={() => setToast(prev => ({ ...prev, show: false }))}
+        />
       </Box>
       
       <SettingsPanel 
