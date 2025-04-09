@@ -46,10 +46,26 @@ function numberToWord(num: number): string {
  */
 export function generateNumberQuestions(count: number = 5, minNumber: number = 1, maxNumber: number = 50, optionsCount: number = 3): GameQuestion[] {
   const questions: GameQuestion[] = [];
+  const usedNumbers = new Set<string>();
   
   // Number questions
   for (let i = 0; i < count; i++) {
-    const num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+    let num: number;
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    // Try to find a unique number
+    do {
+      num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+      attempts++;
+    } while (usedNumbers.has(num.toString()) && attempts < maxAttempts);
+    
+    // If we couldn't find a unique number, use any number
+    if (attempts >= maxAttempts) {
+      num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+    }
+    
+    usedNumbers.add(num.toString());
     const options = generateUniqueOptions(
       num.toString(), 
       optionsCount - 1, 
@@ -74,17 +90,36 @@ export function generateNumberQuestions(count: number = 5, minNumber: number = 1
 export function generateLetterQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
   const questions: GameQuestion[] = [];
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const usedLetters = new Set<string>();
   
   // Mix of uppercase and lowercase letter questions
   for (let i = 0; i < count; i++) {
-    const isUppercase = Math.random() > 0.5;
-    const letter = alphabet[Math.floor(Math.random() * alphabet.length)];
-    const displayLetter = isUppercase ? letter : letter.toLowerCase();
+    let letter: string;
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    // Try to find a unique letter
+    do {
+      const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+      const isUppercase = Math.random() > 0.5;
+      letter = isUppercase ? randomLetter : randomLetter.toLowerCase();
+      attempts++;
+    } while (usedLetters.has(letter) && attempts < maxAttempts);
+    
+    // If we couldn't find a unique letter, use any letter
+    if (attempts >= maxAttempts) {
+      const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
+      const isUppercase = Math.random() > 0.5;
+      letter = isUppercase ? randomLetter : randomLetter.toLowerCase();
+    }
+    
+    usedLetters.add(letter);
+    const isUppercase = letter === letter.toUpperCase();
     const askForCase = isUppercase ? 'uppercase' : 'lowercase';
     
     // Generate options that maintain the same case as the question
     const options = generateUniqueOptions(
-      displayLetter, 
+      letter, 
       optionsCount - 1, 
       () => {
         const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
@@ -96,7 +131,7 @@ export function generateLetterQuestions(count: number = 5, optionsCount: number 
       prompt: `Which is the ${askForCase} letter ${isUppercase ? letter : letter.toUpperCase()}?`,
       focus: ``,
       options,
-      correctAnswer: displayLetter,
+      correctAnswer: letter,
       type: 'letters'
     });
   }
@@ -132,9 +167,25 @@ export function generateShapeQuestions(count: number = 5, optionsCount: number =
     'Right'
   ];
   const questions: GameQuestion[] = [];
+  const usedShapes = new Set<string>();
   
   for (let i = 0; i < count; i++) {
-    const shape = shapes[Math.floor(Math.random() * shapes.length)];
+    let shape: string;
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    // Try to find a unique shape
+    do {
+      shape = shapes[Math.floor(Math.random() * shapes.length)];
+      attempts++;
+    } while (usedShapes.has(shape) && attempts < maxAttempts);
+    
+    // If we couldn't find a unique shape, use any shape
+    if (attempts >= maxAttempts) {
+      shape = shapes[Math.floor(Math.random() * shapes.length)];
+    }
+    
+    usedShapes.add(shape);
     const options = generateUniqueOptions(
       shape, 
       optionsCount - 1, 
@@ -159,9 +210,25 @@ export function generateShapeQuestions(count: number = 5, optionsCount: number =
 export function generateColorQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
   const colors = ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange', 'Pink', 'Brown', 'Black'];
   const questions: GameQuestion[] = [];
+  const usedColors = new Set<string>();
   
   for (let i = 0; i < count; i++) {
-    const color = colors[Math.floor(Math.random() * colors.length)];
+    let color: string;
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    // Try to find a unique color
+    do {
+      color = colors[Math.floor(Math.random() * colors.length)];
+      attempts++;
+    } while (usedColors.has(color) && attempts < maxAttempts);
+    
+    // If we couldn't find a unique color, use any color
+    if (attempts >= maxAttempts) {
+      color = colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    usedColors.add(color);
     const options = generateUniqueOptions(
       color, 
       optionsCount - 1, 
@@ -389,6 +456,7 @@ export const fillInTheBlankWords = [
 export function generateFillInTheBlankQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
   const questions: GameQuestion[] = [];
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const usedLetters = new Set<string>();
   
   // Select random words from the list
   const selectedWords = [...fillInTheBlankWords]
@@ -396,6 +464,25 @@ export function generateFillInTheBlankQuestions(count: number = 5, optionsCount:
     .slice(0, count);
   
   for (const word of selectedWords) {
+    const correctLetter = word.word[word.missingIndex];
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    // Try to find a unique letter
+    while (usedLetters.has(correctLetter) && attempts < maxAttempts) {
+      // Try to find a different word with a unique missing letter
+      const newWord = fillInTheBlankWords[Math.floor(Math.random() * fillInTheBlankWords.length)];
+      if (!usedLetters.has(newWord.word[newWord.missingIndex])) {
+        word.word = newWord.word;
+        word.missingIndex = newWord.missingIndex;
+        word.emoji = newWord.emoji;
+        break;
+      }
+      attempts++;
+    }
+    
+    usedLetters.add(correctLetter);
+    
     // Create the word with underscore for missing letter
     const wordWithBlank = word.word
       .split('')

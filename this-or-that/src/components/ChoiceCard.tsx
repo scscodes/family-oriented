@@ -68,7 +68,9 @@ export default function ChoiceCard({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      transition: 'transform 0.2s, box-shadow 0.2s',
+      transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+      border: '4px solid',
+      borderColor: 'transparent',
       '&:hover': {
         transform: 'scale(1.02)',
         boxShadow: 3
@@ -91,7 +93,8 @@ export default function ChoiceCard({
         ...(colorStyles[color] || {}),
         ...(isSelected ? {
           bgcolor: isCorrect ? 'success.light' : 'error.light',
-          color: 'white'
+          color: 'white',
+          borderColor: isCorrect ? 'success.main' : 'error.main'
         } : {})
       } as SxProps<Theme>;
     } else if (gameType === 'shapes' && typeof children === 'string') {
@@ -103,7 +106,8 @@ export default function ChoiceCard({
         ...(isSelected ? {
           '& .MuiSvgIcon-root': {
             color: isCorrect ? 'success.light' : 'error.light',
-          }
+          },
+          borderColor: isCorrect ? 'success.main' : 'error.main'
         } : {})
       } as SxProps<Theme>;
     }
@@ -112,7 +116,8 @@ export default function ChoiceCard({
       ...baseStyles,
       ...(isSelected ? {
         bgcolor: isCorrect ? 'success.light' : 'error.light',
-        color: 'white'
+        color: 'white',
+        borderColor: isCorrect ? 'success.main' : 'error.main'
       } : {})
     } as SxProps<Theme>;
   };
