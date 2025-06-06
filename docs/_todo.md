@@ -1,15 +1,3 @@
-# Literacy & Vocabulary
-    Word Match
-    Match pictures to the correct word (e.g., "dog" → 🐶).
-    Skill: Word recognition, reading.
-
-    Missing Letter
-    Fill in the blank: "C_ T" → CAT. Add audio to reinforce sound.
-    Skill: Spelling, phonics.
-
-    Rhyming Words
-    Pick the word that rhymes with "ball": (cat, wall, shoe).
-    Skill: Phonemic awareness.
 
 # Creative Play (optional, less quiz-like)
 
@@ -34,11 +22,3 @@
     Number Pop
     Balloons float with numbers, pop the ones that add to 10.
     Skill: Addition, mental math.
-
-    Pattern Train
-    Choose the next item in a pattern: 2, 4, 6, ?
-    Skill: Sequences, logic.
-
-    Shape Sorter
-    Drag shapes into correct holes.
-    Skill: Geometry, spatial awareness.

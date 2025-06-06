@@ -32,9 +32,10 @@ import {
 interface ChoiceCardProps {
   onClick: () => void;
   children: ReactNode;
-  isSelected?: boolean;
-  isCorrect?: boolean;
-  isDisabled?: boolean;
+  selected?: boolean;
+  correct?: boolean;
+  incorrect?: boolean;
+  disabled?: boolean;
   gameType?: GameType;
   sx?: SxProps<Theme>;
 }
@@ -44,43 +45,72 @@ interface ChoiceCardProps {
  * @param {ChoiceCardProps} props - The component props
  * @param {() => void} props.onClick - Function to call when the card is clicked
  * @param {ReactNode} props.children - The content to display in the card
- * @param {boolean} [props.isSelected] - Whether this card is currently selected
- * @param {boolean} [props.isCorrect] - Whether this card is the correct answer
- * @param {boolean} [props.isDisabled] - Whether this card is disabled (incorrect answer)
+ * @param {boolean} [props.selected] - Whether this card is currently selected
+ * @param {boolean} [props.correct] - Whether this card is the correct answer
+ * @param {boolean} [props.incorrect] - Whether this card is the incorrect answer
+ * @param {boolean} [props.disabled] - Whether this card is disabled (incorrect answer)
  * @param {GameType} [props.gameType] - The type of game being played
  * @param {SxProps<Theme>} [props.sx] - Additional styles to apply to the card
  */
 export default function ChoiceCard({ 
   onClick, 
   children,
-  isSelected = false,
-  isCorrect = false,
-  isDisabled = false,
+  selected = false,
+  correct = false,
+  incorrect = false,
+  disabled = false,
   gameType,
   sx
 }: ChoiceCardProps) {
+  // Compute correct/incorrect state at the top level for use in all style logic
+  const isCorrectState = correct;
+  const isIncorrectState = !correct && incorrect;
+  const forcedBg = isCorrectState ? 'success.light' : isIncorrectState ? 'error.light' : undefined;
+
   // Get the appropriate styles based on game type
   const getGameSpecificStyles = (): SxProps<Theme> => {
     const baseStyles: SxProps<Theme> = {
-      m: 1,
-      width: 200,
-      height: 200,
+      width: '100%',
+      minWidth: 0,
+      boxSizing: 'border-box',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
+      transition: 'all 0.3s ease',
       border: '4px solid',
       borderColor: 'transparent',
-      '&:hover': {
-        transform: 'scale(1.02)',
-        boxShadow: 3
+      boxShadow: '0 6px 12px rgba(0, 0, 0, 0.1)',
+      position: 'relative',
+      overflow: 'hidden',
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: '4px',
+        background: 'linear-gradient(90deg, #4361ee, #9381ff)',
+        opacity: 0,
+        transition: 'opacity 0.3s ease',
       },
-      ...(isDisabled && {
+      '&:hover': {
+        transform: 'translateY(-8px)',
+        boxShadow: '0 12px 20px rgba(0, 0, 0, 0.15)',
+        '&::before': {
+          opacity: 1,
+        }
+      },
+      ...(disabled && {
         opacity: 0.5,
         pointerEvents: 'none',
+        transform: 'none',
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
         '&:hover': {
           transform: 'none',
-          boxShadow: 'none'
+          boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
+          '&::before': {
+            opacity: 0,
+          }
         }
       })
     };
@@ -91,10 +121,15 @@ export default function ChoiceCard({
         ...baseStyles,
         ...colorCardStyles,
         ...(colorStyles[color] || {}),
-        ...(isSelected ? {
-          bgcolor: isCorrect ? 'success.light' : 'error.light',
-          color: 'white',
-          borderColor: isCorrect ? 'success.main' : 'error.main'
+        ...(selected ? {
+          bgcolor: forcedBg ? `${forcedBg} !important` : undefined,
+          backgroundColor: forcedBg ? `${forcedBg} !important` : undefined,
+          borderColor: isCorrectState ? 'success.main' : isIncorrectState ? 'error.main' : undefined,
+          boxShadow: isCorrectState
+            ? '0 0 20px rgba(46, 196, 182, 0.4)'
+            : isIncorrectState
+            ? '0 0 20px rgba(255, 90, 95, 0.4)'
+            : undefined,
         } : {})
       } as SxProps<Theme>;
     } else if (gameType === 'shapes' && typeof children === 'string') {
@@ -103,21 +138,34 @@ export default function ChoiceCard({
         ...baseStyles,
         ...shapeCardStyles,
         ...(shapeStyles[shape] || {}),
-        ...(isSelected ? {
+        ...(selected ? {
           '& .MuiSvgIcon-root': {
-            color: isCorrect ? 'success.light' : 'error.light',
+            color: isCorrectState ? 'success.light' : isIncorrectState ? 'error.light' : undefined,
+            transform: 'scale(1.1)',
+            transition: 'transform 0.3s ease, color 0.3s ease',
           },
-          borderColor: isCorrect ? 'success.main' : 'error.main'
+          bgcolor: forcedBg ? `${forcedBg} !important` : undefined,
+          backgroundColor: forcedBg ? `${forcedBg} !important` : undefined,
+          borderColor: isCorrectState ? 'success.main' : isIncorrectState ? 'error.main' : undefined,
+          boxShadow: isCorrectState
+            ? '0 0 20px rgba(46, 196, 182, 0.4)'
+            : isIncorrectState
+            ? '0 0 20px rgba(255, 90, 95, 0.4)'
+            : undefined,
         } : {})
       } as SxProps<Theme>;
     }
-
     return {
       ...baseStyles,
-      ...(isSelected ? {
-        bgcolor: isCorrect ? 'success.light' : 'error.light',
-        color: 'white',
-        borderColor: isCorrect ? 'success.main' : 'error.main'
+      ...(selected ? {
+        bgcolor: forcedBg ? `${forcedBg} !important` : undefined,
+        backgroundColor: forcedBg ? `${forcedBg} !important` : undefined,
+        borderColor: isCorrectState ? 'success.main' : isIncorrectState ? 'error.main' : undefined,
+        boxShadow: isCorrectState
+          ? '0 0 20px rgba(46, 196, 182, 0.4)'
+          : isIncorrectState
+          ? '0 0 20px rgba(255, 90, 95, 0.4)'
+          : undefined,
       } : {})
     } as SxProps<Theme>;
   };
@@ -126,47 +174,47 @@ export default function ChoiceCard({
   const getShapeIcon = (shape: string) => {
     switch (shape.toLowerCase()) {
       case 'circle':
-        return <Circle />;
+        return <Circle sx={{ fontSize: 100 }} />;
       case 'square':
-        return <Square />;
+        return <Square sx={{ fontSize: 100 }} />;
       case 'triangle':
-        return <ChangeHistory />;
+        return <ChangeHistory sx={{ fontSize: 100 }} />;
       case 'rectangle':
-        return <Rectangle />;
+        return <Rectangle sx={{ fontSize: 100 }} />;
       case 'star':
-        return <Star />;
+        return <Star sx={{ fontSize: 100 }} />;
       case 'heart':
-        return <Favorite />;
+        return <Favorite sx={{ fontSize: 100 }} />;
       case 'diamond':
-        return <Diamond />;
+        return <Diamond sx={{ fontSize: 100 }} />;
       case 'umbrella':
-        return <BeachAccess />;
+        return <BeachAccess sx={{ fontSize: 100 }} />;
       case 'wrench':
-        return <Build />;
+        return <Build sx={{ fontSize: 100 }} />;
       case 'cake':
-        return <Cake />;
+        return <Cake sx={{ fontSize: 100 }} />;
       case 'call':
-        return <Phone />;
+        return <Phone sx={{ fontSize: 100 }} />;
       case 'smile':
-        return <EmojiEmotions />;
+        return <EmojiEmotions sx={{ fontSize: 100 }} />;
       case 'sun':
-        return <WbSunny />;
+        return <WbSunny sx={{ fontSize: 100 }} />;
       case 'moon':
-        return <DarkMode />;
+        return <DarkMode sx={{ fontSize: 100 }} />;
       case 'cloud':
-        return <Cloud />;
+        return <Cloud sx={{ fontSize: 100 }} />;
       case 'plus':
-        return <Add />;
+        return <Add sx={{ fontSize: 100 }} />;
       case 'minus':
-        return <Remove />;
+        return <Remove sx={{ fontSize: 100 }} />;
       case 'up':
-        return <ArrowUpward />;
+        return <ArrowUpward sx={{ fontSize: 100 }} />;
       case 'down':
-        return <ArrowDownward />;
+        return <ArrowDownward sx={{ fontSize: 100 }} />;
       case 'left':
-        return <ArrowBack />;
+        return <ArrowBack sx={{ fontSize: 100 }} />;
       case 'right':
-        return <ArrowForward />;
+        return <ArrowForward sx={{ fontSize: 100 }} />;
       default:
         return null;
     }
@@ -186,12 +234,13 @@ export default function ChoiceCard({
     <Card sx={{ ...getGameSpecificStyles(), ...sx } as SxProps<Theme>}>
       <CardActionArea 
         onClick={onClick} 
-        disabled={isDisabled}
+        disabled={disabled}
         sx={{ 
           height: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'center',
+          borderRadius: 'inherit',
         }}
       >
         <CardContent sx={{ 
@@ -213,7 +262,9 @@ export default function ChoiceCard({
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: { xs: '1.75rem', sm: '2.5rem' },
-              fontWeight: 500
+              fontWeight: 600,
+              letterSpacing: '0.02em',
+              textShadow: '0px 1px 2px rgba(0,0,0,0.1)'
             }}
           >
             {getContent()}

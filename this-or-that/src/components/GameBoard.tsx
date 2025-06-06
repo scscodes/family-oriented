@@ -3,14 +3,13 @@
 import React, { useState, useEffect } from "react";
 import GameContainer from "./GameContainer";
 import ChoiceCard from "./ChoiceCard";
-import SettingsPanel from "./SettingsPanel";
-// import Toast from "./Toast";
 import { GameQuestion, GameType } from "@/utils/gameUtils";
-import { GameSettings } from "@/utils/settingsUtils";
 import { Box, Typography, Button } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
 import QuestionDisplay from "./QuestionDisplay";
-import AttemptHistoryFooter from "@/components/AttemptHistoryFooter";
+import ResponsiveAttemptDisplay from "./ResponsiveAttemptDisplay";
+import { useSettings } from "@/context/SettingsContext";
+import ResponsiveOptionGrid from "./ResponsiveOptionGrid";
 
 // Define a generic attempt structure
 interface GenericAttempt {
@@ -23,7 +22,6 @@ interface GameBoardProps {
   title: string;
   questions: GameQuestion[];
   gameType: GameType;
-  onSettingsChange?: (settings: GameSettings) => void;
   cardStyles?: SxProps<Theme>;
   optionStyles?: Record<string, SxProps<Theme>>;
   renderQuestion?: (question: GameQuestion) => React.ReactNode;
@@ -36,25 +34,18 @@ export default function GameBoard({
   title, 
   questions, 
   gameType, 
-  onSettingsChange,
   cardStyles,
   optionStyles,
   renderQuestion
 }: GameBoardProps) {
+  const { settings } = useSettings();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isGameComplete, setIsGameComplete] = useState(false);
   const [disabledOptions, setDisabledOptions] = useState<string[]>([]);
   const [incorrectOptions, setIncorrectOptions] = useState<string[]>([]);
-  const [showSettings, setShowSettings] = useState(false);
-  // Use the generic attempt structure for state
   const [attempts, setAttempts] = useState<GenericAttempt[]>([]); 
-  // const [toast, setToast] = useState<{
-  //   show: boolean;
-  //   message: string;
-  //   severity: 'success' | 'error' | 'info' | 'warning';
-  // }>({ show: false, message: '', severity: 'success' });
   
   // Reset attempts when question changes
   useEffect(() => {
@@ -81,28 +72,17 @@ export default function GameBoard({
     
     if (correct) {
       setScore(score + 1);
-      // setToast({
-      //   show: true,
-      //   message: 'Correct! Well done!',
-      //   severity: 'success'
-      // });
       
       if (currentQuestion < questions.length - 1) {
         setTimeout(() => {
           setCurrentQuestion(currentQuestion + 1);
           setSelectedOption(null);
           // Disabled/incorrect options are reset by the useEffect hook
-        }, 3000); 
+        }, 1500); // Reduced from 3000ms to 1500ms
       } else {
         setIsGameComplete(true);
       }
     } else {
-      // setToast({
-      //   show: true,
-      //   message: 'Try again!',
-      //   severity: 'error'
-      // });
-      
       setIncorrectOptions([...incorrectOptions, option]);
       setDisabledOptions([...disabledOptions, option]);
       
@@ -115,11 +95,6 @@ export default function GameBoard({
         const allIncorrect = currentQuestionOptions.filter(opt => opt !== correctAnswer);
         setDisabledOptions(allIncorrect);
         setSelectedOption(correctAnswer); // Highlight the correct answer
-        // setToast({
-        //   show: true,
-        //   message: `The correct answer is ${correctAnswer}`,
-        //   severity: 'info'
-        // });
         
         // Move to next question after showing the correct answer
         setTimeout(() => {
@@ -130,12 +105,12 @@ export default function GameBoard({
           } else {
              setIsGameComplete(true); 
           }
-        }, 3000); // Increased delay slightly to show correct answer longer
+        }, 1500); // Reduced from 3000ms to 1500ms
       } else {
         // Just reset the selected state after incorrect animation
         setTimeout(() => {
           setSelectedOption(null);
-        }, 1000);
+        }, 500); // Reduced from 1000ms to 500ms
       }
     }
   };
@@ -148,14 +123,6 @@ export default function GameBoard({
     setIncorrectOptions([]);
     setIsGameComplete(false);
     setAttempts([]); // Clear attempts on restart
-  };
-  
-  const handleSettingsChange = (newSettings: GameSettings) => {
-    if (onSettingsChange) {
-      onSettingsChange(newSettings);
-    }
-    // Optionally, reset game state if settings change significantly
-    // handleRestart(); 
   };
 
   // Define how to render the content for a generic attempt
@@ -186,17 +153,10 @@ export default function GameBoard({
     return (
       <GameContainer 
         title={title}
-        onSettingsClick={() => setShowSettings(true)}
       >
         <Box textAlign="center" py={4}>
           <Typography variant="h6">Loading questions...</Typography>
         </Box>
-        <SettingsPanel 
-          gameType={gameType}
-          onSettingsChange={handleSettingsChange}
-          isOpen={showSettings}
-          onClose={() => setShowSettings(false)}
-        />
       </GameContainer>
     );
   }
@@ -208,19 +168,12 @@ export default function GameBoard({
         title={title} 
         score={score} 
         totalQuestions={questions.length}
-        onSettingsClick={() => setShowSettings(true)}
       >
         <Box textAlign="center" py={4}>
           <Typography variant="h4" gutterBottom>Game Complete!</Typography>
           <Typography variant="h6" gutterBottom>You scored {score} out of {questions.length}</Typography>
           <Button variant="contained" color="primary" onClick={handleRestart} size="large">Play Again</Button>
         </Box>
-        <SettingsPanel 
-          gameType={gameType}
-          onSettingsChange={handleSettingsChange}
-          isOpen={showSettings}
-          onClose={() => setShowSettings(false)}
-        />
       </GameContainer>
     );
   }
@@ -233,103 +186,39 @@ export default function GameBoard({
       title={title} 
       score={score} 
       totalQuestions={questions.length}
-      onSettingsClick={() => setShowSettings(true)}
     >
-      <Box py={4}>
+      <Box py={4} sx={{ maxWidth: { xs: 340, sm: 600, md: 800 }, mx: 'auto' }}>
         {renderQuestion ? (
           renderQuestion(question)
         ) : (
           <QuestionDisplay question={question} />
         )}
-        
         {/* Options Display */}
-        <Box 
-          sx={{ 
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            mt: 3, // Added margin top for spacing
-            maxWidth: 800,
-            mx: 'auto',
-            alignItems: 'center'
-          }}
-        >
-          {/* Row 1 of options */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 1, 
-            justifyContent: 'center',
-            width: '100%',
-            maxWidth: 600,
-            '& > *': { flex: '1 1 200px', maxWidth: 'calc(50% - 8px)', display: 'flex', justifyContent: 'center' }
-          }}>
-            {question.options.slice(0, 2).map((option) => (
-              <Box key={option}>
-                <ChoiceCard
-                  onClick={() => handleOptionClick(option)}
-                  isSelected={selectedOption === option || incorrectOptions.includes(option)}
-                  isCorrect={selectedOption === option && option === question.correctAnswer}
-                  isDisabled={disabledOptions.includes(option)}
-                  gameType={gameType}
-                  sx={{ ...(cardStyles || {}), ...(optionStyles?.[option.toLowerCase()] || {}) } as SxProps<Theme>}
-                >
-                  {option}
-                </ChoiceCard>
-              </Box>
-            ))}
-          </Box>
-          
-          {/* Row 2 of options */}
-          {question.options.length > 2 && (
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 1, 
-              justifyContent: 'center',
-              width: '100%',
-              maxWidth: 600,
-              '& > *': { flex: '1 1 200px', maxWidth: 'calc(50% - 8px)', display: 'flex', justifyContent: 'center' }
-            }}>
-              {question.options.slice(2, 4).map((option) => (
-                <Box key={option}>
-                  <ChoiceCard
-                    onClick={() => handleOptionClick(option)}
-                    isSelected={selectedOption === option || incorrectOptions.includes(option)}
-                    isCorrect={selectedOption === option && option === question.correctAnswer}
-                    isDisabled={disabledOptions.includes(option)}
-                    gameType={gameType}
-                    sx={{ ...(cardStyles || {}), ...(optionStyles?.[option.toLowerCase()] || {}) } as SxProps<Theme>}
-                  >
-                    {option}
-                  </ChoiceCard>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
+        <ResponsiveOptionGrid count={question.options.length}>
+          {question.options.map((option, idx) => (
+            <ChoiceCard
+              key={option}
+              selected={selectedOption === option}
+              disabled={disabledOptions.includes(option)}
+              incorrect={incorrectOptions.includes(option)}
+              onClick={() => handleOptionClick(option)}
+              sx={optionStyles?.[option]}
+              cardStyles={cardStyles}
+              tabIndex={0}
+              autoFocus={idx === 0}
+              gameType={gameType}
+            >
+              {option}
+            </ChoiceCard>
+          ))}
+        </ResponsiveOptionGrid>
         
-        {/* Render Attempt History Unconditionally */}
-        <AttemptHistoryFooter
+        {/* Responsive Attempt Display */}
+        <ResponsiveAttemptDisplay
           items={attempts}
           renderItemContent={renderGenericAttemptContent}
-          sx={{ mt: 15 }} 
         />
-        
-        {/* Toast Notifications */}
-        {/* <Toast
-          show={toast.show}
-          message={toast.message}
-          severity={toast.severity}
-          onClose={() => setToast(prev => ({ ...prev, show: false }))}
-        /> */}
       </Box>
-      
-      {/* Settings Panel (Modal) */}
-      <SettingsPanel 
-        gameType={gameType}
-        onSettingsChange={handleSettingsChange}
-        isOpen={showSettings}
-        onClose={() => setShowSettings(false)}
-      />
     </GameContainer>
   );
 } 

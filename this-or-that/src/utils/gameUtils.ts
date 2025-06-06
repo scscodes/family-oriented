@@ -9,7 +9,8 @@ export type GameType =
   | 'patterns'
   | 'math'
   | 'geography'
-  | 'fill-in-the-blank';
+  | 'fill-in-the-blank'
+  | 'rhyming';
 
 import type { GameSettings } from './settingsUtils';
 
@@ -103,25 +104,33 @@ export const questionGenerators: Record<
   GameType,
   (settings: GameSettings) => GameQuestion[]
 > = {
-  numbers: (s) =>
-    generateNumberQuestions(
-      s.questionCount,
+  numbers: (s) => {
+    // Ensure numberRange exists and has required properties
+    if (!s.numberRange || typeof s.numberRange.min !== 'number' || typeof s.numberRange.max !== 'number') {
+      console.error('Invalid numberRange in settings:', s);
+      return [];
+    }
+    
+    return generateNumberQuestions(
+      s.questionCount || 10,
       s.numberRange.min,
       s.numberRange.max,
-      s.optionsCount
-    ),
+      s.optionsCount || 4
+    );
+  },
   letters: (s) =>
-    generateLetterQuestions(s.questionCount, s.optionsCount),
+    generateLetterQuestions(s.questionCount || 10, s.optionsCount || 4),
   shapes: (s) =>
-    generateShapeQuestions(s.questionCount, s.optionsCount),
+    generateShapeQuestions(s.questionCount || 10, s.optionsCount || 4),
   colors: (s) =>
-    generateColorQuestions(s.questionCount, s.optionsCount),
+    generateColorQuestions(s.questionCount || 10, s.optionsCount || 4),
   patterns: (s) =>
-    generatePatternQuestions(s.questionCount, s.optionsCount),
-  math: (s) => generateMathQuestions(s.questionCount, s.optionsCount),
+    generatePatternQuestions(s.questionCount || 10, s.optionsCount || 4),
+  math: (s) => generateMathQuestions(s.questionCount || 10, s.optionsCount || 4),
   'fill-in-the-blank': (s) =>
-    generateFillInTheBlankQuestions(s.questionCount, s.optionsCount),
-  geography: () => [] // Placeholder until geography generators are added
+    generateFillInTheBlankQuestions(s.questionCount || 10, s.optionsCount || 4),
+  geography: () => [], // Placeholder until geography generators are added
+  rhyming: (s) => generateRhymingQuestions(s.questionCount || 10),
 };
 
 /**
@@ -555,4 +564,85 @@ export function generateFillInTheBlankQuestions(count: number = 5, optionsCount:
   }
   
   return questions;
+}
+
+/**
+ * Rhyming word pairs and distractors for the rhyming game
+ */
+export const rhymingWordSets = [
+  {
+    prompt: 'Pick the word that rhymes with "ball"',
+    focus: 'ball',
+    options: ['cat', 'wall', 'shoe'],
+    correctAnswer: 'wall',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "cat"',
+    focus: 'cat',
+    options: ['bat', 'dog', 'car'],
+    correctAnswer: 'bat',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "sun"',
+    focus: 'sun',
+    options: ['run', 'sit', 'pen'],
+    correctAnswer: 'run',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "dog"',
+    focus: 'dog',
+    options: ['log', 'cat', 'fish'],
+    correctAnswer: 'log',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "car"',
+    focus: 'car',
+    options: ['star', 'bus', 'pen'],
+    correctAnswer: 'star',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "tree"',
+    focus: 'tree',
+    options: ['bee', 'dog', 'cat'],
+    correctAnswer: 'bee',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "hat"',
+    focus: 'hat',
+    options: ['bat', 'dog', 'car'],
+    correctAnswer: 'bat',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "book"',
+    focus: 'book',
+    options: ['look', 'pen', 'cat'],
+    correctAnswer: 'look',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "mouse"',
+    focus: 'mouse',
+    options: ['house', 'dog', 'car'],
+    correctAnswer: 'house',
+  },
+  {
+    prompt: 'Pick the word that rhymes with "bed"',
+    focus: 'bed',
+    options: ['red', 'cat', 'dog'],
+    correctAnswer: 'red',
+  },
+];
+
+/**
+ * Generates rhyming word questions
+ */
+export function generateRhymingQuestions(count: number = 5): GameQuestion[] {
+  // Shuffle and select up to count questions
+  const shuffled = [...rhymingWordSets].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count).map((q) => ({
+    prompt: q.prompt,
+    focus: q.focus,
+    options: q.options,
+    correctAnswer: q.correctAnswer,
+    type: 'rhyming',
+  }));
 } 
