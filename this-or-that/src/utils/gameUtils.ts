@@ -1,7 +1,17 @@
 /**
  * Game types supported by the application
  */
-export type GameType = 'numbers' | 'letters' | 'shapes' | 'colors' | 'patterns' | 'math' | 'geography' | 'fill-in-the-blank';
+export type GameType =
+  | 'numbers'
+  | 'letters'
+  | 'shapes'
+  | 'colors'
+  | 'patterns'
+  | 'math'
+  | 'geography'
+  | 'fill-in-the-blank';
+
+import type { GameSettings } from './settingsUtils';
 
 /**
  * Basic structure for all game questions
@@ -83,6 +93,36 @@ export function generateNumberQuestions(count: number = 5, minNumber: number = 1
   
   return questions;
 }
+
+/**
+ * Mapping of game types to their question generators. Centralizing the logic
+ * allows hooks and components to easily obtain the appropriate generator
+ * without needing to know the specific function names.
+ */
+export const questionGenerators: Record<
+  GameType,
+  (settings: GameSettings) => GameQuestion[]
+> = {
+  numbers: (s) =>
+    generateNumberQuestions(
+      s.questionCount,
+      s.numberRange.min,
+      s.numberRange.max,
+      s.optionsCount
+    ),
+  letters: (s) =>
+    generateLetterQuestions(s.questionCount, s.optionsCount),
+  shapes: (s) =>
+    generateShapeQuestions(s.questionCount, s.optionsCount),
+  colors: (s) =>
+    generateColorQuestions(s.questionCount, s.optionsCount),
+  patterns: (s) =>
+    generatePatternQuestions(s.questionCount, s.optionsCount),
+  math: (s) => generateMathQuestions(s.questionCount, s.optionsCount),
+  'fill-in-the-blank': (s) =>
+    generateFillInTheBlankQuestions(s.questionCount, s.optionsCount),
+  geography: () => [] // Placeholder until geography generators are added
+};
 
 /**
  * Generates letter-based questions with options
