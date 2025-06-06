@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import ThemeProvider from "@/theme/ThemeProvider";
+import { SettingsProvider } from "@/context/SettingsContext";
 
 export const metadata: Metadata = {
   title: "This or That - Fun Learning Games for Kids",
@@ -13,7 +15,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <ThemeProvider>
+          <SettingsProvider>
+            {children}
+          </SettingsProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
