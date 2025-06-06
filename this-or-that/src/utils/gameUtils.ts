@@ -461,10 +461,12 @@ export function generateFillInTheBlankQuestions(count: number = 5, optionsCount:
   // Select random words from the list
   const selectedWords = [...fillInTheBlankWords]
     .sort(() => 0.5 - Math.random())
-    .slice(0, count);
+    .slice(0, count)
+    .map(word => ({ ...word }));
   
-  for (const word of selectedWords) {
-    const correctLetter = word.word[word.missingIndex];
+  for (const baseWord of selectedWords) {
+    let word = { ...baseWord };
+    let correctLetter = word.word[word.missingIndex];
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loop
     
@@ -472,10 +474,10 @@ export function generateFillInTheBlankQuestions(count: number = 5, optionsCount:
     while (usedLetters.has(correctLetter) && attempts < maxAttempts) {
       // Try to find a different word with a unique missing letter
       const newWord = fillInTheBlankWords[Math.floor(Math.random() * fillInTheBlankWords.length)];
-      if (!usedLetters.has(newWord.word[newWord.missingIndex])) {
-        word.word = newWord.word;
-        word.missingIndex = newWord.missingIndex;
-        word.emoji = newWord.emoji;
+      const newLetter = newWord.word[newWord.missingIndex];
+      if (!usedLetters.has(newLetter)) {
+        word = { ...newWord };
+        correctLetter = newLetter;
         break;
       }
       attempts++;

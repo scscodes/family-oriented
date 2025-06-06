@@ -1,27 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import GameBoard from "@/components/GameBoard";
-import { GameQuestion, generateNumberQuestions } from "@/utils/gameUtils";
-import { GameSettings, getSettings } from "@/utils/settingsUtils";
+import { generateNumberQuestions } from "@/utils/gameUtils";
+import { useGame } from "@/hooks/useGame";
 
 export default function NumbersGame() {
-  const [questions, setQuestions] = useState<GameQuestion[]>([]);
-  const [settings, setSettings] = useState<GameSettings>(getSettings("numbers"));
-  
-  useEffect(() => {
-    // Generate questions when component mounts or settings change
-    setQuestions(generateNumberQuestions(
-      settings.questionCount, 
-      settings.numberRange.min, 
+  const { questions, handleSettingsChange } = useGame("numbers", (settings) =>
+    generateNumberQuestions(
+      settings.questionCount,
+      settings.numberRange.min,
       settings.numberRange.max,
       settings.optionsCount
-    ));
-  }, [settings]);
-  
-  const handleSettingsChange = (newSettings: GameSettings) => {
-    setSettings(newSettings);
-  };
+    )
+  );
   
   return (
     <GameBoard 
