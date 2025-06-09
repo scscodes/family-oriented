@@ -10,7 +10,6 @@ import {
   Container, 
   Box,
   Collapse,
-  Stack,
   IconButton
 } from '@mui/material';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';

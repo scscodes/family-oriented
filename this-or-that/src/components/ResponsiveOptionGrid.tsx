@@ -17,7 +17,7 @@ export default function ResponsiveOptionGrid({ children, count, sx }: {
   sx?: SxProps<Theme>;
 }) {
   // For 2: always 2 columns. For 3: 1fr on xs, 3 columns on sm+. For 4+: 2 on xs, 4 on sm+.
-  let columns = `repeat(${count}, minmax(0, 1fr))`;
+  const columns = `repeat(${count}, minmax(0, 1fr))`;
   return (
     <Box
       sx={{

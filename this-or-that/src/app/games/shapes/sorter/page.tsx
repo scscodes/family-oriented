@@ -13,7 +13,7 @@ const SHAPES = [
   { name: "star", icon: <Star sx={{ fontSize: 60 }} /> },
 ];
 
-function shuffle(array: any[]) {
+function shuffle<T>(array: T[]): T[] {
   return array.sort(() => 0.5 - Math.random());
 }
 
