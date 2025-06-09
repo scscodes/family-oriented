@@ -28,7 +28,6 @@ jobs:
       - name: Build and Export
         run: |
           npm run build
-          npm run export
         env:
           BASE_PATH: /${{ github.event.repository.name }}
       - name: Upload artifact (GitHub Pages default name)
