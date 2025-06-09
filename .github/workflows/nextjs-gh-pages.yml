@@ -25,13 +25,16 @@ jobs:
           cache: 'npm'
           cache-dependency-path: package-lock.json
       - run: npm ci
-      - name: Build project
-        run: npm run build
+      - name: Build and Export
+        run: |
+          npm run build
+          npm run export
         env:
           BASE_PATH: /${{ github.event.repository.name }}
-      - uses: actions/upload-pages-artifact@v3
+      - name: Upload artifact (GitHub Pages default name)
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: ./out  # No explicit name needed; use default expected by deploy-pages
+          path: out  # ✅ IMPORTANT: no 'name' field
 
   deploy:
     needs: build
@@ -40,6 +43,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4  # ✅ Required to ensure correct context
-      - id: deployment
+      - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v3
