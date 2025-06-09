@@ -30,7 +30,7 @@ export default function AdditionGame() {
         // Generate 3 more unique wrong options
         while (options.length < 4) {
           // Generate a random wrong answer within a reasonable range
-          let wrongAnswer = Math.floor(Math.random() * (mathRange.max * 2)) + 1;
+          const wrongAnswer = Math.floor(Math.random() * (mathRange.max * 2)) + 1;
           
           // Ensure it's not the correct answer and not already in options
           if (wrongAnswer !== sum && !options.includes(`${wrongAnswer}`)) {

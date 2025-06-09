@@ -8,7 +8,6 @@ import { Box, Typography, Button } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material';
 import QuestionDisplay from "./QuestionDisplay";
 import ResponsiveAttemptDisplay from "./ResponsiveAttemptDisplay";
-import { useSettings } from "@/context/SettingsContext";
 import ResponsiveOptionGrid from "./ResponsiveOptionGrid";
 
 // Define a generic attempt structure
@@ -38,7 +37,6 @@ export default function GameBoard({
   optionStyles,
   renderQuestion
 }: GameBoardProps) {
-  const { settings } = useSettings();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [score, setScore] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);

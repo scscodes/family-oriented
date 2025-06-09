@@ -5,14 +5,13 @@ import { useGame } from "@/hooks/useGame";
 import { mathCardStyles } from "./styles";
 
 export default function MathGame() {
-  const { questions, handleSettingsChange } = useGame("math");
+  const { questions } = useGame("math");
   
   return (
     <GameBoard 
       title="Math Game" 
       questions={questions}
       gameType="math"
-      onSettingsChange={handleSettingsChange}
       cardStyles={mathCardStyles}
     />
   );
