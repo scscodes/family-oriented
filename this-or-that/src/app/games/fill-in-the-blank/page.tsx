@@ -5,14 +5,13 @@ import { useGame } from "@/hooks/useGame";
 import { fillInTheBlankCardStyles } from "./styles";
 
 export default function FillInTheBlankGame() {
-  const { questions, handleSettingsChange } = useGame("fill-in-the-blank");
+  const { questions } = useGame("fill-in-the-blank");
   
   return (
     <GameBoard 
       title="Fill in the Blank" 
       questions={questions}
       gameType="fill-in-the-blank"
-      onSettingsChange={handleSettingsChange}
       cardStyles={fillInTheBlankCardStyles}
     />
   );

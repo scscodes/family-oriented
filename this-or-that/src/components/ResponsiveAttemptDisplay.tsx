@@ -19,8 +19,6 @@ interface ResponsiveAttemptDisplayProps<T extends AttemptRecord> {
   items: T[];
   /** Function to render the specific content of each item. */
   renderItemContent: (item: T) => ReactNode;
-  /** Optional title for the history section. */
-  title?: string;
   /** Additional styles to apply to the root container. */
   sx?: SxProps<Theme>;
 }
@@ -33,7 +31,6 @@ interface ResponsiveAttemptDisplayProps<T extends AttemptRecord> {
 export default function ResponsiveAttemptDisplay<T extends AttemptRecord>({
   items,
   renderItemContent,
-  title,
   sx
 }: ResponsiveAttemptDisplayProps<T>) {
   const theme = useTheme();
