@@ -48,6 +48,7 @@ export default function AdditionGame() {
           focus: `${firstNumber} + ${secondNumber} = ?`,
           options,
           correctAnswer,
+          type: 'math',
           meta: {
             firstNumber,
             secondNumber,

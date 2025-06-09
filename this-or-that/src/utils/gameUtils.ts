@@ -24,6 +24,8 @@ export interface GameQuestion {
   options: string[];
   correctAnswer: string;
   type: GameType;
+  id?: string; // Optional unique identifier for the question
+  meta?: Record<string, unknown>; // Optional metadata for custom rendering or logic
 }
 
 /**

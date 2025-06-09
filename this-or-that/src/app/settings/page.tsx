@@ -85,16 +85,35 @@ export default function SettingsPage() {
     setLocalSettings(prev => {
       const newSettings = { ...prev };
       
-      // Handle nested paths like 'mathRange.min'
       if (path.includes('.')) {
         const [parent, child] = path.split('.');
-        newSettings[parent as keyof GlobalSettings] = {
-          ...(newSettings[parent as keyof GlobalSettings] as object),
-          [child]: value
-        };
+        if (parent === 'numberRange' || parent === 'mathRange') {
+          newSettings[parent] = {
+            ...(newSettings[parent] as { min: number; max: number }),
+            [child]: value
+          };
+        } else if (parent === 'mathOperations') {
+          newSettings[parent] = {
+            ...(newSettings[parent] as { addition: boolean; subtraction: boolean }),
+            [child]: value
+          };
+        }
       } else {
-        // Handle top-level paths
-        newSettings[path as keyof GlobalSettings] = value;
+        switch (path) {
+          case 'questionsPerSession':
+            newSettings.questionsPerSession = value as number;
+            break;
+          case 'wordComplexity':
+            newSettings.wordComplexity = value as 'easy' | 'medium' | 'hard';
+            break;
+          case 'showVisualAids':
+            newSettings.showVisualAids = value as boolean;
+            break;
+          // Add more cases here if you add more primitive properties
+          default:
+            // Do nothing for object properties
+            break;
+        }
       }
       
       return newSettings;

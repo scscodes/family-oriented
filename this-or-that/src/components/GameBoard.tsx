@@ -21,7 +21,6 @@ interface GameBoardProps {
   title: string;
   questions: GameQuestion[];
   gameType: GameType;
-  cardStyles?: SxProps<Theme>;
   optionStyles?: Record<string, SxProps<Theme>>;
   renderQuestion?: (question: GameQuestion) => React.ReactNode;
 }
@@ -33,7 +32,6 @@ export default function GameBoard({
   title, 
   questions, 
   gameType, 
-  cardStyles,
   optionStyles,
   renderQuestion
 }: GameBoardProps) {
@@ -193,7 +191,7 @@ export default function GameBoard({
         )}
         {/* Options Display */}
         <ResponsiveOptionGrid count={question.options.length}>
-          {question.options.map((option, idx) => (
+          {question.options.map((option) => (
             <ChoiceCard
               key={option}
               selected={selectedOption === option}
@@ -201,9 +199,6 @@ export default function GameBoard({
               incorrect={incorrectOptions.includes(option)}
               onClick={() => handleOptionClick(option)}
               sx={optionStyles?.[option]}
-              cardStyles={cardStyles}
-              tabIndex={0}
-              autoFocus={idx === 0}
               gameType={gameType}
             >
               {option}

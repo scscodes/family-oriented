@@ -49,6 +49,7 @@ export default function SubtractionGame() {
           focus: `${firstNumber} - ${secondNumber} = ?`,
           options,
           correctAnswer,
+          type: 'math',
           meta: {
             firstNumber,
             secondNumber,

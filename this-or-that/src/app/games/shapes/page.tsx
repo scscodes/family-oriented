@@ -2,7 +2,7 @@
 
 import GameBoard from "@/components/GameBoard";
 import { useGame } from "@/hooks/useGame";
-import { shapeStyles, shapeCardStyles } from "./styles";
+import { shapeStyles } from "./styles";
 
 export default function ShapesGame() {
   const { questions } = useGame("shapes");
@@ -12,7 +12,6 @@ export default function ShapesGame() {
       title="Shapes Game" 
       questions={questions}
       gameType="shapes"
-      cardStyles={shapeCardStyles}
       optionStyles={shapeStyles}
     />
   );

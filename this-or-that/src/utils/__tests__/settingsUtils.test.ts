@@ -27,13 +27,15 @@ describe('settingsUtils', () => {
   it('saves settings to localStorage', () => {
     const custom = { ...DEFAULT_SETTINGS.numbers, questionCount: 7 };
     saveSettings('numbers', custom);
-    const stored = JSON.parse(localStorage.getItem('numbers_settings'));
+    const stored = JSON.parse(localStorage.getItem('numbers_settings') ?? '');
     expect(stored).toEqual(custom);
   });
 
   it('returns default if localStorage is corrupted', () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     localStorage.setItem('numbers_settings', 'not-json');
     const settings = getSettings('numbers');
     expect(settings).toEqual(DEFAULT_SETTINGS.numbers);
+    spy.mockRestore();
   });
 }); 

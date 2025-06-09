@@ -2,7 +2,6 @@
 
 import GameBoard from "@/components/GameBoard";
 import { useGame } from "@/hooks/useGame";
-import { mathCardStyles } from "./styles";
 
 export default function MathGame() {
   const { questions } = useGame("math");
@@ -12,7 +11,6 @@ export default function MathGame() {
       title="Math Game" 
       questions={questions}
       gameType="math"
-      cardStyles={mathCardStyles}
     />
   );
 } 
