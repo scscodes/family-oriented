@@ -34,6 +34,10 @@ declare module 'react-simple-maps' {
   }
 
   export interface ZoomableGroupProps {
+    /** Current zoom level of the map */
+    zoom?: number;
+    /** Center coordinates for the map */
+    center?: [number, number];
     children: ReactNode;
   }
 
