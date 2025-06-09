@@ -78,7 +78,10 @@ export default function SettingsPage() {
     setIsSaved(true);
   };
 
-  const handleLocalChange = (path: string, value: any) => {
+  const handleLocalChange = (
+    path: string,
+    value: string | number | boolean
+  ) => {
     setLocalSettings(prev => {
       const newSettings = { ...prev };
       

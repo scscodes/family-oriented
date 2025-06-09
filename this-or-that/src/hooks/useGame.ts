@@ -51,7 +51,7 @@ export function useGame(gameType: GameType) {
     }
   }, [globalSettings, gameType]);
 
-  const handleSettingsChange = (newSettings: any) => {
+  const handleSettingsChange = (newSettings: Record<string, unknown>) => {
     // This function could be expanded to update specific settings
     console.log("Settings change requested:", newSettings);
     // Implementation would depend on how you want to handle game-specific settings
