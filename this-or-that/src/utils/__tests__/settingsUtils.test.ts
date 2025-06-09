@@ -2,7 +2,7 @@ import { getSettings, saveSettings, DEFAULT_SETTINGS } from '../settingsUtils';
 
 describe('settingsUtils', () => {
   beforeEach(() => {
-    // @ts-ignore
+    // @ts-expect-error localStorage is not defined in Node test environment
     global.localStorage = {
       store: {} as Record<string, string>,
       getItem(key: string) { return this.store[key] || null; },
