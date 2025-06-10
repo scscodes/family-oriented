@@ -5,10 +5,10 @@ import GameContainer from "./GameContainer";
 import ChoiceCard from "./ChoiceCard";
 import { GameQuestion, GameType } from "@/utils/gameUtils";
 import { Box, Typography, Button } from '@mui/material';
-import type { SxProps, Theme } from '@mui/material';
 import QuestionDisplay from "./QuestionDisplay";
 import ResponsiveAttemptDisplay from "./ResponsiveAttemptDisplay";
 import ResponsiveOptionGrid from "./ResponsiveOptionGrid";
+import { GAME_TIMINGS } from "@/utils/constants";
 
 // Define a generic attempt structure
 interface GenericAttempt {
@@ -21,7 +21,6 @@ interface GameBoardProps {
   title: string;
   questions: GameQuestion[];
   gameType: GameType;
-  optionStyles?: Record<string, SxProps<Theme>>;
   renderQuestion?: (question: GameQuestion) => React.ReactNode;
 }
 
@@ -32,7 +31,6 @@ export default function GameBoard({
   title, 
   questions, 
   gameType, 
-  optionStyles,
   renderQuestion
 }: GameBoardProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -74,7 +72,7 @@ export default function GameBoard({
           setCurrentQuestion(currentQuestion + 1);
           setSelectedOption(null);
           // Disabled/incorrect options are reset by the useEffect hook
-        }, 1500); // Reduced from 3000ms to 1500ms
+        }, GAME_TIMINGS.CORRECT_ANSWER_DELAY);
       } else {
         setIsGameComplete(true);
       }
@@ -101,12 +99,12 @@ export default function GameBoard({
           } else {
              setIsGameComplete(true); 
           }
-        }, 1500); // Reduced from 3000ms to 1500ms
+        }, GAME_TIMINGS.CORRECT_ANSWER_DELAY);
       } else {
         // Just reset the selected state after incorrect animation
         setTimeout(() => {
           setSelectedOption(null);
-        }, 500); // Reduced from 1000ms to 500ms
+        }, GAME_TIMINGS.INCORRECT_ANSWER_DELAY);
       }
     }
   };
@@ -198,7 +196,6 @@ export default function GameBoard({
               disabled={disabledOptions.includes(option)}
               incorrect={incorrectOptions.includes(option)}
               onClick={() => handleOptionClick(option)}
-              sx={optionStyles?.[option]}
               gameType={gameType}
             >
               {option}

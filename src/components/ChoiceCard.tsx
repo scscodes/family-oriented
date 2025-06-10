@@ -5,6 +5,7 @@ import { Card, CardContent, CardActionArea, Typography, SxProps, Theme } from '@
 import { colorStyles, colorCardStyles } from '@/app/games/colors/styles';
 import { shapeStyles, shapeCardStyles } from '@/app/games/shapes/styles';
 import { GameType } from '@/utils/gameUtils';
+import { UI_CONSTANTS } from '@/utils/constants';
 import {
   Circle,
   Square,
@@ -122,8 +123,7 @@ export default function ChoiceCard({
         ...colorCardStyles,
         ...(colorStyles[color] || {}),
         ...(selected ? {
-          bgcolor: forcedBg ? `${forcedBg} !important` : undefined,
-          backgroundColor: forcedBg ? `${forcedBg} !important` : undefined,
+          backgroundColor: forcedBg || undefined,
           borderColor: isCorrectState ? 'success.main' : isIncorrectState ? 'error.main' : undefined,
           boxShadow: isCorrectState
             ? '0 0 20px rgba(46, 196, 182, 0.4)'
@@ -144,8 +144,7 @@ export default function ChoiceCard({
             transform: 'scale(1.1)',
             transition: 'transform 0.3s ease, color 0.3s ease',
           },
-          bgcolor: forcedBg ? `${forcedBg} !important` : undefined,
-          backgroundColor: forcedBg ? `${forcedBg} !important` : undefined,
+          backgroundColor: forcedBg || undefined,
           borderColor: isCorrectState ? 'success.main' : isIncorrectState ? 'error.main' : undefined,
           boxShadow: isCorrectState
             ? '0 0 20px rgba(46, 196, 182, 0.4)'
@@ -158,8 +157,7 @@ export default function ChoiceCard({
     return {
       ...baseStyles,
       ...(selected ? {
-        bgcolor: forcedBg ? `${forcedBg} !important` : undefined,
-        backgroundColor: forcedBg ? `${forcedBg} !important` : undefined,
+        backgroundColor: forcedBg || undefined,
         borderColor: isCorrectState ? 'success.main' : isIncorrectState ? 'error.main' : undefined,
         boxShadow: isCorrectState
           ? '0 0 20px rgba(46, 196, 182, 0.4)'
@@ -172,49 +170,50 @@ export default function ChoiceCard({
 
   // Get the appropriate icon for shapes
   const getShapeIcon = (shape: string) => {
+    const iconSize = UI_CONSTANTS.SHAPE_ICON_SIZE; // Use constant instead of magic number
     switch (shape.toLowerCase()) {
       case 'circle':
-        return <Circle sx={{ fontSize: 100 }} />;
+        return <Circle sx={{ fontSize: iconSize }} />;
       case 'square':
-        return <Square sx={{ fontSize: 100 }} />;
+        return <Square sx={{ fontSize: iconSize }} />;
       case 'triangle':
-        return <ChangeHistory sx={{ fontSize: 100 }} />;
+        return <ChangeHistory sx={{ fontSize: iconSize }} />;
       case 'rectangle':
-        return <Rectangle sx={{ fontSize: 100 }} />;
+        return <Rectangle sx={{ fontSize: iconSize }} />;
       case 'star':
-        return <Star sx={{ fontSize: 100 }} />;
+        return <Star sx={{ fontSize: iconSize }} />;
       case 'heart':
-        return <Favorite sx={{ fontSize: 100 }} />;
+        return <Favorite sx={{ fontSize: iconSize }} />;
       case 'diamond':
-        return <Diamond sx={{ fontSize: 100 }} />;
+        return <Diamond sx={{ fontSize: iconSize }} />;
       case 'umbrella':
-        return <BeachAccess sx={{ fontSize: 100 }} />;
+        return <BeachAccess sx={{ fontSize: iconSize }} />;
       case 'wrench':
-        return <Build sx={{ fontSize: 100 }} />;
+        return <Build sx={{ fontSize: iconSize }} />;
       case 'cake':
-        return <Cake sx={{ fontSize: 100 }} />;
+        return <Cake sx={{ fontSize: iconSize }} />;
       case 'call':
-        return <Phone sx={{ fontSize: 100 }} />;
+        return <Phone sx={{ fontSize: iconSize }} />;
       case 'smile':
-        return <EmojiEmotions sx={{ fontSize: 100 }} />;
+        return <EmojiEmotions sx={{ fontSize: iconSize }} />;
       case 'sun':
-        return <WbSunny sx={{ fontSize: 100 }} />;
+        return <WbSunny sx={{ fontSize: iconSize }} />;
       case 'moon':
-        return <DarkMode sx={{ fontSize: 100 }} />;
+        return <DarkMode sx={{ fontSize: iconSize }} />;
       case 'cloud':
-        return <Cloud sx={{ fontSize: 100 }} />;
+        return <Cloud sx={{ fontSize: iconSize }} />;
       case 'plus':
-        return <Add sx={{ fontSize: 100 }} />;
+        return <Add sx={{ fontSize: iconSize }} />;
       case 'minus':
-        return <Remove sx={{ fontSize: 100 }} />;
+        return <Remove sx={{ fontSize: iconSize }} />;
       case 'up':
-        return <ArrowUpward sx={{ fontSize: 100 }} />;
+        return <ArrowUpward sx={{ fontSize: iconSize }} />;
       case 'down':
-        return <ArrowDownward sx={{ fontSize: 100 }} />;
+        return <ArrowDownward sx={{ fontSize: iconSize }} />;
       case 'left':
-        return <ArrowBack sx={{ fontSize: 100 }} />;
+        return <ArrowBack sx={{ fontSize: iconSize }} />;
       case 'right':
-        return <ArrowForward sx={{ fontSize: 100 }} />;
+        return <ArrowForward sx={{ fontSize: iconSize }} />;
       default:
         return null;
     }
@@ -223,9 +222,23 @@ export default function ChoiceCard({
   // Get the content to display based on game type
   const getContent = () => {
     if (gameType === 'shapes' && typeof children === 'string') {
-      return getShapeIcon(children);
+      const shapeIcon = getShapeIcon(children);
+      return shapeIcon ? (
+        <span aria-label={`${children} shape`}>
+          {shapeIcon}
+        </span>
+      ) : (
+        <Typography variant="h3" component="span" aria-label={`${children} shape`}>
+          {children}
+        </Typography>
+      );
     } else if (gameType === 'colors') {
-      return null; // Hide text for colors game
+      // For colors game, provide screen reader text while hiding visual text
+      return (
+        <span aria-label={`${children} color`} role="img">
+          <span aria-hidden="true" style={{ opacity: 0 }}>{children}</span>
+        </span>
+      );
     }
     return children;
   };

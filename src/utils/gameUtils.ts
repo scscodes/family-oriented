@@ -13,6 +13,8 @@ export type GameType =
   | 'rhyming';
 
 import type { GameSettings } from './settingsUtils';
+import { generateUniqueOptions } from './arrayUtils';
+import { GAME_TIMINGS, GAME_DEFAULTS } from './constants';
 
 /**
  * Basic structure for all game questions
@@ -65,16 +67,15 @@ export function generateNumberQuestions(count: number = 5, minNumber: number = 1
   for (let i = 0; i < count; i++) {
     let num: number;
     let attempts = 0;
-    const maxAttempts = 100; // Prevent infinite loop
     
     // Try to find a unique number
     do {
       num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
       attempts++;
-    } while (usedNumbers.has(num.toString()) && attempts < maxAttempts);
+    } while (usedNumbers.has(num.toString()) && attempts < GAME_TIMINGS.MAX_UNIQUE_ATTEMPTS);
     
     // If we couldn't find a unique number, use any number
-    if (attempts >= maxAttempts) {
+    if (attempts >= GAME_TIMINGS.MAX_UNIQUE_ATTEMPTS) {
       num = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
     }
     
@@ -114,25 +115,25 @@ export const questionGenerators: Record<
     }
     
     return generateNumberQuestions(
-      s.questionCount || 10,
+      s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION,
       s.numberRange.min,
       s.numberRange.max,
-      s.optionsCount || 4
+      s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT
     );
   },
   letters: (s) =>
-    generateLetterQuestions(s.questionCount || 10, s.optionsCount || 4),
+    generateLetterQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
   shapes: (s) =>
-    generateShapeQuestions(s.questionCount || 10, s.optionsCount || 4),
+    generateShapeQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
   colors: (s) =>
-    generateColorQuestions(s.questionCount || 10, s.optionsCount || 4),
+    generateColorQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
   patterns: (s) =>
-    generatePatternQuestions(s.questionCount || 10, s.optionsCount || 4),
-  math: (s) => generateMathQuestions(s.questionCount || 10, s.optionsCount || 4),
+    generatePatternQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
+  math: (s) => generateMathQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
   'fill-in-the-blank': (s) =>
-    generateFillInTheBlankQuestions(s.questionCount || 10, s.optionsCount || 4),
+    generateFillInTheBlankQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
   geography: () => [], // Placeholder until geography generators are added
-  rhyming: (s) => generateRhymingQuestions(s.questionCount || 10),
+  rhyming: (s) => generateRhymingQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION),
 };
 
 /**
@@ -147,7 +148,6 @@ export function generateLetterQuestions(count: number = 5, optionsCount: number 
   for (let i = 0; i < count; i++) {
     let letter: string;
     let attempts = 0;
-    const maxAttempts = 100; // Prevent infinite loop
     
     // Try to find a unique letter
     do {
@@ -155,10 +155,10 @@ export function generateLetterQuestions(count: number = 5, optionsCount: number 
       const isUppercase = Math.random() > 0.5;
       letter = isUppercase ? randomLetter : randomLetter.toLowerCase();
       attempts++;
-    } while (usedLetters.has(letter) && attempts < maxAttempts);
+    } while (usedLetters.has(letter) && attempts < GAME_TIMINGS.MAX_UNIQUE_ATTEMPTS);
     
     // If we couldn't find a unique letter, use any letter
-    if (attempts >= maxAttempts) {
+    if (attempts >= GAME_TIMINGS.MAX_UNIQUE_ATTEMPTS) {
       const randomLetter = alphabet[Math.floor(Math.random() * alphabet.length)];
       const isUppercase = Math.random() > 0.5;
       letter = isUppercase ? randomLetter : randomLetter.toLowerCase();
@@ -299,42 +299,102 @@ export function generateColorQuestions(count: number = 5, optionsCount: number =
 }
 
 /**
- * Generates pattern-based questions with options
+ * Algorithmic pattern generators for different types of patterns
+ */
+const PATTERN_GENERATORS = {
+  arithmetic: (start: number, step: number, length: number) => {
+    const sequence = [];
+    for (let i = 0; i < length; i++) {
+      sequence.push((start + i * step).toString());
+    }
+    return sequence;
+  },
+  
+  alphabetic: (startChar: string, step: number, length: number) => {
+    const sequence = [];
+    const isUppercase = startChar === startChar.toUpperCase();
+    const startCode = startChar.toUpperCase().charCodeAt(0);
+    
+    for (let i = 0; i < length; i++) {
+      const charCode = startCode + i * step;
+      if (charCode <= 90) { // Z
+        const char = String.fromCharCode(charCode);
+        sequence.push(isUppercase ? char : char.toLowerCase());
+      }
+    }
+    return sequence;
+  },
+  
+  geometric: (start: number, ratio: number, length: number) => {
+    const sequence = [];
+    for (let i = 0; i < length; i++) {
+      sequence.push((start * Math.pow(ratio, i)).toString());
+    }
+    return sequence;
+  }
+};
+
+/**
+ * Generates pattern-based questions with algorithmic generation
  */
 export function generatePatternQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
   const questions: GameQuestion[] = [];
   
-  // Simple pattern completion
-  const patterns = [
-    { sequence: '1, 2, 3, ?', answer: '4', options: ['4', '5', '6'] },
-    { sequence: 'A, B, C, ?', answer: 'D', options: ['D', 'E', 'F'] },
-    { sequence: '2, 4, 6, ?', answer: '8', options: ['8', '10', '12'] },
-    { sequence: 'Square, Triangle, Circle, ?', answer: 'Star', options: ['Star', 'Heart', 'Diamond'] },
-    { sequence: 'Red, Blue, Green, ?', answer: 'Yellow', options: ['Yellow', 'Purple', 'Orange'] },
-    { sequence: '1, 3, 5, ?', answer: '7', options: ['7', '9', '11'] },
-    { sequence: 'Circle, Circle, Square, ?', answer: 'Square', options: ['Square', 'Triangle', 'Circle'] },
-    { sequence: 'Cat, Dog, Fish, ?', answer: 'Bird', options: ['Bird', 'Elephant', 'Monkey'] },
-    { sequence: '10, 20, 30, ?', answer: '40', options: ['40', '50', '60'] },
-    { sequence: 'a, b, c, ?', answer: 'd', options: ['d', 'e', 'f'] }
-  ];
-  
-  // Select random patterns from the list
-  const selectedPatterns = [...patterns]
-    .sort(() => 0.5 - Math.random())
-    .slice(0, count);
-  
-  for (const pattern of selectedPatterns) {
-    // Take only the required number of options
-    const limitedOptions = [
-      pattern.answer,
-      ...pattern.options.filter(opt => opt !== pattern.answer)
-    ].slice(0, optionsCount);
+  for (let i = 0; i < count; i++) {
+    const patternType = Math.random();
+    let sequence: string[];
+    let answer: string;
+    
+    if (patternType < 0.4) {
+      // Arithmetic sequences (40% chance)
+      const start = Math.floor(Math.random() * 10) + 1;
+      const step = Math.floor(Math.random() * 5) + 1;
+      sequence = PATTERN_GENERATORS.arithmetic(start, step, 4);
+      answer = PATTERN_GENERATORS.arithmetic(start, step, 5)[4];
+    } else if (patternType < 0.7) {
+      // Alphabetic sequences (30% chance)
+      const startChar = String.fromCharCode(65 + Math.floor(Math.random() * 20)); // A-T
+      const isUppercase = Math.random() > 0.5;
+      const step = Math.floor(Math.random() * 3) + 1;
+      sequence = PATTERN_GENERATORS.alphabetic(isUppercase ? startChar : startChar.toLowerCase(), step, 4);
+      const fullSequence = PATTERN_GENERATORS.alphabetic(isUppercase ? startChar : startChar.toLowerCase(), step, 5);
+      answer = fullSequence[4] || sequence[3]; // Fallback if sequence too long
+    } else {
+      // Simple geometric or custom patterns (30% chance)
+      const start = Math.floor(Math.random() * 5) + 1;
+      const ratio = 2; // Keep it simple for kids
+      sequence = PATTERN_GENERATORS.geometric(start, ratio, 4);
+      answer = PATTERN_GENERATORS.geometric(start, ratio, 5)[4];
+    }
+    
+    // Generate wrong options
+    const wrongOptions: string[] = [];
+    const answerNum = parseInt(answer);
+    
+    if (!isNaN(answerNum)) {
+      // Numeric answer - generate nearby numbers
+      for (let j = 0; j < optionsCount - 1; j++) {
+        const offset = (j + 1) * (Math.random() > 0.5 ? 1 : -1);
+        wrongOptions.push((answerNum + offset).toString());
+      }
+    } else {
+      // Non-numeric answer - generate random letters/characters
+      for (let j = 0; j < optionsCount - 1; j++) {
+        const randomChar = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+        const isAnswerUppercase = answer === answer.toUpperCase();
+        wrongOptions.push(isAnswerUppercase ? randomChar : randomChar.toLowerCase());
+      }
+    }
+    
+    const options = generateUniqueOptions(answer, optionsCount - 1, () => {
+      return wrongOptions[Math.floor(Math.random() * wrongOptions.length)] || answer;
+    });
     
     questions.push({
       prompt: `What comes next?`,
-      focus: pattern.sequence,
-      options: limitedOptions.sort(() => 0.5 - Math.random()),
-      correctAnswer: pattern.answer,
+      focus: `${sequence.join(', ')}, ?`,
+      options,
+      correctAnswer: answer,
       type: 'patterns'
     });
   }
@@ -343,43 +403,138 @@ export function generatePatternQuestions(count: number = 5, optionsCount: number
 }
 
 /**
- * Generates math-based questions with options
+ * Generates math questions (addition and subtraction)
  */
-export function generateMathQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
+export function generateMathQuestions(count: number = 5, optionsCount: number = 4): GameQuestion[] {
   const questions: GameQuestion[] = [];
   
   for (let i = 0; i < count; i++) {
-    // Randomly choose between addition and subtraction
     const isAddition = Math.random() > 0.5;
+    const minNum = 1;
+    const maxNum = 10;
     
-    // Generate numbers between 1 and 5
-    const num1 = Math.floor(Math.random() * 5) + 1;
-    const num2 = Math.floor(Math.random() * 5) + 1;
+    let firstNumber: number;
+    let secondNumber: number;
+    let answer: number;
+    let operation: string;
     
-    // Ensure subtraction results are positive
-    const [a, b] = isAddition ? [num1, num2] : [Math.max(num1, num2), Math.min(num1, num2)];
-    const result = isAddition ? a + b : a - b;
+    if (isAddition) {
+      firstNumber = Math.floor(Math.random() * maxNum) + minNum;
+      secondNumber = Math.floor(Math.random() * maxNum) + minNum;
+      answer = firstNumber + secondNumber;
+      operation = '+';
+    } else {
+      // For subtraction, ensure firstNumber >= secondNumber to avoid negative results
+      firstNumber = Math.floor(Math.random() * maxNum) + minNum;
+      secondNumber = Math.floor(Math.random() * Math.min(firstNumber, maxNum)) + minNum;
+      answer = firstNumber - secondNumber;
+      operation = '-';
+    }
     
-    const question = `${a} ${isAddition ? '+' : '-'} ${b} = ?`;
+    const correctAnswer = answer.toString();
     const options = generateUniqueOptions(
-      result.toString(),
+      correctAnswer,
       optionsCount - 1,
       () => {
-        // Generate random options that are different from the correct answer
-        let option;
-        do {
-          option = Math.floor(Math.random() * 10).toString();
-        } while (option === result.toString());
-        return option;
+        // Generate reasonable wrong answers
+        const wrongAnswer = Math.floor(Math.random() * (maxNum * 2)) + 0;
+        return wrongAnswer.toString();
       }
     );
     
     questions.push({
-      prompt: `What is the answer?`,
-      focus: question,
+      prompt: `Solve the ${isAddition ? 'addition' : 'subtraction'} problem.`,
+      focus: `${firstNumber} ${operation} ${secondNumber} = ?`,
       options,
-      correctAnswer: result.toString(),
-      type: 'math'
+      correctAnswer,
+      type: 'math',
+      meta: {
+        firstNumber,
+        secondNumber,
+        operation: isAddition ? 'addition' : 'subtraction',
+        showVisualAid: true
+      }
+    });
+  }
+  
+  return questions;
+}
+
+/**
+ * Generates addition-specific questions
+ */
+export function generateAdditionQuestions(count: number = 5, mathRange: { min: number; max: number } = { min: 1, max: 10 }, optionsCount: number = 4, showVisualAids: boolean = true): GameQuestion[] {
+  const questions: GameQuestion[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    const firstNumber = Math.floor(Math.random() * (mathRange.max - mathRange.min + 1)) + mathRange.min;
+    const secondNumber = Math.floor(Math.random() * (mathRange.max - mathRange.min + 1)) + mathRange.min;
+    const sum = firstNumber + secondNumber;
+    
+    const correctAnswer = sum.toString();
+    const options = generateUniqueOptions(
+      correctAnswer,
+      optionsCount - 1,
+      () => {
+        const wrongAnswer = Math.floor(Math.random() * (mathRange.max * 2)) + mathRange.min;
+        return wrongAnswer.toString();
+      }
+    );
+    
+    questions.push({
+      id: `addition-${i}`,
+      prompt: "Ask the child to solve the addition problem.",
+      focus: `${firstNumber} + ${secondNumber} = ?`,
+      options,
+      correctAnswer,
+      type: 'math',
+      meta: {
+        firstNumber,
+        secondNumber,
+        operation: 'addition',
+        showVisualAid: showVisualAids
+      }
+    });
+  }
+  
+  return questions;
+}
+
+/**
+ * Generates subtraction-specific questions
+ */
+export function generateSubtractionQuestions(count: number = 5, mathRange: { min: number; max: number } = { min: 1, max: 10 }, optionsCount: number = 4, showVisualAids: boolean = true): GameQuestion[] {
+  const questions: GameQuestion[] = [];
+  
+  for (let i = 0; i < count; i++) {
+    // Generate random numbers ensuring firstNumber >= secondNumber to avoid negative results
+    const firstNumber = Math.floor(Math.random() * (mathRange.max - mathRange.min + 1)) + mathRange.min;
+    const secondNumber = Math.floor(Math.random() * Math.min(firstNumber, mathRange.max)) + mathRange.min;
+    const difference = firstNumber - secondNumber;
+    
+    const correctAnswer = difference.toString();
+    const options = generateUniqueOptions(
+      correctAnswer,
+      optionsCount - 1,
+      () => {
+        const wrongAnswer = Math.floor(Math.random() * (mathRange.max * 2)) + 0;
+        return wrongAnswer.toString();
+      }
+    );
+    
+    questions.push({
+      id: `subtraction-${i}`,
+      prompt: "Ask the child to solve the subtraction problem.",
+      focus: `${firstNumber} - ${secondNumber} = ?`,
+      options,
+      correctAnswer,
+      type: 'math',
+      meta: {
+        firstNumber,
+        secondNumber,
+        operation: 'subtraction',
+        showVisualAid: showVisualAids
+      }
     });
   }
   
@@ -405,23 +560,6 @@ export function generateMixedQuestions(count: number = 10, minNumber: number = 1
   return allQuestions
     .sort(() => 0.5 - Math.random())
     .slice(0, count);
-}
-
-/**
- * Generates unique options for a question including the correct answer
- */
-function generateUniqueOptions(correctAnswer: string, numOptions: number, optionGenerator: () => string): string[] {
-  const options = [correctAnswer];
-  
-  while (options.length < numOptions + 1) {
-    const option = optionGenerator();
-    if (!options.includes(option)) {
-      options.push(option);
-    }
-  }
-  
-  // Shuffle the options
-  return options.sort(() => 0.5 - Math.random());
 }
 
 /**

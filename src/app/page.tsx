@@ -3,24 +3,147 @@
 import { useState } from "react";
 import Link from "next/link";
 import { 
-  Card, 
-  CardContent, 
-  CardActionArea, 
   Typography, 
   Container, 
   Box,
-  Collapse,
-  IconButton
+  IconButton,
+  Chip
 } from '@mui/material';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import SettingsIcon from '@mui/icons-material/Settings';
+import SearchBar from "@/components/SearchBar";
+import AccordionCategory from "@/components/AccordionCategory";
+
+// Academic subject definitions with colors
+const SUBJECTS = {
+  'Language Arts': { color: '#ff6d00', icon: '📚' },
+  'Mathematics': { color: '#4361ee', icon: '🔢' },
+  'Social Studies': { color: '#64f7e7', icon: '🌍' },
+  'Visual Arts': { color: '#ff5a5f', icon: '🎨' }
+};
+
+// New: Centralized data for categories and subgames with subject categorization
+const GAME_CATEGORIES = [
+  {
+    key: "numbers",
+    title: "Numbers",
+    description: "Learn to count and recognize numbers",
+    emoji: "🔢",
+    color: "#4361ee",
+    subject: "Mathematics",
+    subgames: [
+      { title: "Numbers", description: "Learn to recognize numbers and count objects", href: "/games/numbers", emoji: "🔢", color: "#4361ee" }
+    ]
+  },
+  {
+    key: "letters",
+    title: "Letters",
+    description: "Learn the alphabet and letter sounds",
+    emoji: "🔤",
+    color: "#ff6d00",
+    subject: "Language Arts",
+    subgames: [
+      { title: "Letters", description: "Learn the alphabet and letter sounds", href: "/games/letters", emoji: "🔤", color: "#ff6d00" }
+    ]
+  },
+  {
+    key: "shapes",
+    title: "Shapes",
+    description: "Identify different shapes",
+    emoji: "⭐",
+    color: "#2ec4b6",
+    subject: "Visual Arts",
+    subgames: [
+      { title: "Shapes", description: "Identify different shapes", href: "/games/shapes", emoji: "⭐", color: "#2ec4b6" },
+      { title: "Shape Sorter", description: "Drag shapes into the correct holes", href: "/games/shapes/sorter", emoji: "🔷", color: "#2ec4b6" }
+    ]
+  },
+  {
+    key: "colors",
+    title: "Colors",
+    description: "Recognize and match colors",
+    emoji: "🌈",
+    color: "#ff5a5f",
+    subject: "Visual Arts",
+    subgames: [
+      { title: "Colors", description: "Recognize and match colors", href: "/games/colors", emoji: "🌈", color: "#ff5a5f" }
+    ]
+  },
+  {
+    key: "patterns",
+    title: "Patterns",
+    description: "Find the patterns and sequences",
+    emoji: "📊",
+    color: "#ffbe0b",
+    subject: "Visual Arts",
+    subgames: [
+      { title: "Patterns", description: "Find the patterns and sequences", href: "/games/patterns", emoji: "📊", color: "#ffbe0b" }
+    ]
+  },
+  {
+    key: "math",
+    title: "Math",
+    description: "Practice simple math operations",
+    emoji: "➕",
+    color: "#9381ff",
+    subject: "Mathematics",
+    subgames: [
+      { title: "Addition", description: "Practice simple addition problems", href: "/games/math/addition", emoji: "➕", color: "#2ec4b6" },
+      { title: "Subtraction", description: "Practice simple subtraction problems", href: "/games/math/subtraction", emoji: "➖", color: "#ffbe0b" }
+    ]
+  },
+  {
+    key: "fill-in-the-blank",
+    title: "Fill in the Blank",
+    description: "Complete the missing letters in words",
+    emoji: "✏️",
+    color: "#ff9e40",
+    subject: "Language Arts",
+    subgames: [
+      { title: "Fill in the Blank", description: "Complete the missing letters in words", href: "/games/fill-in-the-blank", emoji: "✏️", color: "#ff9e40" }
+    ]
+  },
+  {
+    key: "geography",
+    title: "Geography",
+    description: "Learn about continents and US states",
+    emoji: "🌍",
+    color: "#64f7e7",
+    subject: "Social Studies",
+    subgames: [
+      { title: "Geography", description: "Learn about continents and US states", href: "/games/geography", emoji: "🌍", color: "#64f7e7" }
+    ]
+  },
+  {
+    key: "rhyming",
+    title: "Rhyming Words",
+    description: "Pick the word that rhymes!",
+    emoji: "🧩",
+    color: "#64f7e7",
+    subject: "Language Arts",
+    subgames: [
+      { title: "Rhyming Words", description: "Pick the word that rhymes!", href: "/games/rhyming", emoji: "🧩", color: "#64f7e7" }
+    ]
+  }
+];
 
 export default function Home() {
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
-  const toggleExpand = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
+  // Filter logic: filter categories and subgames by search term and subject
+  const searchTerm = search.trim().toLowerCase();
+  const filteredCategories = GAME_CATEGORIES
+    .filter(category => !selectedSubject || category.subject === selectedSubject)
+    .map(category => {
+      // Filter subgames by search
+      const filteredSubgames = category.subgames.filter(subgame =>
+        subgame.title.toLowerCase().includes(searchTerm) ||
+        subgame.description.toLowerCase().includes(searchTerm)
+      );
+      return { ...category, subgames: filteredSubgames };
+    })
+    .filter(category => category.subgames.length > 0);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -79,392 +202,52 @@ export default function Home() {
           </Link>
         </Box>
       </Box>
-
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: {
-          xs: '1fr',
-          sm: 'repeat(2, 1fr)',
-          md: 'repeat(3, 1fr)'
-        },
-        gap: 3
-      }}>
-        <Box>
-          <ExpandableGameCard 
-            title="Numbers" 
-            description="Learn to count and recognize numbers"
-            emoji="🔢"
-            color="#4361ee"
-            isExpanded={expandedSection === 'numbers'}
-            onClick={() => toggleExpand('numbers')}
-            subgames={[
-              {
-                title: "Number Recognition",
-                description: "Learn to recognize numbers and count objects",
-                href: "/games/numbers",
-                emoji: "🔢",
-                color: "#4361ee"
-              },
-              {
-                title: "Number Words",
-                description: "Match numbers with their word form",
-                href: "/games/numbers/words",
-                emoji: "📝",
-                color: "#738dff"
-              },
-              {
-                title: "Count by 2s",
-                description: "Practice counting by twos",
-                href: "/games/numbers/count-by/2",
-                emoji: "2️⃣",
-                color: "#0036bb"
-              },
-              {
-                title: "Count by 5s",
-                description: "Practice counting by fives",
-                href: "/games/numbers/count-by/5",
-                emoji: "5️⃣",
-                color: "#5653c8"
-              },
-              {
-                title: "Count by 10s",
-                description: "Practice counting by tens",
-                href: "/games/numbers/count-by/10",
-                emoji: "🔟",
-                color: "#6254cc"
-              }
-            ]}
+      <SearchBar value={search} onChange={setSearch} />
+      
+      {/* Subject filter chips */}
+      <Box mt={2} mb={2}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'text.secondary' }}>
+          Filter by Subject:
+        </Typography>
+        <Box display="flex" flexWrap="wrap" gap={1}>
+          <Chip
+            label="All Subjects"
+            onClick={() => setSelectedSubject(null)}
+            variant={selectedSubject === null ? "filled" : "outlined"}
+            sx={{ 
+              backgroundColor: selectedSubject === null ? '#e3f2fd' : 'transparent',
+              '&:hover': { backgroundColor: selectedSubject === null ? '#bbdefb' : '#f5f5f5' }
+            }}
           />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Letters" 
-            description="Learn the alphabet and letter sounds"
-            href="/games/letters"
-            emoji="🔤"
-            color="#ff6d00"
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Shapes" 
-            description="Identify different shapes"
-            href="/games/shapes"
-            emoji="⭐"
-            color="#2ec4b6"
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Colors" 
-            description="Recognize and match colors"
-            href="/games/colors"
-            emoji="🌈"
-            color="#ff5a5f"
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Patterns" 
-            description="Find the patterns and sequences"
-            href="/games/patterns"
-            emoji="📊"
-            color="#ffbe0b"
-          />
-        </Box>
-        
-        <Box>
-          <ExpandableGameCard
-            title="Math" 
-            description="Practice simple math operations"
-            emoji="➕"
-            color="#9381ff"
-            isExpanded={expandedSection === 'math'}
-            onClick={() => toggleExpand('math')}
-            subgames={[
-              {
-                title: "Addition",
-                description: "Practice simple addition problems",
-                href: "/games/math/addition",
-                emoji: "➕",
-                color: "#2ec4b6"
-              },
-              {
-                title: "Subtraction",
-                description: "Practice simple subtraction problems",
-                href: "/games/math/subtraction",
-                emoji: "➖",
-                color: "#64f7e7"
-              }
-            ]}
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Fill in the Blank" 
-            description="Complete the missing letters in words"
-            href="/games/fill-in-the-blank"
-            emoji="✏️"
-            color="#ff9e40"
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Geography" 
-            description="Learn about continents and US states"
-            href="/games/geography"
-            emoji="🌍"
-            color="#64f7e7"
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Rhyming Words" 
-            description="Pick the word that rhymes!" 
-            href="/games/rhyming" 
-            emoji="🧩" 
-            color="#64f7e7" 
-          />
-        </Box>
-        
-        <Box>
-          <GameCard 
-            title="Shape Sorter" 
-            description="Drag shapes into the correct holes" 
-            href="/games/shapes/sorter" 
-            emoji="🔷" 
-            color="#2ec4b6" 
-          />
+          {Object.entries(SUBJECTS).map(([subject, config]) => (
+            <Chip
+              key={subject}
+              label={`${config.icon} ${subject}`}
+              onClick={() => setSelectedSubject(selectedSubject === subject ? null : subject)}
+              variant={selectedSubject === subject ? "filled" : "outlined"}
+              sx={{ 
+                backgroundColor: selectedSubject === subject ? config.color : 'transparent',
+                color: selectedSubject === subject ? '#fff' : config.color,
+                borderColor: config.color,
+                '&:hover': { 
+                  backgroundColor: selectedSubject === subject ? config.color : `${config.color}20`
+                }
+              }}
+            />
+          ))}
         </Box>
       </Box>
+
+      <Box mt={4}>
+        {filteredCategories.map(category => (
+          <AccordionCategory
+            key={category.key}
+            category={category}
+            expanded={expanded === category.key}
+            onChange={() => setExpanded(expanded === category.key ? null : category.key)}
+          />
+        ))}
+      </Box>
     </Container>
-  );
-}
-
-interface GameCardProps {
-  title: string;
-  description: string;
-  href: string;
-  emoji: string;
-  color: string;
-}
-
-function GameCard({ title, description, href, emoji, color }: GameCardProps) {
-  return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
-      <Card sx={{ 
-        height: '100%',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'transform 0.3s, box-shadow 0.3s',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '6px',
-          background: color,
-        },
-        '&:hover': {
-          transform: 'translateY(-6px)',
-        }
-      }}>
-        <CardActionArea sx={{ height: '100%', pt: 1 }}>
-          <CardContent>
-            <Box display="flex" alignItems="center" mb={2}>
-              <Typography variant="h3" component="span" mr={2} sx={{ 
-                fontSize: '2.5rem',
-                filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-              }}>
-                {emoji}
-              </Typography>
-              <Typography variant="h5" component="h2" sx={{ 
-                fontWeight: 600,
-                color: color
-              }}>
-                {title}
-              </Typography>
-            </Box>
-            <Typography color="text.secondary" sx={{ opacity: 0.9 }}>
-              {description}
-            </Typography>
-          </CardContent>
-        </CardActionArea>
-      </Card>
-    </Link>
-  );
-}
-
-interface SubGameCardProps {
-  title: string;
-  description: string;
-  href: string;
-  emoji: string;
-  color: string;
-}
-
-interface ExpandableGameCardProps {
-  title: string;
-  description: string;
-  emoji: string;
-  color: string;
-  isExpanded: boolean;
-  onClick: () => void;
-  subgames: SubGameCardProps[];
-}
-
-function ExpandableGameCard({ 
-  title, 
-  description, 
-  emoji, 
-  color, 
-  isExpanded,
-  onClick,
-  subgames 
-}: ExpandableGameCardProps) {
-  return (
-    <Box sx={{ marginBottom: isExpanded ? 3 : 0 }}>
-      <Card sx={{ 
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'transform 0.3s, box-shadow 0.3s',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '6px',
-          background: color,
-        },
-        '&:hover': {
-          transform: isExpanded ? 'none' : 'translateY(-6px)',
-        }
-      }}>
-        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-          <CardActionArea 
-            sx={{ pt: 1, flexGrow: 1 }}
-            onClick={onClick}
-          >
-            <CardContent>
-              <Box display="flex" alignItems="center" justifyContent="space-between">
-                <Box display="flex" alignItems="center">
-                  <Typography variant="h3" component="span" mr={2} sx={{ 
-                    fontSize: '2.5rem',
-                    filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
-                  }}>
-                    {emoji}
-                  </Typography>
-                  <Typography variant="h5" component="h2" sx={{ 
-                    fontWeight: 600,
-                    color
-                  }}>
-                    {title}
-                  </Typography>
-                </Box>
-                <Box sx={{ width: 48, height: 48 }} /> {/* Placeholder for the IconButton space */}
-              </Box>
-              <Typography color="text.secondary" sx={{ opacity: 0.9, mt: 1 }}>
-                {description}
-              </Typography>
-            </CardContent>
-          </CardActionArea>
-          
-          {/* Move IconButton outside of CardActionArea */}
-          <Box sx={{ position: 'absolute', top: 16, right: 16, zIndex: 1 }}>
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onClick();
-              }}
-              aria-label={isExpanded ? "collapse" : "expand"}
-              sx={{ 
-                color,
-                transition: 'transform 0.3s',
-                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
-              }}
-              size="medium"
-            >
-              <KeyboardArrowDownIcon />
-            </IconButton>
-          </Box>
-        </Box>
-      </Card>
-      
-      <Collapse in={isExpanded} timeout="auto" unmountOnExit>
-        <Box 
-          sx={{ 
-            mt: 2, 
-            ml: 3, 
-            borderLeft: `3px solid ${color}`,
-            pl: 2
-          }}
-        >
-          <Box sx={{ 
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-            gap: 2
-          }}>
-            {subgames.map((subgame, index) => (
-              <Box key={index}>
-                <Link href={subgame.href} style={{ textDecoration: 'none' }}>
-                  <Card sx={{ 
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'transform 0.3s, box-shadow 0.3s',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      height: '4px',
-                      background: subgame.color,
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                    }
-                  }}>
-                    <CardActionArea sx={{ py: 1 }}>
-                      <CardContent sx={{ py: 1.5 }}>
-                        <Box display="flex" alignItems="center" mb={1}>
-                          <Typography variant="h5" component="span" mr={1.5} sx={{ 
-                            fontSize: '1.8rem',
-                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))'
-                          }}>
-                            {subgame.emoji}
-                          </Typography>
-                          <Typography variant="h6" component="h3" sx={{ 
-                            fontWeight: 600,
-                            color: subgame.color
-                          }}>
-                            {subgame.title}
-                          </Typography>
-                        </Box>
-                        <Typography 
-                          color="text.secondary" 
-                          variant="body2" 
-                          sx={{ opacity: 0.9 }}
-                        >
-                          {subgame.description}
-                        </Typography>
-                      </CardContent>
-                    </CardActionArea>
-                  </Card>
-                </Link>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      </Collapse>
-    </Box>
   );
 }
