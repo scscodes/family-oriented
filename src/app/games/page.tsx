@@ -15,7 +15,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import SearchBar from "@/components/SearchBar";
 import AccordionCategory from "@/components/AccordionCategory";
-import { GAME_CATEGORIES } from "@/utils/gameData";
+import { SUBJECTS, gameDiscovery, Game } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
 
@@ -29,35 +29,34 @@ function BrowseGamesContent() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
 
-  // Generate subjects with theme colors
-  const subjects = {
-    'Language Arts': { color: themeConfig.primary, icon: '📚' },
-    'Mathematics': { color: themeConfig.secondary, icon: '🔢' },
-    'Social Studies': { color: themeConfig.accent, icon: '🌍' },
-    'Visual Arts': { color: `color-mix(in srgb, ${themeConfig.primary} 70%, ${themeConfig.secondary} 30%)`, icon: '🎨' }
-  };
-
   // Set initial subject from URL parameter
   useEffect(() => {
     const subjectParam = searchParams.get('subject');
-    if (subjectParam) {
+    if (subjectParam && subjectParam in SUBJECTS) {
       setSelectedSubject(subjectParam);
+      setExpanded(subjectParam); // Auto-expand the selected subject
     }
   }, [searchParams]);
 
-  // Filter logic: filter categories and subgames by search term and subject
-  const searchTerm = search.trim().toLowerCase();
-  const filteredCategories = GAME_CATEGORIES
-    .filter(category => !selectedSubject || category.subject === selectedSubject)
-    .map(category => {
-      // Filter subgames by search
-      const filteredSubgames = category.subgames.filter(subgame =>
-        subgame.title.toLowerCase().includes(searchTerm) ||
-        subgame.description.toLowerCase().includes(searchTerm)
-      );
-      return { ...category, subgames: filteredSubgames };
-    })
-    .filter(category => category.subgames.length > 0);
+  // Get filtered games using the new discovery engine
+  const searchResults = gameDiscovery.search(search, {
+    subjects: selectedSubject ? [selectedSubject] : undefined,
+    status: ['active']
+  });
+
+  // Group games by subject for display
+  const gamesBySubject = Object.keys(SUBJECTS).reduce((acc, subject) => {
+    const subjectGames = searchResults.filter(game => game.subject === subject);
+    if (subjectGames.length > 0) {
+      acc[subject as keyof typeof SUBJECTS] = subjectGames;
+    }
+    return acc;
+  }, {} as Record<keyof typeof SUBJECTS, Game[]>);
+
+  // Get tag facets for advanced filtering (could be used in future)
+  // const facets = gameDiscovery.getFacets({
+  //   subjects: selectedSubject ? [selectedSubject] : undefined
+  // });
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -78,7 +77,7 @@ function BrowseGamesContent() {
           
           <Typography variant="h3" component="h1" gutterBottom sx={{ 
             fontWeight: 700,
-            color: '#4361ee',
+            color: themeConfig.primary,
             mb: 2
           }}>
             Browse All Games
@@ -94,25 +93,33 @@ function BrowseGamesContent() {
             <IconButton 
               aria-label="settings"
               sx={{ 
-                color: 'rgba(0, 0, 0, 0.5)',
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(10px)',
+                color: 'rgba(0, 0, 0, 0.7)',
                 '&:hover': { 
-                  color: 'rgba(0, 0, 0, 0.7)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.05)'
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                  color: 'rgba(0, 0, 0, 0.9)'
                 }
               }}
             >
-              <SettingsIcon fontSize="large" />
+              <SettingsIcon />
             </IconButton>
           </Link>
         </Box>
       </Box>
 
-      <SearchBar value={search} onChange={setSearch} />
-      
-      {/* Subject filter chips */}
-      <Box mt={2} mb={4}>
-        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, color: 'text.secondary' }}>
-          Filter by Subject:
+      {/* Search Bar */}
+      <Box sx={{ mb: 3 }}>
+        <SearchBar 
+          value={search}
+          onChange={setSearch}
+        />
+      </Box>
+
+      {/* Subject Filter Chips */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+          Filter by Subject
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={1}>
           <Chip
@@ -120,38 +127,74 @@ function BrowseGamesContent() {
             onClick={() => setSelectedSubject(null)}
             variant={selectedSubject === null ? "filled" : "outlined"}
             sx={{ 
-              backgroundColor: selectedSubject === null ? '#e3f2fd' : 'transparent',
-              '&:hover': { backgroundColor: selectedSubject === null ? '#bbdefb' : '#f5f5f5' }
+              backgroundColor: selectedSubject === null ? themeConfig.primary : 'transparent',
+              color: selectedSubject === null ? '#fff' : themeConfig.primary,
+              borderColor: themeConfig.primary,
+              '&:hover': { 
+                backgroundColor: selectedSubject === null ? themeConfig.primary : `${themeConfig.primary}20`
+              }
             }}
           />
-          {Object.entries(subjects).map(([subject, config]) => (
-            <Chip
-              key={subject}
-              label={`${config.icon} ${subject}`}
-              onClick={() => setSelectedSubject(selectedSubject === subject ? null : subject)}
-              variant={selectedSubject === subject ? "filled" : "outlined"}
-              sx={{ 
-                backgroundColor: selectedSubject === subject ? config.color : 'transparent',
-                color: selectedSubject === subject ? '#fff' : config.color,
-                borderColor: config.color,
-                '&:hover': { 
-                  backgroundColor: selectedSubject === subject ? config.color : `${config.color}20`
-                }
-              }}
-            />
-          ))}
+          {Object.entries(SUBJECTS).map(([subject, config]) => {
+            const gameCount = gameDiscovery.getGamesBySubject(subject as keyof typeof SUBJECTS).length;
+            
+            return (
+              <Chip
+                key={subject}
+                label={`${config.icon} ${subject} (${gameCount})`}
+                onClick={() => setSelectedSubject(selectedSubject === subject ? null : subject)}
+                variant={selectedSubject === subject ? "filled" : "outlined"}
+                sx={{ 
+                  backgroundColor: selectedSubject === subject ? config.color : 'transparent',
+                  color: selectedSubject === subject ? '#fff' : config.color,
+                  borderColor: config.color,
+                  '&:hover': { 
+                    backgroundColor: selectedSubject === subject ? config.color : `${config.color}20`
+                  }
+                }}
+              />
+            );
+          })}
         </Box>
       </Box>
 
+      {/* Results Summary */}
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="body1" color="text.secondary">
+          {search || selectedSubject ? (
+            <>
+              Found {searchResults.length} game{searchResults.length !== 1 ? 's' : ''}
+              {search && ` matching "${search}"`}
+              {selectedSubject && ` in ${selectedSubject}`}
+            </>
+          ) : (
+            `Showing all ${searchResults.length} available games`
+          )}
+        </Typography>
+      </Box>
+
+      {/* Game Accordions by Subject */}
       <Box>
-        {filteredCategories.map(category => (
-          <AccordionCategory
-            key={category.key}
-            category={category}
-            expanded={expanded === category.key}
-            onChange={() => setExpanded(expanded === category.key ? null : category.key)}
-          />
-        ))}
+        {Object.entries(gamesBySubject).length === 0 ? (
+          <Box textAlign="center" py={8}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No games found
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Try adjusting your search terms or filters
+            </Typography>
+          </Box>
+        ) : (
+          Object.entries(gamesBySubject).map(([subject, games]) => (
+            <AccordionCategory
+              key={subject}
+              subject={subject as keyof typeof SUBJECTS}
+              games={games}
+              expanded={expanded === subject}
+              onChange={() => setExpanded(expanded === subject ? null : subject)}
+            />
+          ))
+        )}
       </Box>
     </Container>
   );
@@ -159,7 +202,11 @@ function BrowseGamesContent() {
 
 export default function BrowseGames() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Typography>Loading games...</Typography>
+      </Container>
+    }>
       <BrowseGamesContent />
     </Suspense>
   );

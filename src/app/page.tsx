@@ -16,7 +16,7 @@ import SchoolIcon from '@mui/icons-material/School';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { GAME_CATEGORIES } from "@/utils/gameData";
+import { SUBJECTS, gameDiscovery } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
 
@@ -44,28 +44,14 @@ export default function Home() {
     'Visual Arts': { color: headingColors.h5, icon: '🎨' }
   };
 
-  // Get featured games from different categories
-  const featuredGames = [ {
-    title: "Numbers",
-    description: "Learn to recognize numbers and count objects",
-    href: "/games/numbers",
-    emoji: "🔢",
+  // Get featured games using the discovery engine
+  const featuredGames = gameDiscovery.getFeaturedGames().slice(0, 3).map(game => ({
+    title: game.title,
+    description: game.description,
+    href: game.href,
+    emoji: game.emoji,
     color: headingColors.h5
-  },
-  {
-    title: "Letters",
-    description: "Learn the alphabet and letter sounds",
-    href: "/games/letters",
-    emoji: "🔤",
-    color: headingColors.h5
-  },
-  {
-    title: "Shapes",
-    description: "Identify different shapes",
-    href: "/games/shapes",
-    emoji: "⭐",
-    color: headingColors.h5
-  }];
+  }));
 
   return (
     <>
@@ -220,9 +206,7 @@ export default function Home() {
             mb: 4
           }}>
             {Object.entries(subjects).map(([subject, config]) => {
-              const gameCount = GAME_CATEGORIES
-                .filter(cat => cat.subject === subject)
-                .reduce((total, cat) => total + cat.subgames.length, 0);
+              const gameCount = gameDiscovery.getGamesBySubject(subject as keyof typeof SUBJECTS).length;
               
               return (
                 <Card

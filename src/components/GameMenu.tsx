@@ -22,20 +22,19 @@ import PatternsIcon from '@mui/icons-material/Timeline';
 import MathIcon from '@mui/icons-material/Calculate';
 import BlankIcon from '@mui/icons-material/Edit';
 import GeoIcon from '@mui/icons-material/Public';
+import RhymingIcon from '@mui/icons-material/MusicNote';
+
+import { GAMES, SUBJECTS } from '@/utils/gameData';
 
 /**
  * Dropdown menu component for quick navigation between games
  */
-interface GameSubItem {
-  title: string;
-  path: string;
-}
-
-interface GameCategory {
+interface GameMenuItem {
+  id: string;
   title: string;
   icon: ReactNode;
-  path?: string;
-  children?: GameSubItem[];
+  path: string;
+  subject: string;
 }
 
 export default function GameMenu() {
@@ -56,52 +55,43 @@ export default function GameMenu() {
     router.push(path);
   };
   
-  // Define our game categories and subcategories
-  const gameCategories: GameCategory[] = [
-    {
-      title: 'Numbers',
-      icon: <NumbersIcon />,
-      path: '/games/numbers'
-    },
-    {
-      title: 'Letters',
-      icon: <LettersIcon />,
-      path: '/games/letters'
-    },
-    {
-      title: 'Shapes',
-      icon: <ShapesIcon />,
-      path: '/games/shapes'
-    },
-    {
-      title: 'Colors',
-      icon: <ColorsIcon />,
-      path: '/games/colors'
-    },
-    {
-      title: 'Patterns',
-      icon: <PatternsIcon />,
-      path: '/games/patterns'
-    },
-    {
-      title: 'Math',
-      icon: <MathIcon />,
-      children: [
-        { title: 'Addition', path: '/games/math/addition' },
-        { title: 'Subtraction', path: '/games/math/subtraction' }
-      ]
-    },
-    {
-      title: 'Fill in the Blank',
-      icon: <BlankIcon />,
-      path: '/games/fill-in-the-blank'
-    },
-    {
-      title: 'Geography',
-      icon: <GeoIcon />,
-      path: '/games/geography'
+  // Get icon for each game
+  const getGameIcon = (gameId: string): ReactNode => {
+    const iconMap: Record<string, ReactNode> = {
+      'numbers': <NumbersIcon />,
+      'letters': <LettersIcon />,
+      'shapes': <ShapesIcon />,
+      'shape-sorter': <ShapesIcon />,
+      'colors': <ColorsIcon />,
+      'patterns': <PatternsIcon />,
+      'addition': <MathIcon />,
+      'subtraction': <MathIcon />,
+      'fill-in-the-blank': <BlankIcon />,
+      'geography': <GeoIcon />,
+      'rhyming': <RhymingIcon />
+    };
+    return iconMap[gameId] || <NumbersIcon />;
+  };
+  
+  // Convert games to menu items grouped by subject
+  const gameMenuItems: GameMenuItem[] = GAMES
+    .filter(game => game.status === 'active')
+    .map(game => ({
+      id: game.id,
+      title: game.title,
+      icon: getGameIcon(game.id),
+      path: game.href,
+      subject: game.subject
+    }));
+  
+  // Group games by subject for organized display
+  const gamesBySubject = gameMenuItems.reduce((acc, game) => {
+    if (!acc[game.subject]) {
+      acc[game.subject] = [];
     }
-  ];
+    acc[game.subject].push(game);
+    return acc;
+  }, {} as Record<string, GameMenuItem[]>);
   
   return (
     <>
@@ -137,8 +127,9 @@ export default function GameMenu() {
           elevation: 3,
           sx: {
             borderRadius: 2,
-            maxWidth: 280,
-            mt: 0.5
+            maxWidth: 320,
+            mt: 0.5,
+            maxHeight: '80vh'
           }
         }}
       >
@@ -155,41 +146,53 @@ export default function GameMenu() {
         </Typography>
         <Divider />
         
-        {gameCategories.map((category, index) => (
-          category.children ? (
-            <div key={category.title}>
-              <MenuItem 
-                disabled
-                sx={{ 
-                  opacity: 1, 
-                  '& .MuiListItemText-primary': { fontWeight: 600 } 
-                }}
-              >
-                <ListItemIcon>{category.icon}</ListItemIcon>
-                <ListItemText primary={category.title} />
-              </MenuItem>
-              
-              {category.children.map(subItem => (
-                <MenuItem 
-                  key={subItem.title} 
-                  onClick={() => navigateTo(subItem.path)}
-                  sx={{ pl: 6 }}
-                >
-                  <ListItemText primary={subItem.title} />
-                </MenuItem>
-              ))}
-              
-              {index < gameCategories.length - 1 && <Divider sx={{ my: 0.5 }} />}
-            </div>
-          ) : (
+        {Object.entries(gamesBySubject).map(([subject, games], subjectIndex) => (
+          <div key={subject}>
+            {/* Subject Header */}
             <MenuItem 
-              key={category.title} 
-              onClick={() => navigateTo(category.path)}
+              disabled
+              sx={{ 
+                opacity: 1, 
+                backgroundColor: SUBJECTS[subject as keyof typeof SUBJECTS].color + '08',
+                '& .MuiListItemText-primary': { 
+                  fontWeight: 600,
+                  color: SUBJECTS[subject as keyof typeof SUBJECTS].color,
+                  fontSize: '0.875rem'
+                }
+              }}
             >
-              <ListItemIcon>{category.icon}</ListItemIcon>
-              <ListItemText primary={category.title} />
+              <ListItemIcon sx={{ color: SUBJECTS[subject as keyof typeof SUBJECTS].color }}>
+                {SUBJECTS[subject as keyof typeof SUBJECTS].icon}
+              </ListItemIcon>
+              <ListItemText primary={subject} />
             </MenuItem>
-          )
+            
+            {/* Games in this subject */}
+            {games.map(game => (
+              <MenuItem 
+                key={game.id} 
+                onClick={() => navigateTo(game.path)}
+                sx={{ pl: 4 }}
+              >
+                <ListItemIcon sx={{ minWidth: 36 }}>
+                  {game.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={game.title}
+                  sx={{
+                    '& .MuiListItemText-primary': {
+                      fontSize: '0.875rem'
+                    }
+                  }}
+                />
+              </MenuItem>
+            ))}
+            
+            {/* Add divider between subjects except for the last one */}
+            {subjectIndex < Object.entries(gamesBySubject).length - 1 && (
+              <Divider sx={{ my: 0.5 }} />
+            )}
+          </div>
         ))}
       </Menu>
     </>
