@@ -67,6 +67,59 @@ export interface GameGroup {
   featured?: boolean;
 }
 
+// Autocomplete suggestion interface
+export interface AutocompleteSuggestion {
+  type: 'game' | 'tag' | 'objective';
+  value: string;
+  label: string;
+  emoji?: string;
+  subject?: keyof typeof SUBJECTS;
+  count?: number;
+  gameTitle?: string;
+}
+
+// Tag category data interface
+export interface TagCategoryData {
+  id: string;
+  name: string;
+  tags: TagData[];
+}
+
+// Individual tag data interface
+export interface TagData {
+  name: string;
+  count: number;
+  label: string;
+}
+
+// Facet filter interface for sidebar
+export interface FacetFilter {
+  ageRanges: string[];
+  durations: string[];
+  skillLevels: string[];
+  features: string[];
+}
+
+// Sort options interface
+export interface SortOptions {
+  field: 'relevance' | 'skillLevel' | 'duration' | 'lastUpdated' | 'title';
+  direction: 'asc' | 'desc';
+}
+
+// View preferences interface
+export interface ViewPreferences {
+  sortBy: SortOptions;
+  viewType: 'grid' | 'list';
+  resultsPerPage: number;
+}
+
+// Enhanced game filter including facets
+export interface EnhancedGameFilter extends GameFilter {
+  facets?: FacetFilter;
+  sort?: SortOptions;
+  query?: string;
+}
+
 // Flat game registry - all games in one array
 export const GAMES: Game[] = [
   {
@@ -304,6 +357,50 @@ export const GAMES: Game[] = [
     status: 'active',
     lastUpdated: '2024-01-15',
     version: '1.0.0'
+  },
+  {
+    id: 'alphabet-sequence',
+    title: 'Alphabet Sequence',
+    description: 'Memorize the alphabet order by finding missing letters',
+    href: '/games/alphabet-sequence',
+    emoji: '🔤',
+    color: '#9381ff',
+    subject: 'Language Arts',
+    tags: ['alphabet', 'memory', 'sequence', 'order', 'beginner'],
+    ageRange: [4, 7],
+    skillLevel: 'beginner',
+    estimatedDuration: 10,
+    learningObjectives: ['Alphabet memorization', 'Sequential thinking', 'Letter recognition'],
+    prerequisites: ['letters'],
+    hasAudio: true,
+    hasVisuals: true,
+    isInteractive: true,
+    supportsMultiplayer: false,
+    status: 'active',
+    lastUpdated: '2024-01-15',
+    version: '1.0.0'
+  },
+  {
+    id: 'number-sequence',
+    title: 'Number Sequence',
+    description: 'Memorize number order by finding missing numbers',
+    href: '/games/number-sequence',
+    emoji: '1️⃣',
+    color: '#4361ee',
+    subject: 'Mathematics',
+    tags: ['numbers', 'memory', 'sequence', 'order', 'counting'],
+    ageRange: [4, 7],
+    skillLevel: 'beginner',
+    estimatedDuration: 10,
+    learningObjectives: ['Number sequence memorization', 'Sequential counting', 'Number recognition'],
+    prerequisites: ['numbers'],
+    hasAudio: true,
+    hasVisuals: true,
+    isInteractive: true,
+    supportsMultiplayer: false,
+    status: 'active',
+    lastUpdated: '2024-01-15',
+    version: '1.0.0'
   }
 ];
 
@@ -486,6 +583,389 @@ export class GameDiscoveryEngine {
       tags: this.buildTagFacets(filteredGames),
       ageRanges: this.buildAgeRangeFacets(filteredGames)
     };
+  }
+
+  /**
+   * Get autocomplete suggestions based on search query
+   * Returns suggestions from game titles, tags, and learning objectives
+   */
+  getAutocompleteSuggestions(query: string, limit: number = 8): AutocompleteSuggestion[] {
+    if (!query.trim()) return [];
+    
+    const suggestions: AutocompleteSuggestion[] = [];
+    const queryLower = query.toLowerCase();
+    const seen = new Set<string>();
+
+    // Game titles
+    this.games.forEach(game => {
+      if (game.title.toLowerCase().includes(queryLower) && !seen.has(game.title)) {
+        suggestions.push({
+          type: 'game',
+          value: game.title,
+          label: game.title,
+          emoji: game.emoji,
+          subject: game.subject
+        });
+        seen.add(game.title);
+      }
+    });
+
+    // Popular tags
+    const allTags = this.games.flatMap(game => game.tags);
+    const tagCounts = allTags.reduce((acc, tag) => {
+      acc[tag] = (acc[tag] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    Object.entries(tagCounts)
+      .filter(([tag]) => tag.toLowerCase().includes(queryLower) && !seen.has(tag))
+      .sort(([, a], [, b]) => b - a) // Sort by popularity
+      .forEach(([tag]) => {
+        suggestions.push({
+          type: 'tag',
+          value: tag,
+          label: `#${tag}`,
+          count: tagCounts[tag]
+        });
+        seen.add(tag);
+      });
+
+    // Learning objectives
+    this.games.forEach(game => {
+      game.learningObjectives.forEach(objective => {
+        if (objective.toLowerCase().includes(queryLower) && !seen.has(objective)) {
+          suggestions.push({
+            type: 'objective',
+            value: objective,
+            label: objective,
+            gameTitle: game.title
+          });
+          seen.add(objective);
+        }
+      });
+    });
+
+    return suggestions.slice(0, limit);
+  }
+
+  /**
+   * Get all available tags grouped by category with counts
+   */
+  getTagsByCategory(currentFilters: GameFilter = {}): TagCategoryData[] {
+    const filteredGames = this.search('', currentFilters);
+    const allTags = filteredGames.flatMap(game => game.tags);
+    const tagCounts = allTags.reduce((acc, tag) => {
+      acc[tag] = (acc[tag] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(TAG_CATEGORIES).map(([categoryKey, categoryTags]) => ({
+      id: categoryKey,
+      name: this.formatCategoryName(categoryKey),
+      tags: categoryTags
+        .filter(tag => tagCounts[tag] > 0)
+        .map(tag => ({
+          name: tag,
+          count: tagCounts[tag],
+          label: this.formatTagLabel(tag)
+        }))
+        .sort((a, b) => b.count - a.count)
+    })).filter(category => category.tags.length > 0);
+  }
+
+  /**
+   * Format category name for display
+   */
+  private formatCategoryName(categoryKey: string): string {
+    const nameMap: Record<string, string> = {
+      'skill-type': 'Skills',
+      'interaction': 'Interaction',
+      'difficulty': 'Difficulty',
+      'duration': 'Duration',
+      'feature': 'Features',
+      'curriculum': 'Curriculum'
+    };
+    return nameMap[categoryKey] || categoryKey;
+  }
+
+  /**
+   * Format tag label for display
+   */
+  private formatTagLabel(tag: string): string {
+    return tag.split('-').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  }
+
+  /**
+   * Enhanced search with facet filtering and sorting
+   */
+  searchWithFacets(query: string = '', filters: EnhancedGameFilter = {}): Game[] {
+    let results = this.search(query, filters);
+
+    // Apply facet filters
+    if (filters.facets) {
+      results = this.applyFacetFilters(results, filters.facets);
+    }
+
+    // Apply sorting
+    if (filters.sort) {
+      results = this.sortGames(results, filters.sort, query);
+    }
+
+    return results;
+  }
+
+  /**
+   * Apply facet filters to game results
+   */
+  private applyFacetFilters(games: Game[], facets: FacetFilter): Game[] {
+    let filtered = games;
+
+    // Age range filtering
+    if (facets.ageRanges.length > 0) {
+      filtered = filtered.filter(game => {
+        return facets.ageRanges.some(range => {
+          const [minAge, maxAge] = this.parseAgeRange(range);
+          return game.ageRange[0] <= maxAge && game.ageRange[1] >= minAge;
+        });
+      });
+    }
+
+    // Duration filtering
+    if (facets.durations.length > 0) {
+      filtered = filtered.filter(game => {
+        return facets.durations.some(duration => {
+          const [minDuration, maxDuration] = this.parseDurationRange(duration);
+          return game.estimatedDuration >= minDuration && game.estimatedDuration <= maxDuration;
+        });
+      });
+    }
+
+    // Skill level filtering
+    if (facets.skillLevels.length > 0) {
+      filtered = filtered.filter(game => 
+        facets.skillLevels.includes(game.skillLevel)
+      );
+    }
+
+    // Features filtering
+    if (facets.features.length > 0) {
+      filtered = filtered.filter(game => {
+        return facets.features.every(feature => {
+          switch (feature) {
+            case 'audio':
+              return game.hasAudio;
+            case 'multiplayer':
+              return game.supportsMultiplayer;
+            case 'interactive':
+              return game.isInteractive;
+            case 'visuals':
+              return game.hasVisuals;
+            default:
+              return game.tags.includes(feature);
+          }
+        });
+      });
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Sort games based on criteria
+   */
+  private sortGames(games: Game[], sort: SortOptions, query: string = ''): Game[] {
+    const sorted = [...games];
+
+    switch (sort.field) {
+      case 'relevance':
+        return this.sortByRelevance(sorted, query);
+      
+      case 'skillLevel':
+        return sorted.sort((a, b) => {
+          const skillOrder = { 'beginner': 1, 'intermediate': 2, 'advanced': 3 };
+          const comparison = skillOrder[a.skillLevel] - skillOrder[b.skillLevel];
+          return sort.direction === 'desc' ? -comparison : comparison;
+        });
+      
+      case 'duration':
+        return sorted.sort((a, b) => {
+          const comparison = a.estimatedDuration - b.estimatedDuration;
+          return sort.direction === 'desc' ? -comparison : comparison;
+        });
+      
+      case 'lastUpdated':
+        return sorted.sort((a, b) => {
+          const comparison = new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime();
+          return sort.direction === 'desc' ? -comparison : comparison;
+        });
+      
+      case 'title':
+        return sorted.sort((a, b) => {
+          const comparison = a.title.localeCompare(b.title);
+          return sort.direction === 'desc' ? -comparison : comparison;
+        });
+      
+      default:
+        return sorted;
+    }
+  }
+
+  /**
+   * Sort by relevance based on search query
+   */
+  private sortByRelevance(games: Game[], query: string): Game[] {
+    if (!query.trim()) {
+      // If no query, sort by popularity (tag count) and then alphabetically
+      return games.sort((a, b) => {
+        const aPopularity = a.tags.length;
+        const bPopularity = b.tags.length;
+        if (aPopularity !== bPopularity) {
+          return bPopularity - aPopularity;
+        }
+        return a.title.localeCompare(b.title);
+      });
+    }
+
+    const queryLower = query.toLowerCase();
+    
+    return games.sort((a, b) => {
+      let scoreA = 0;
+      let scoreB = 0;
+
+      // Title exact match (highest priority)
+      if (a.title.toLowerCase() === queryLower) scoreA += 100;
+      if (b.title.toLowerCase() === queryLower) scoreB += 100;
+
+      // Title starts with query
+      if (a.title.toLowerCase().startsWith(queryLower)) scoreA += 50;
+      if (b.title.toLowerCase().startsWith(queryLower)) scoreB += 50;
+
+      // Title contains query
+      if (a.title.toLowerCase().includes(queryLower)) scoreA += 25;
+      if (b.title.toLowerCase().includes(queryLower)) scoreB += 25;
+
+      // Tag exact match
+      if (a.tags.some(tag => tag.toLowerCase() === queryLower)) scoreA += 20;
+      if (b.tags.some(tag => tag.toLowerCase() === queryLower)) scoreB += 20;
+
+      // Tag contains query
+      if (a.tags.some(tag => tag.toLowerCase().includes(queryLower))) scoreA += 10;
+      if (b.tags.some(tag => tag.toLowerCase().includes(queryLower))) scoreB += 10;
+
+      // Learning objectives contain query
+      if (a.learningObjectives.some(obj => obj.toLowerCase().includes(queryLower))) scoreA += 5;
+      if (b.learningObjectives.some(obj => obj.toLowerCase().includes(queryLower))) scoreB += 5;
+
+      // Description contains query
+      if (a.description.toLowerCase().includes(queryLower)) scoreA += 2;
+      if (b.description.toLowerCase().includes(queryLower)) scoreB += 2;
+
+      return scoreB - scoreA;
+    });
+  }
+
+  /**
+   * Parse age range string to min/max values
+   */
+  private parseAgeRange(range: string): [number, number] {
+    const rangeMap: Record<string, [number, number]> = {
+      '2-3': [2, 3],
+      '3-4': [3, 4],
+      '4-5': [4, 5],
+      '5-6': [5, 6],
+      '6+': [6, 10]
+    };
+    return rangeMap[range] || [0, 10];
+  }
+
+  /**
+   * Parse duration range string to min/max values (in minutes)
+   */
+  private parseDurationRange(range: string): [number, number] {
+    const rangeMap: Record<string, [number, number]> = {
+      'quick': [0, 5],
+      'short': [5, 10],
+      'medium': [10, 15],
+      'long': [15, 60]
+    };
+    return rangeMap[range] || [0, 60];
+  }
+
+  /**
+   * Get facet options with counts for sidebar
+   */
+  getFacetOptions(currentFilters: EnhancedGameFilter = {}): {
+    ageRanges: Array<{range: string, label: string, count: number}>;
+    durations: Array<{range: string, label: string, count: number}>;
+    skillLevels: Array<{level: string, label: string, count: number}>;
+    features: Array<{feature: string, label: string, count: number}>;
+  } {
+    const baseGames = this.search(currentFilters.query || '', currentFilters);
+
+    return {
+      ageRanges: [
+        { range: '2-3', label: '2-3 years', count: this.countGamesInAgeRange(baseGames, '2-3') },
+        { range: '3-4', label: '3-4 years', count: this.countGamesInAgeRange(baseGames, '3-4') },
+        { range: '4-5', label: '4-5 years', count: this.countGamesInAgeRange(baseGames, '4-5') },
+        { range: '5-6', label: '5-6 years', count: this.countGamesInAgeRange(baseGames, '5-6') },
+        { range: '6+', label: '6+ years', count: this.countGamesInAgeRange(baseGames, '6+') }
+      ].filter(item => item.count > 0),
+
+      durations: [
+        { range: 'quick', label: 'Quick (≤5 min)', count: this.countGamesInDurationRange(baseGames, 'quick') },
+        { range: 'short', label: 'Short (5-10 min)', count: this.countGamesInDurationRange(baseGames, 'short') },
+        { range: 'medium', label: 'Medium (10-15 min)', count: this.countGamesInDurationRange(baseGames, 'medium') },
+        { range: 'long', label: 'Long (15+ min)', count: this.countGamesInDurationRange(baseGames, 'long') }
+      ].filter(item => item.count > 0),
+
+      skillLevels: [
+        { level: 'beginner', label: 'Beginner', count: this.countGamesBySkillLevel(baseGames, 'beginner') },
+        { level: 'intermediate', label: 'Intermediate', count: this.countGamesBySkillLevel(baseGames, 'intermediate') },
+        { level: 'advanced', label: 'Advanced', count: this.countGamesBySkillLevel(baseGames, 'advanced') }
+      ].filter(item => item.count > 0),
+
+      features: [
+        { feature: 'audio', label: 'Audio Support', count: this.countGamesByFeature(baseGames, 'audio') },
+        { feature: 'interactive', label: 'Interactive', count: this.countGamesByFeature(baseGames, 'interactive') },
+        { feature: 'visuals', label: 'Rich Visuals', count: this.countGamesByFeature(baseGames, 'visuals') },
+        { feature: 'multiplayer', label: 'Multiplayer', count: this.countGamesByFeature(baseGames, 'multiplayer') }
+      ].filter(item => item.count > 0)
+    };
+  }
+
+  /**
+   * Helper methods for counting games by facet criteria
+   */
+  private countGamesInAgeRange(games: Game[], range: string): number {
+    const [minAge, maxAge] = this.parseAgeRange(range);
+    return games.filter(game => 
+      game.ageRange[0] <= maxAge && game.ageRange[1] >= minAge
+    ).length;
+  }
+
+  private countGamesInDurationRange(games: Game[], range: string): number {
+    const [minDuration, maxDuration] = this.parseDurationRange(range);
+    return games.filter(game => 
+      game.estimatedDuration >= minDuration && game.estimatedDuration <= maxDuration
+    ).length;
+  }
+
+  private countGamesBySkillLevel(games: Game[], level: string): number {
+    return games.filter(game => game.skillLevel === level).length;
+  }
+
+  private countGamesByFeature(games: Game[], feature: string): number {
+    return games.filter(game => {
+      switch (feature) {
+        case 'audio': return game.hasAudio;
+        case 'interactive': return game.isInteractive;
+        case 'visuals': return game.hasVisuals;
+        case 'multiplayer': return game.supportsMultiplayer;
+        default: return false;
+      }
+    }).length;
   }
   
   private buildFacet(games: Game[], field: keyof Game) {

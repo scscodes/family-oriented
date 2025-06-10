@@ -10,7 +10,9 @@ export type GameType =
   | 'math'
   | 'geography'
   | 'fill-in-the-blank'
-  | 'rhyming';
+  | 'rhyming'
+  | 'alphabet-sequence'
+  | 'number-sequence';
 
 import type { GameSettings } from './settingsUtils';
 import { generateUniqueOptions } from './arrayUtils';
@@ -134,6 +136,8 @@ export const questionGenerators: Record<
     generateFillInTheBlankQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
   geography: () => [], // Placeholder until geography generators are added
   rhyming: (s) => generateRhymingQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION),
+  'alphabet-sequence': (s) => generateAlphabetSequenceQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
+  'number-sequence': (s) => generateNumberSequenceQuestions(s.questionCount || GAME_DEFAULTS.QUESTIONS_PER_SESSION, s.optionsCount || GAME_DEFAULTS.OPTIONS_COUNT),
 };
 
 /**
@@ -785,4 +789,141 @@ export function generateRhymingQuestions(count: number = 5): GameQuestion[] {
     correctAnswer: q.correctAnswer,
     type: 'rhyming',
   }));
+}
+
+/**
+ * Generates alphabet sequence questions where children identify missing letters
+ */
+export function generateAlphabetSequenceQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
+  const questions: GameQuestion[] = [];
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const usedSequences = new Set<string>();
+  
+  for (let i = 0; i < count; i++) {
+    let sequenceStart: number;
+    let sequenceLength: number;
+    let missingIndex: number;
+    let sequenceKey: string;
+    let attempts = 0;
+    
+    // Generate unique sequences
+    do {
+      // Generate sequence of 3-6 letters
+      sequenceLength = Math.floor(Math.random() * 4) + 3; // 3-6 letters
+      sequenceStart = Math.floor(Math.random() * (26 - sequenceLength)); // Ensure we don't go past Z
+      missingIndex = Math.floor(Math.random() * sequenceLength);
+      sequenceKey = `${sequenceStart}-${sequenceLength}-${missingIndex}`;
+      attempts++;
+    } while (usedSequences.has(sequenceKey) && attempts < GAME_TIMINGS.MAX_UNIQUE_ATTEMPTS);
+    
+    usedSequences.add(sequenceKey);
+    
+    // Create sequence with missing letter
+    const sequence: string[] = [];
+    const correctLetter = alphabet[sequenceStart + missingIndex];
+    
+    for (let j = 0; j < sequenceLength; j++) {
+      if (j === missingIndex) {
+        sequence.push('?');
+      } else {
+        sequence.push(alphabet[sequenceStart + j]);
+      }
+    }
+    
+    // Generate options
+    const options = generateUniqueOptions(
+      correctLetter,
+      optionsCount - 1,
+      () => {
+        // Generate letters that are not in the sequence and not the correct answer
+        let letter;
+        do {
+          letter = alphabet[Math.floor(Math.random() * alphabet.length)];
+        } while (
+          letter === correctLetter || 
+          sequence.includes(letter)
+        );
+        return letter;
+      }
+    );
+    
+    questions.push({
+      prompt: 'What letter comes next in the alphabet sequence?',
+      focus: sequence.join(', '),
+      options,
+      correctAnswer: correctLetter,
+      type: 'alphabet-sequence'
+    });
+  }
+  
+  return questions;
+}
+
+/**
+ * Generates number sequence questions where children identify missing numbers
+ */
+export function generateNumberSequenceQuestions(count: number = 5, optionsCount: number = 3): GameQuestion[] {
+  const questions: GameQuestion[] = [];
+  const usedSequences = new Set<string>();
+  
+  for (let i = 0; i < count; i++) {
+    let sequenceStart: number;
+    let sequenceLength: number;
+    let missingIndex: number;
+    let sequenceKey: string;
+    let attempts = 0;
+    
+    // Generate unique sequences
+    do {
+      // Generate sequence of 3-6 numbers
+      sequenceLength = Math.floor(Math.random() * 4) + 3; // 3-6 numbers
+      sequenceStart = Math.floor(Math.random() * 15) + 1; // Start from 1-15
+      missingIndex = Math.floor(Math.random() * sequenceLength);
+      sequenceKey = `${sequenceStart}-${sequenceLength}-${missingIndex}`;
+      attempts++;
+    } while (usedSequences.has(sequenceKey) && attempts < GAME_TIMINGS.MAX_UNIQUE_ATTEMPTS);
+    
+    usedSequences.add(sequenceKey);
+    
+    // Create sequence with missing number
+    const sequence: string[] = [];
+    const correctNumber = sequenceStart + missingIndex;
+    
+    for (let j = 0; j < sequenceLength; j++) {
+      if (j === missingIndex) {
+        sequence.push('?');
+      } else {
+        sequence.push((sequenceStart + j).toString());
+      }
+    }
+    
+    // Generate options
+    const options = generateUniqueOptions(
+      correctNumber.toString(),
+      optionsCount - 1,
+      () => {
+        // Generate numbers that are close but not in the sequence
+        let number;
+        const maxNumber = sequenceStart + sequenceLength + 5;
+        const minNumber = Math.max(1, sequenceStart - 5);
+        do {
+          number = Math.floor(Math.random() * (maxNumber - minNumber + 1)) + minNumber;
+        } while (
+          number === correctNumber ||
+          sequence.includes(number.toString())
+        );
+        return number.toString();
+      }
+    );
+    
+    questions.push({
+      prompt: 'What number comes next in the number sequence?',
+      focus: sequence.join(', '),
+      options,
+      correctAnswer: correctNumber.toString(),
+      type: 'number-sequence'
+    });
+  }
+  
+  return questions;
 } 
