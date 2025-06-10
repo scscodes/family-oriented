@@ -18,7 +18,7 @@ export default function SettingsPanel({
   gameType, 
   onSettingsChange, 
   isOpen, 
-  onClose 
+  onClose
 }: SettingsPanelProps) {
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_SETTINGS[gameType]);
   const [showNumberRange, setShowNumberRange] = useState(gameType === 'numbers');
@@ -30,7 +30,12 @@ export default function SettingsPanel({
     setShowNumberRange(gameType === 'numbers');
   }, [gameType]);
   
-  const handleChange = (field: string, value: number | { min: number; max: number }) => {
+  type SettingsField = 'numberRange' | 'questionCount' | 'optionsCount';
+
+  const handleChange = (
+    field: SettingsField,
+    value: number | { min: number; max: number }
+  ) => {
     const updatedSettings = { ...settings };
     
     if (field === 'numberRange') {
