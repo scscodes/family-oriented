@@ -30,7 +30,7 @@ describe('SettingsContext', () => {
     act(() => {
       result.current.updateSettings({
         questionsPerSession: 8,
-        mathOperations: { addition: false },
+        mathOperations: { addition: false, subtraction: true },
       });
     });
     expect(result.current.settings.questionsPerSession).toBe(8);

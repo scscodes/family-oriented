@@ -1,5 +1,16 @@
 import { createTheme } from '@mui/material/styles';
 import { Rubik, Varela_Round, Nunito } from 'next/font/google';
+import { 
+  spacing, 
+  borderRadius, 
+  shadows, 
+  typography as designTypography,
+  gameColors,
+  transitions,
+  themeVariants,
+  accessibility,
+  type ThemeVariant 
+} from './tokens';
 
 // Define fonts
 export const rubik = Rubik({
@@ -20,141 +31,265 @@ export const nunito = Nunito({
   display: 'swap',
 });
 
-// Create a theme instance
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#4361ee', // Bright blue
-      light: '#738dff',
-      dark: '#0036bb',
-    },
-    secondary: {
-      main: '#ff6d00', // Vibrant orange
-      light: '#ff9e40',
-      dark: '#c43c00',
-    },
-    success: {
-      main: '#2ec4b6', // Teal
-      light: '#64f7e7',
-      dark: '#009387',
-    },
-    error: {
-      main: '#ff5a5f', // Coral red
-      light: '#ff8c8f',
-      dark: '#c62333',
-    },
-    warning: {
-      main: '#ffbe0b', // Sunny yellow
-      light: '#fff04d',
-      dark: '#c78f00',
-    },
-    info: {
-      main: '#9381ff', // Lavender
-      light: '#c5b0ff',
-      dark: '#6254cc',
-    },
-    background: {
-      default: '#f8f9fa',
-      paper: '#ffffff',
-    },
-    text: {
-      primary: '#3a3a3a',
-      secondary: '#606060',
-    },
-  },
-  typography: {
-    fontFamily: varelaRound.style.fontFamily,
-    h1: {
-      fontFamily: rubik.style.fontFamily,
-      fontWeight: 700,
-    },
-    h2: {
-      fontFamily: rubik.style.fontFamily,
-      fontWeight: 700,
-    },
-    h3: {
-      fontFamily: rubik.style.fontFamily,
-      fontWeight: 500,
-    },
-    h4: {
-      fontFamily: rubik.style.fontFamily,
-      fontWeight: 500,
-    },
-    h5: {
-      fontFamily: rubik.style.fontFamily,
-      fontWeight: 500,
-    },
-    h6: {
-      fontFamily: rubik.style.fontFamily,
-      fontWeight: 500,
-    },
-    body1: {
-      fontFamily: nunito.style.fontFamily, // More readable font for game questions
-      fontSize: '1.1rem',
-    },
-    body2: {
-      fontFamily: nunito.style.fontFamily,
-      fontSize: '1rem',
-    },
-    button: {
-      fontFamily: varelaRound.style.fontFamily,
-      fontWeight: 500,
-      textTransform: 'none',
-    },
-  },
-  shape: {
-    borderRadius: 12, // Rounded corners
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16,
-          boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
-          transition: 'transform 0.3s, box-shadow 0.3s',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
-          },
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 30,
-          padding: '10px 24px',
-          boxShadow: '0 4px 10px rgba(0, 0, 0, 0.1)',
-          '&:hover': {
-            boxShadow: '0 6px 12px rgba(0, 0, 0, 0.2)',
-          },
-        },
-        containedPrimary: {
-          background: 'linear-gradient(45deg, #4361ee 30%, #738dff 90%)',
-        },
-        containedSecondary: {
-          background: 'linear-gradient(45deg, #ff6d00 30%, #ff9e40 90%)',
-        },
-      },
-    },
-    MuiIconButton: {
-      styleOverrides: {
-        root: {
-          color: '#4361ee',
-          '&:hover': {
-            backgroundColor: 'rgba(67, 97, 238, 0.1)',
-          },
-        },
-      },
-    },
-    MuiTypography: {
-      styleOverrides: {
-        root: {
-          letterSpacing: '0.02em',
-        },
-      },
-    },
-  },
-});
+/**
+ * Generate heading colors based on theme primary and secondary colors
+ * Provides consistent hierarchy: h1 (primary) -> h6 (lightest)
+ */
+const generateHeadingColors = (primary: string, secondary: string) => {
+  return {
+    h1: primary,
+    h2: `color-mix(in srgb, ${primary} 90%, ${secondary} 10%)`,
+    h3: `color-mix(in srgb, ${primary} 80%, ${secondary} 20%)`,
+    h4: `color-mix(in srgb, ${primary} 70%, ${secondary} 30%)`,
+    h5: `color-mix(in srgb, ${primary} 60%, ${secondary} 40%)`,
+    h6: `color-mix(in srgb, ${primary} 50%, ${secondary} 50%)`
+  };
+};
 
-export default theme; 
+// Extend MUI theme interface to include our custom properties
+declare module '@mui/material/styles' {
+  interface Palette {
+    games: {
+      colors: typeof gameColors.colors;
+      shapes: typeof gameColors.shapes;
+    };
+    headingColors: ReturnType<typeof generateHeadingColors>;
+  }
+
+  interface PaletteOptions {
+    games?: {
+      colors?: typeof gameColors.colors;
+      shapes?: typeof gameColors.shapes;
+    };
+    headingColors?: ReturnType<typeof generateHeadingColors>;
+  }
+
+  interface Theme {
+    customSpacing: typeof spacing;
+    customShadows: typeof shadows;
+    themeVariant: ThemeVariant;
+  }
+
+  interface ThemeOptions {
+    customSpacing?: typeof spacing;
+    customShadows?: typeof shadows;
+    themeVariant?: ThemeVariant;
+  }
+}
+
+/**
+ * Create enhanced MUI theme with design tokens integration
+ * @param variant - Theme variant key (purple, ocean, forest, sunset)
+ */
+export const createEnhancedTheme = (variant: ThemeVariant = 'purple') => {
+  const themeConfig = themeVariants[variant];
+  const headingColors = generateHeadingColors(themeConfig.primary, themeConfig.secondary);
+
+  return createTheme({
+    palette: {
+      primary: {
+        main: themeConfig.primary,
+        light: `color-mix(in srgb, ${themeConfig.primary} 80%, white 20%)`,
+        dark: `color-mix(in srgb, ${themeConfig.primary} 80%, black 20%)`,
+      },
+      secondary: {
+        main: themeConfig.secondary,
+        light: `color-mix(in srgb, ${themeConfig.secondary} 80%, white 20%)`,
+        dark: `color-mix(in srgb, ${themeConfig.secondary} 80%, black 20%)`,
+      },
+      success: {
+        main: '#2ec4b6', // Teal
+        light: '#64f7e7',
+        dark: '#009387',
+      },
+      error: {
+        main: '#ff5a5f', // Coral red
+        light: '#ff8c8f',
+        dark: '#c62333',
+      },
+      warning: {
+        main: '#ffbe0b', // Sunny yellow
+        light: '#fff04d',
+        dark: '#c78f00',
+      },
+      info: {
+        main: themeConfig.accent,
+        light: `color-mix(in srgb, ${themeConfig.accent} 80%, white 20%)`,
+        dark: `color-mix(in srgb, ${themeConfig.accent} 80%, black 20%)`,
+      },
+      background: {
+        default: '#f8f9fa',
+        paper: '#ffffff',
+      },
+      text: {
+        primary: '#3a3a3a',
+        secondary: '#606060',
+      },
+      // Custom game color palettes
+      games: {
+        colors: gameColors.colors,
+        shapes: gameColors.shapes,
+      },
+      // Heading color hierarchy
+      headingColors,
+    },
+    typography: {
+      fontFamily: varelaRound.style.fontFamily,
+      h1: {
+        fontFamily: rubik.style.fontFamily,
+        fontWeight: designTypography.fontWeight.bold,
+        fontSize: designTypography.fontSize['4xl'],
+        lineHeight: designTypography.lineHeight.tight,
+        letterSpacing: designTypography.letterSpacing.tight,
+      },
+      h2: {
+        fontFamily: rubik.style.fontFamily,
+        fontWeight: designTypography.fontWeight.bold,
+        fontSize: designTypography.fontSize['3xl'],
+        lineHeight: designTypography.lineHeight.tight,
+      },
+      h3: {
+        fontFamily: rubik.style.fontFamily,
+        fontWeight: designTypography.fontWeight.semibold,
+        fontSize: designTypography.fontSize['2xl'],
+        lineHeight: designTypography.lineHeight.normal,
+      },
+      h4: {
+        fontFamily: rubik.style.fontFamily,
+        fontWeight: designTypography.fontWeight.semibold,
+        fontSize: designTypography.fontSize.xl,
+        lineHeight: designTypography.lineHeight.normal,
+      },
+      h5: {
+        fontFamily: rubik.style.fontFamily,
+        fontWeight: designTypography.fontWeight.medium,
+        fontSize: designTypography.fontSize.lg,
+        lineHeight: designTypography.lineHeight.normal,
+      },
+      h6: {
+        fontFamily: rubik.style.fontFamily,
+        fontWeight: designTypography.fontWeight.medium,
+        fontSize: designTypography.fontSize.base,
+        lineHeight: designTypography.lineHeight.normal,
+      },
+      body1: {
+        fontFamily: nunito.style.fontFamily,
+        fontSize: designTypography.fontSize.lg,
+        lineHeight: designTypography.lineHeight.relaxed,
+      },
+      body2: {
+        fontFamily: nunito.style.fontFamily,
+        fontSize: designTypography.fontSize.base,
+        lineHeight: designTypography.lineHeight.normal,
+      },
+      button: {
+        fontFamily: varelaRound.style.fontFamily,
+        fontWeight: designTypography.fontWeight.medium,
+        textTransform: 'none',
+        fontSize: designTypography.fontSize.base,
+      },
+    },
+    shape: {
+      borderRadius: borderRadius.md,
+    },
+    spacing: (factor: number) => `${spacing.xs * factor}px`,
+    components: {
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: borderRadius.lg,
+            boxShadow: shadows.card,
+            transition: `transform ${transitions.duration.slow}, box-shadow ${transitions.duration.slow}`,
+            '&:hover': {
+              transform: 'translateY(-2px)',
+              boxShadow: shadows.cardHover,
+            },
+          },
+        },
+      },
+      MuiButton: {
+        styleOverrides: {
+          root: {
+            borderRadius: borderRadius.xl,
+            padding: `${spacing.sm}px ${spacing.lg}px`,
+            boxShadow: shadows.button,
+            minHeight: accessibility.touchTarget.minSize,
+            transition: `all ${transitions.duration.normal}`,
+            '&:hover': {
+              boxShadow: shadows.buttonHover,
+            },
+            '&:focus-visible': {
+              outline: `${accessibility.focusRing.width} ${accessibility.focusRing.style} ${accessibility.focusRing.color}`,
+              outlineOffset: '2px',
+            },
+          },
+          containedPrimary: {
+            background: `linear-gradient(45deg, ${themeConfig.primary} 30%, ${themeConfig.accent} 90%)`,
+          },
+          containedSecondary: {
+            background: `linear-gradient(45deg, ${themeConfig.secondary} 30%, ${themeConfig.accent} 90%)`,
+          },
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            color: themeConfig.primary,
+            minHeight: accessibility.touchTarget.minSize,
+            minWidth: accessibility.touchTarget.minSize,
+            '&:hover': {
+              backgroundColor: `${themeConfig.primary}10`,
+            },
+            '&:focus-visible': {
+              outline: `${accessibility.focusRing.width} ${accessibility.focusRing.style} ${accessibility.focusRing.color}`,
+              outlineOffset: '2px',
+            },
+          },
+        },
+      },
+      MuiTypography: {
+        styleOverrides: {
+          root: {
+            letterSpacing: designTypography.letterSpacing.wide,
+          },
+        },
+      },
+      MuiAccordion: {
+        styleOverrides: {
+          root: {
+            borderRadius: borderRadius.lg,
+            boxShadow: shadows.card,
+            '&:before': {
+              display: 'none',
+            },
+            '&.Mui-expanded': {
+              margin: 0,
+            },
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            borderRadius: borderRadius.xl,
+            height: accessibility.touchTarget.minSize,
+            '&:focus-visible': {
+              outline: `${accessibility.focusRing.width} ${accessibility.focusRing.style} ${accessibility.focusRing.color}`,
+              outlineOffset: '2px',
+            },
+          },
+        },
+      },
+    },
+    // Custom properties for design tokens
+    customSpacing: spacing,
+    customShadows: shadows,
+    themeVariant: variant,
+  });
+};
+
+// Default theme instance (purple variant)
+const theme = createEnhancedTheme('purple');
+
+export default theme;
+export { type ThemeVariant, themeVariants, generateHeadingColors }; 

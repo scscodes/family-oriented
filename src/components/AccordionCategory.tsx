@@ -1,24 +1,8 @@
 import { Accordion, AccordionSummary, AccordionDetails, Typography, Box, Card, CardActionArea, CardContent } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Link from 'next/link';
-
-interface GameData {
-  title: string;
-  description: string;
-  href: string;
-  emoji: string;
-  color: string;
-}
-
-interface CategoryData {
-  key: string;
-  title: string;
-  description: string;
-  emoji: string;
-  color: string;
-  subject: string;
-  subgames: GameData[];
-}
+import { GameData, CategoryData } from '@/utils/gameData';
+import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
 
 /**
  * Accessible accordion for a game category
@@ -31,6 +15,8 @@ export default function AccordionCategory({ category, expanded, onChange }: {
   expanded: boolean,
   onChange: () => void
 }) {
+  const { themeConfig } = useEnhancedTheme();
+
   return (
     <Accordion expanded={expanded} onChange={onChange} sx={{ mb: 2 }}>
       <AccordionSummary
@@ -40,7 +26,7 @@ export default function AccordionCategory({ category, expanded, onChange }: {
       >
         <Box display="flex" alignItems="center" gap={2}>
           <span style={{ fontSize: 32 }} aria-hidden="true">{category.emoji}</span>
-          <Typography variant="h6" component="div" sx={{ fontWeight: 600, color: category.color }}>
+          <Typography variant="h6" component="div" sx={{ fontWeight: 600, color: themeConfig.primary }}>
             {category.title}
           </Typography>
         </Box>
@@ -48,7 +34,7 @@ export default function AccordionCategory({ category, expanded, onChange }: {
       <AccordionDetails>
         <Box display="flex" flexWrap="wrap" gap={2}>
           {category.subgames.map((game: GameData) => (
-            <Card key={game.href} sx={{ minWidth: 220, flex: '1 1 220px', background: game.color, color: '#fff' }}>
+            <Card key={game.href} sx={{ minWidth: 220, flex: '1 1 220px', background: themeConfig.accent, color: '#fff' }}>
               <Link href={game.href} passHref legacyBehavior>
                 <CardActionArea component="a" aria-label={game.title}>
                   <CardContent>

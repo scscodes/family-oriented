@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import ThemeProvider from "@/theme/ThemeProvider";
+import { EnhancedThemeProvider } from "@/theme/EnhancedThemeProvider";
 import { SettingsProvider } from "@/context/SettingsContext";
 
 export const metadata: Metadata = {
@@ -15,11 +15,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider>
+        <EnhancedThemeProvider>
           <SettingsProvider>
             {children}
           </SettingsProvider>
-        </ThemeProvider>
+        </EnhancedThemeProvider>
       </body>
     </html>
   );

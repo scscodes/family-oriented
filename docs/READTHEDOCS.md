@@ -2,6 +2,7 @@
 
 ## General Rules
 - For local development, expect a Windows-based environment; use CMD/powershell-compatible commands and syntax
+- For cli commands, prefer one per line
 - Keep changes constrained to the task at hand
 - Avoid sweeping changes unless directed
 - Prioritize accessibility compliance in all changes (WCAG standards)
@@ -62,7 +63,7 @@
 - Comment accessibility implementation details for future maintenance
 
 ### **Project Documentation**
-- Create a `tasks.md` file to track progress over large or multi-step tasks
+- Use docs/tasks.md to track progress over large or multi-step tasks
 - Tasks should be ordered, and clearly define their purpose and expected outcome that is easily validated
 - Update architecture documentation when adding new patterns or utilities
 - Maintain agent integration guides with current best practices
@@ -80,7 +81,8 @@
 - [Project README](../README.md) - Overview, features, quick start
 - [Architecture Overview](./architecture.md) - Technical details and patterns
 - [Agent Guide](./agents.md) - AI/LLM integration patterns
-- [Tasks Tracking](../tasks.md) - Implementation progress and roadmap
+- [Tasks Tracking](./tasks.md) - A fluid, temporal task store
+- [Feature Roadmap](./feature_roadmap.md) - Ideation, future state ideas
 
 ### **Code Quality Resources**
 - **Utility Examples**: Reference `src/utils/` for proper algorithm implementation
