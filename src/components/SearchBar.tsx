@@ -1,12 +1,15 @@
 import { TextField, InputAdornment } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 
+interface SearchBarProps {
+  value: string;
+  onChange: (val: string) => void;
+}
+
 /**
  * Accessible search bar for filtering games
- * @param {string} value - The current search value
- * @param {(val: string) => void} onChange - Callback for when the search value changes
  */
-export default function SearchBar({ value, onChange }: { value: string, onChange: (val: string) => void }) {
+export default function SearchBar({ value, onChange }: SearchBarProps) {
   return (
     <TextField
       label="Search games"

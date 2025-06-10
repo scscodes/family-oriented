@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { 
   IconButton, 
   Menu, 
@@ -26,6 +26,18 @@ import GeoIcon from '@mui/icons-material/Public';
 /**
  * Dropdown menu component for quick navigation between games
  */
+interface GameSubItem {
+  title: string;
+  path: string;
+}
+
+interface GameCategory {
+  title: string;
+  icon: ReactNode;
+  path?: string;
+  children?: GameSubItem[];
+}
+
 export default function GameMenu() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -45,7 +57,7 @@ export default function GameMenu() {
   };
   
   // Define our game categories and subcategories
-  const gameCategories = [
+  const gameCategories: GameCategory[] = [
     {
       title: 'Numbers',
       icon: <NumbersIcon />,
