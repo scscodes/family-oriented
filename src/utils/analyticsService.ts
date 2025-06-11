@@ -1,9 +1,12 @@
 /**
  * Comprehensive Analytics Service for Game Tracking and Learning Progression
  * Supports both individual user analytics and aggregate platform metrics
+ * Integrated with Supabase for persistent data storage
  */
 
 import { GameType } from './gameUtils';
+import { createClient } from '@/lib/supabase/client';
+import type { Database } from '@/lib/supabase/database.types';
 
 // Core interfaces for analytics data
 export interface GameSessionData {
@@ -63,25 +66,46 @@ export interface PerformanceMetrics {
 }
 
 /**
- * Analytics Service Class
+ * Supabase-Integrated Analytics Service Class
  * Handles all game tracking, learning progression, and performance analytics
+ * with persistent storage via Supabase
  */
-export class AnalyticsService {
-  private sessions: Map<string, GameSessionData> = new Map();
-  private events: GameEventData[] = [];
-  private progressData: Map<string, LearningProgressData[]> = new Map();
+export class SupabaseAnalyticsService {
+  private supabase = createClient();
+  
+  // Local cache for performance (still maintain for complex calculations)
+  private sessionCache: Map<string, GameSessionData> = new Map();
+  private eventSequenceCounters: Map<string, number> = new Map();
 
   /**
-   * Start tracking a new game session
+   * Start tracking a new game session (Supabase-integrated)
    */
-  startGameSession(avatarId: string, gameId: GameType, settings: Record<string, unknown>, orgId?: string): string {
-    const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    
+  async startGameSession(
+    avatarId: string,
+    gameType: string, // Using gameType to match Supabase schema
+    settings: Record<string, unknown>,
+    orgId?: string
+  ): Promise<string> {
+    const { data, error } = await this.supabase
+      .from('game_sessions')
+      .insert({
+        avatar_id: avatarId,
+        org_id: orgId,
+        game_type: gameType,
+        settings_used: settings as any,
+        session_start: new Date().toISOString()
+      })
+      .select('id')
+      .single();
+
+    if (error) throw error;
+
+    // Cache session locally for immediate access
     const session: GameSessionData = {
-      id: sessionId,
+      id: data.id,
       avatarId,
       orgId,
-      gameId,
+      gameId: gameType as GameType,
       sessionStart: new Date(),
       totalDuration: 0,
       questionsAttempted: 0,
@@ -91,76 +115,179 @@ export class AnalyticsService {
       settingsUsed: settings
     };
 
-    this.sessions.set(sessionId, session);
+    this.sessionCache.set(data.id, session);
+    this.eventSequenceCounters.set(data.id, 0);
     
     // Track session start event
-    this.trackEvent(sessionId, avatarId, 'game_start', { gameId, settings });
+    await this.trackEvent(data.id, avatarId, 'game_start', { gameType, settings });
     
-    return sessionId;
+    return data.id;
   }
 
   /**
-   * Track individual game events during a session
+   * Track individual game events during a session (Supabase-integrated)
    */
-  trackEvent(sessionId: string, avatarId: string, eventType: GameEventData['eventType'], eventData: Record<string, unknown>): void {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      console.warn(`Session ${sessionId} not found for event tracking`);
-      return;
-    }
+  async trackEvent(
+    sessionId: string,
+    avatarId: string,
+    eventType: GameEventData['eventType'],
+    eventData: Record<string, unknown>
+  ): Promise<void> {
+    const sequenceNumber = (this.eventSequenceCounters.get(sessionId) || 0) + 1;
+    this.eventSequenceCounters.set(sessionId, sequenceNumber);
 
-    const event: GameEventData = {
-      sessionId,
-      avatarId,
-      eventType,
-      eventData,
-      timestamp: new Date(),
-      sequenceNumber: this.events.filter(e => e.sessionId === sessionId).length + 1
+    const { error } = await this.supabase
+      .from('game_events')
+      .insert({
+        session_id: sessionId,
+        avatar_id: avatarId,
+        event_type: eventType,
+        event_data: eventData as any,
+        timestamp: new Date().toISOString(),
+        sequence_number: sequenceNumber
+      });
+
+    if (error) throw error;
+
+    // Update local cache if session exists
+    const session = this.sessionCache.get(sessionId);
+    if (session) {
+      this.updateSessionFromEvent(session, {
+        sessionId,
+        avatarId,
+        eventType,
+        eventData,
+        timestamp: new Date(),
+        sequenceNumber
+      });
+    }
+  }
+
+  /**
+   * Complete a game session and calculate final metrics (Supabase-integrated)
+   */
+  async completeGameSession(
+    sessionId: string,
+    finalScore: number,
+    questionsAttempted: number,
+    questionsCorrect: number
+  ): Promise<void> {
+    const scoreData = {
+      finalScore,
+      accuracy: questionsAttempted > 0 ? questionsCorrect / questionsAttempted : 0,
+      questionsCorrect,
+      questionsAttempted,
+      completionRate: 1.0
     };
 
-    this.events.push(event);
-
-    // Update session data based on event
-    this.updateSessionFromEvent(session, event);
-  }
-
-  /**
-   * Complete a game session and calculate final metrics
-   */
-  completeGameSession(sessionId: string, finalScore: number, questionsAttempted: number, questionsCorrect: number): void {
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      console.warn(`Session ${sessionId} not found for completion`);
-      return;
+    // Calculate duration from cached session or fetch from DB
+    let totalDuration = 0;
+    const cachedSession = this.sessionCache.get(sessionId);
+    if (cachedSession) {
+      totalDuration = Math.floor((new Date().getTime() - cachedSession.sessionStart.getTime()) / 1000);
     }
 
-    session.sessionEnd = new Date();
-    session.totalDuration = Math.floor((session.sessionEnd.getTime() - session.sessionStart.getTime()) / 1000);
-    session.questionsAttempted = questionsAttempted;
-    session.questionsCorrect = questionsCorrect;
-    session.completionStatus = 'completed';
+    const { error } = await this.supabase
+      .from('game_sessions')
+      .update({
+        session_end: new Date().toISOString(),
+        total_duration: totalDuration,
+        questions_attempted: questionsAttempted,
+        questions_correct: questionsCorrect,
+        completion_status: 'completed',
+        score_data: scoreData
+      })
+      .eq('id', sessionId);
+
+    if (error) throw error;
 
     // Track completion event
-    this.trackEvent(sessionId, session.avatarId, 'game_complete', {
+    await this.trackEvent(sessionId, cachedSession?.avatarId || '', 'game_complete', {
       finalScore,
       questionsAttempted,
       questionsCorrect,
-      duration: session.totalDuration
+      duration: totalDuration
     });
 
     // Update learning progress
-    this.updateLearningProgress(session, finalScore);
+    if (cachedSession) {
+      await this.updateLearningProgress(cachedSession, finalScore);
+    }
+
+    // Clean up cache
+    this.sessionCache.delete(sessionId);
+    this.eventSequenceCounters.delete(sessionId);
+  }
+
+  /**
+   * Get learning progress for an avatar (Supabase-integrated)
+   */
+  async getAvatarProgress(avatarId: string): Promise<LearningProgressData[]> {
+    const { data, error } = await this.supabase
+      .from('learning_progress')
+      .select('*')
+      .eq('avatar_id', avatarId)
+      .order('last_played', { ascending: false });
+
+    if (error) throw error;
+
+    // Transform Supabase data to our interface
+    return (data || []).map(row => ({
+      avatarId: row.avatar_id,
+      gameId: row.game_type as GameType,
+      skillLevel: row.skill_level as 'beginner' | 'intermediate' | 'advanced',
+      masteryScore: row.mastery_score || 0,
+      learningObjectivesMet: row.learning_objectives_met || [],
+      prerequisiteCompletion: (row.prerequisite_completion as Record<string, boolean>) || {},
+      lastPlayed: new Date(row.last_played),
+      totalSessions: row.total_sessions || 0,
+      averagePerformance: row.average_performance || 0,
+      improvementTrend: row.improvement_trend as 'improving' | 'stable' | 'declining'
+    }));
+  }
+
+  /**
+   * Get game sessions for an avatar (Supabase-integrated)
+   */
+  async getAvatarSessions(avatarId: string, limit?: number): Promise<GameSessionData[]> {
+    let query = this.supabase
+      .from('game_sessions')
+      .select('*')
+      .eq('avatar_id', avatarId)
+      .order('session_start', { ascending: false });
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    // Transform Supabase data to our interface
+    return (data || []).map(row => ({
+      id: row.id,
+      avatarId: row.avatar_id,
+      orgId: row.org_id || undefined,
+      gameId: row.game_type as GameType,
+      sessionStart: new Date(row.session_start),
+      sessionEnd: row.session_end ? new Date(row.session_end) : undefined,
+      totalDuration: row.total_duration || 0,
+      questionsAttempted: row.questions_attempted || 0,
+      questionsCorrect: row.questions_correct || 0,
+      completionStatus: row.completion_status as 'completed' | 'abandoned' | 'in_progress',
+      difficultyLevel: row.difficulty_level,
+      settingsUsed: (row.settings_used as Record<string, unknown>) || {}
+    }));
   }
 
   /**
    * Get learning path recommendations for an avatar
    */
-  getLearningPathRecommendations(avatarId: string, maxRecommendations: number = 5): LearningPathRecommendation[] {
-    const progress = this.progressData.get(avatarId) || [];
+  async getLearningPathRecommendations(avatarId: string, maxRecommendations: number = 5): Promise<LearningPathRecommendation[]> {
+    const progress = await this.getAvatarProgress(avatarId);
     const recommendations: LearningPathRecommendation[] = [];
 
     // Import games data for analysis
-    // This would typically come from the gameData.ts GAMES array
     const availableGames = this.getAvailableGames();
 
     for (const game of availableGames) {
@@ -181,13 +308,15 @@ export class AnalyticsService {
   /**
    * Get comprehensive performance metrics for an avatar
    */
-  getPerformanceMetrics(avatarId: string): PerformanceMetrics {
-    const progress = this.progressData.get(avatarId) || [];
-    const avatarSessions = Array.from(this.sessions.values()).filter(s => s.avatarId === avatarId);
+  async getPerformanceMetrics(avatarId: string): Promise<PerformanceMetrics> {
+    const [progress, sessions] = await Promise.all([
+      this.getAvatarProgress(avatarId),
+      this.getAvatarSessions(avatarId)
+    ]);
 
-    const totalGamesPlayed = avatarSessions.length;
-    const averageSessionDuration = avatarSessions.reduce((sum, s) => sum + s.totalDuration, 0) / totalGamesPlayed || 0;
-    const completedSessions = avatarSessions.filter(s => s.completionStatus === 'completed');
+    const totalGamesPlayed = sessions.length;
+    const averageSessionDuration = sessions.reduce((sum, s) => sum + s.totalDuration, 0) / totalGamesPlayed || 0;
+    const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
     const overallCompletionRate = completedSessions.length / totalGamesPlayed || 0;
 
     // Calculate skill level distribution
@@ -197,13 +326,13 @@ export class AnalyticsService {
     }, {} as Record<string, number>);
 
     // Calculate subject preferences based on play frequency
-    const subjectPreferences = this.calculateSubjectPreferences(avatarSessions);
+    const subjectPreferences = this.calculateSubjectPreferences(sessions);
 
     // Calculate learning velocity (objectives mastered per week)
     const learningVelocity = this.calculateLearningVelocity(progress);
 
     // Calculate engagement score based on various factors
-    const engagementScore = this.calculateEngagementScore(avatarSessions);
+    const engagementScore = this.calculateEngagementScore(sessions);
 
     return {
       totalGamesPlayed,
@@ -217,34 +346,45 @@ export class AnalyticsService {
   }
 
   /**
-   * Get aggregate analytics for platform-wide metrics
+   * Get aggregate analytics for platform-wide metrics (Supabase-integrated)
    */
-  getAggregateAnalytics(orgId?: string): {
+  async getAggregateAnalytics(orgId?: string): Promise<{
     totalSessions: number;
     uniquePlayers: number;
     averageDuration: number;
     completionRate: number;
     popularGames: Array<{ gameId: GameType; sessions: number; avgScore: number }>;
     learningEffectiveness: Record<string, number>;
-  } {
-    const relevantSessions = Array.from(this.sessions.values())
-      .filter(s => !orgId || s.orgId === orgId);
+  }> {
+    let query = this.supabase
+      .from('game_sessions')
+      .select('*');
 
-    const totalSessions = relevantSessions.length;
-    const uniquePlayers = new Set(relevantSessions.map(s => s.avatarId)).size;
-    const averageDuration = relevantSessions.reduce((sum, s) => sum + s.totalDuration, 0) / totalSessions || 0;
-    const completedSessions = relevantSessions.filter(s => s.completionStatus === 'completed');
+    if (orgId) {
+      query = query.eq('org_id', orgId);
+    }
+
+    const { data: sessions, error } = await query;
+    if (error) throw error;
+
+    const sessionData = sessions || [];
+    const totalSessions = sessionData.length;
+    const uniquePlayers = new Set(sessionData.map(s => s.avatar_id)).size;
+    const averageDuration = sessionData.reduce((sum, s) => sum + (s.total_duration || 0), 0) / totalSessions || 0;
+    const completedSessions = sessionData.filter(s => s.completion_status === 'completed');
     const completionRate = completedSessions.length / totalSessions || 0;
 
     // Calculate popular games
-    const gameStats = relevantSessions.reduce((stats, session) => {
-      if (!stats[session.gameId]) {
-        stats[session.gameId] = { sessions: 0, totalScore: 0, completedSessions: 0 };
+    const gameStats = sessionData.reduce((stats, session) => {
+      const gameType = session.game_type;
+      if (!stats[gameType]) {
+        stats[gameType] = { sessions: 0, totalScore: 0, completedSessions: 0 };
       }
-      stats[session.gameId].sessions++;
-      if (session.completionStatus === 'completed') {
-        stats[session.gameId].completedSessions++;
-        stats[session.gameId].totalScore += (session.questionsCorrect / session.questionsAttempted) * 100 || 0;
+      stats[gameType].sessions++;
+      if (session.completion_status === 'completed' && session.score_data) {
+        stats[gameType].completedSessions++;
+        const scoreData = session.score_data as any;
+        stats[gameType].totalScore += scoreData.finalScore || 0;
       }
       return stats;
     }, {} as Record<string, { sessions: number; totalScore: number; completedSessions: number }>);
@@ -258,7 +398,7 @@ export class AnalyticsService {
       .sort((a, b) => b.sessions - a.sessions);
 
     // Calculate learning effectiveness by subject
-    const learningEffectiveness = this.calculateLearningEffectiveness(relevantSessions);
+    const learningEffectiveness = this.calculateLearningEffectivenessFromSessions(sessionData);
 
     return {
       totalSessions,
@@ -286,55 +426,80 @@ export class AnalyticsService {
     }
   }
 
-  private updateLearningProgress(session: GameSessionData, finalScore: number): void {
-    const avatarProgress = this.progressData.get(session.avatarId) || [];
-    let gameProgress = avatarProgress.find(p => p.gameId === session.gameId);
+  private async updateLearningProgress(session: GameSessionData, finalScore: number): Promise<void> {
+    // Check if progress record exists
+    const { data: existingProgress } = await this.supabase
+      .from('learning_progress')
+      .select('*')
+      .eq('avatar_id', session.avatarId)
+      .eq('game_type', session.gameId)
+      .single();
 
-    if (!gameProgress) {
-      gameProgress = {
-        avatarId: session.avatarId,
-        gameId: session.gameId,
-        skillLevel: 'beginner',
-        masteryScore: 0,
-        learningObjectivesMet: [],
-        prerequisiteCompletion: {},
-        lastPlayed: new Date(),
-        totalSessions: 0,
-        averagePerformance: 0,
-        improvementTrend: 'stable'
-      };
-      avatarProgress.push(gameProgress);
-    }
+    const now = new Date().toISOString();
+    
+    if (!existingProgress) {
+      // Create new progress record
+      const { error } = await this.supabase
+        .from('learning_progress')
+        .insert({
+          avatar_id: session.avatarId,
+          org_id: session.orgId,
+          game_type: session.gameId,
+          skill_level: 'beginner',
+          mastery_score: finalScore,
+          learning_objectives_met: [],
+          prerequisite_completion: {},
+          last_played: now,
+          total_sessions: 1,
+          average_performance: finalScore,
+          improvement_trend: 'stable',
+          needs_realtime_update: true
+        });
 
-    // Update progress metrics
-    gameProgress.lastPlayed = new Date();
-    gameProgress.totalSessions++;
-    
-    const previousAverage = gameProgress.averagePerformance;
-    gameProgress.averagePerformance = (previousAverage * (gameProgress.totalSessions - 1) + finalScore) / gameProgress.totalSessions;
-    
-    // Determine improvement trend
-    if (gameProgress.totalSessions > 1) {
-      if (gameProgress.averagePerformance > previousAverage * 1.1) {
-        gameProgress.improvementTrend = 'improving';
-      } else if (gameProgress.averagePerformance < previousAverage * 0.9) {
-        gameProgress.improvementTrend = 'declining';
-      } else {
-        gameProgress.improvementTrend = 'stable';
+      if (error) throw error;
+    } else {
+      // Update existing progress
+      const totalSessions = (existingProgress.total_sessions || 0) + 1;
+      const previousAverage = existingProgress.average_performance || 0;
+      const newAverage = (previousAverage * (totalSessions - 1) + finalScore) / totalSessions;
+      
+      // Determine improvement trend
+      let improvementTrend = 'stable';
+      if (totalSessions > 1) {
+        if (newAverage > previousAverage * 1.1) {
+          improvementTrend = 'improving';
+        } else if (newAverage < previousAverage * 0.9) {
+          improvementTrend = 'declining';
+        }
       }
+
+      // Update mastery score (weighted average favoring recent performance)
+      const masteryScore = Math.min(100, ((existingProgress.mastery_score || 0) * 0.7) + (finalScore * 0.3));
+
+      // Check for skill level advancement
+      let skillLevel = existingProgress.skill_level;
+      if (masteryScore >= 80 && skillLevel === 'beginner') {
+        skillLevel = 'intermediate';
+      } else if (masteryScore >= 90 && skillLevel === 'intermediate') {
+        skillLevel = 'advanced';
+      }
+
+      const { error } = await this.supabase
+        .from('learning_progress')
+        .update({
+          skill_level: skillLevel,
+          mastery_score: masteryScore,
+          last_played: now,
+          total_sessions: totalSessions,
+          average_performance: newAverage,
+          improvement_trend: improvementTrend,
+          needs_realtime_update: true,
+          updated_at: now
+        })
+        .eq('id', existingProgress.id);
+
+      if (error) throw error;
     }
-
-    // Update mastery score (weighted average favoring recent performance)
-    gameProgress.masteryScore = Math.min(100, (gameProgress.masteryScore * 0.7) + (finalScore * 0.3));
-
-    // Check for skill level advancement
-    if (gameProgress.masteryScore >= 80 && gameProgress.skillLevel === 'beginner') {
-      gameProgress.skillLevel = 'intermediate';
-    } else if (gameProgress.masteryScore >= 90 && gameProgress.skillLevel === 'intermediate') {
-      gameProgress.skillLevel = 'advanced';
-    }
-
-    this.progressData.set(session.avatarId, avatarProgress);
   }
 
   private calculateGameRecommendation(
@@ -342,9 +507,6 @@ export class AnalyticsService {
     gameProgress?: LearningProgressData, 
     allProgress?: LearningProgressData[]
   ): LearningPathRecommendation | null {
-    // This would integrate with the actual GAMES array from gameData.ts
-    // For now, using placeholder logic
-    
     let priority = 5; // base priority
     let reason = 'Recommended for continued learning';
 
@@ -423,7 +585,7 @@ export class AnalyticsService {
     return Math.max(0, Math.min(100, score));
   }
 
-  private calculateLearningEffectiveness(sessions: GameSessionData[]): Record<string, number> {
+  private calculateLearningEffectivenessFromSessions(sessions: any[]): Record<string, number> {
     // Calculate effectiveness by subject based on improvement over time
     const subjectEffectiveness: Record<string, number> = {};
     
@@ -435,7 +597,7 @@ export class AnalyticsService {
     return subjectEffectiveness;
   }
 
-  // Additional helper methods would be implemented here...
+  // Additional helper methods (preserved from original implementation)
   private getAvailableGames(): Array<{ id: string; prerequisites?: string[]; learningObjectives?: string[] }> {
     // This would return the GAMES array from gameData.ts
     return [];
@@ -463,4 +625,4 @@ export class AnalyticsService {
 }
 
 // Export singleton instance
-export const analyticsService = new AnalyticsService(); 
+export const analyticsService = new SupabaseAnalyticsService(); 
