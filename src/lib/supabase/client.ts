@@ -1,10 +1,5 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
 import type { Database } from './database.types'
 
-// Client-side Supabase client
+// Client-side Supabase client for use in React components, context, and hooks
 export const createClient = () => createClientComponentClient<Database>()
-
-// Server-side Supabase client
-export const createServerClient = () => createServerComponentClient<Database>({ cookies })

@@ -9,6 +9,8 @@ import QuestionDisplay from "./QuestionDisplay";
 import ResponsiveAttemptDisplay from "./ResponsiveAttemptDisplay";
 import ResponsiveOptionGrid from "./ResponsiveOptionGrid";
 import { GAME_TIMINGS } from "@/utils/constants";
+import { useGameAnalytics } from '@/hooks/useGameAnalytics';
+import { useAvatar } from '@/context/UserContext';
 
 // Define a generic attempt structure
 interface GenericAttempt {
@@ -26,6 +28,8 @@ interface GameBoardProps {
 
 /**
  * Reusable game board component for displaying questions and options
+ * Integrates analytics tracking for session, question, and completion events.
+ * @param {GameBoardProps} props
  */
 export default function GameBoard({ 
   title, 
@@ -41,6 +45,17 @@ export default function GameBoard({
   const [incorrectOptions, setIncorrectOptions] = useState<string[]>([]);
   const [attempts, setAttempts] = useState<GenericAttempt[]>([]); 
   
+  // Avatar context for analytics
+  const { currentAvatar } = useAvatar();
+  const avatarId = currentAvatar?.id || 'demo-avatar-id';
+
+  // Analytics hook
+  const analytics = useGameAnalytics({
+    gameType,
+    avatarId,
+    autoTrack: true
+  });
+  
   // Reset attempts when question changes
   useEffect(() => {
     if (questions.length > 0) {
@@ -51,7 +66,8 @@ export default function GameBoard({
     }
   }, [questions, currentQuestion]);
   
-  const handleOptionClick = (option: string) => {
+  // Track question attempt
+  const handleOptionClick = async (option: string) => {
     if (selectedOption !== null) return;
     
     setSelectedOption(option);
@@ -64,6 +80,12 @@ export default function GameBoard({
       key: `q${currentQuestion}-a${prev.length}` // Unique key based on question and attempt index
     }]);
     
+    await analytics.trackQuestionAttempt(correct, {
+      questionIndex: currentQuestion,
+      selectedOption: option,
+      correctAnswer: questions[currentQuestion].correctAnswer
+    });
+    
     if (correct) {
       setScore(score + 1);
       
@@ -75,6 +97,7 @@ export default function GameBoard({
         }, GAME_TIMINGS.CORRECT_ANSWER_DELAY);
       } else {
         setIsGameComplete(true);
+        await analytics.completeSession();
       }
     } else {
       setIncorrectOptions([...incorrectOptions, option]);
@@ -91,13 +114,14 @@ export default function GameBoard({
         setSelectedOption(correctAnswer); // Highlight the correct answer
         
         // Move to next question after showing the correct answer
-        setTimeout(() => {
+        setTimeout(async () => {
           if (currentQuestion < questions.length - 1) {
              setCurrentQuestion(currentQuestion + 1);
              setSelectedOption(null);
              // Disabled/incorrect options are reset by the useEffect hook
           } else {
              setIsGameComplete(true); 
+             await analytics.completeSession();
           }
         }, GAME_TIMINGS.CORRECT_ANSWER_DELAY);
       } else {
@@ -166,6 +190,25 @@ export default function GameBoard({
         <Box textAlign="center" py={4}>
           <Typography variant="h4" gutterBottom>Game Complete!</Typography>
           <Typography variant="h6" gutterBottom>You scored {score} out of {questions.length}</Typography>
+          {/* Analytics: Show recommendations and performance metrics */}
+          {analytics.recommendations && analytics.recommendations.length > 0 && (
+            <Box mt={4}>
+              <Typography variant="h6">Recommended Next Games:</Typography>
+              <ul>
+                {analytics.recommendations.map(rec => (
+                  <li key={rec.gameId}>{rec.reason} ({rec.gameId})</li>
+                ))}
+              </ul>
+            </Box>
+          )}
+          {analytics.performanceMetrics && (
+            <Box mt={2}>
+              <Typography variant="subtitle1">Performance Metrics:</Typography>
+              <pre style={{ textAlign: 'left', background: '#f5f5f5', padding: 8, borderRadius: 4 }}>
+                {JSON.stringify(analytics.performanceMetrics, null, 2)}
+              </pre>
+            </Box>
+          )}
           <Button variant="contained" color="primary" onClick={handleRestart} size="large">Play Again</Button>
         </Box>
       </GameContainer>

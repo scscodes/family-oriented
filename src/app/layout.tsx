@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { EnhancedThemeProvider } from "@/theme/EnhancedThemeProvider";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { UserProvider } from "@/context/UserContext";
 
 export const metadata: Metadata = {
   title: "This or That - Fun Learning Games for Kids",
@@ -16,9 +17,11 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <EnhancedThemeProvider>
-          <SettingsProvider>
-            {children}
-          </SettingsProvider>
+          <UserProvider>
+            <SettingsProvider>
+              {children}
+            </SettingsProvider>
+          </UserProvider>
         </EnhancedThemeProvider>
       </body>
     </html>
