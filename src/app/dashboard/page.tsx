@@ -5,6 +5,7 @@ import { useAvatar, useUser } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
 import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Divider, Button, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
 
 /**
  * User Dashboard page for learning progress, recommendations, and metrics.
@@ -61,8 +62,8 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAvatarChange = useCallback((e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
-    const selectedAvatar = avatars.find(a => a.id === e.target.value);
+  const handleAvatarChange = useCallback((event: SelectChangeEvent<string>) => {
+    const selectedAvatar = avatars.find(a => a.id === event.target.value);
     if (selectedAvatar && selectedAvatar.id !== currentAvatar?.id) {
       console.log('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
       setCurrentAvatar(selectedAvatar);
