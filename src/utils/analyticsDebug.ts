@@ -240,7 +240,7 @@ export class AnalyticsDebugger {
   /**
    * Clear all analytics data (requires manual database cleanup)
    */
-  async clearAnalyticsData(): Promise<{ success: boolean; error?: string }> {
+  async clearAllAnalyticsData(): Promise<{ success: boolean; error?: string }> {
     try {
       return await mockDataGenerator.clearAllAnalyticsData();
     } catch (err) {
@@ -273,9 +273,9 @@ export class AnalyticsDebugger {
     const tablesTest = await this.testAnalyticsTablesAccess(avatarId);
     console.log('Tables Access:', tablesTest);
 
-    // Test analytics service methods
+    // Test analytics service methods with detailed logging
     console.log('\n4. Testing Analytics Service Methods...');
-    const serviceTest = await this.testAnalyticsService(avatarId);
+    const serviceTest = await this.testAnalyticsServiceWithDetails(avatarId);
     console.log('Service Methods:', serviceTest);
 
     // If no data exists, create test data
@@ -286,12 +286,80 @@ export class AnalyticsDebugger {
 
       if (testDataResult.success) {
         console.log('\n6. Re-testing Analytics Service after test data creation...');
-        const retestService = await this.testAnalyticsService(avatarId);
+        const retestService = await this.testAnalyticsServiceWithDetails(avatarId);
         console.log('Service Methods (After Test Data):', retestService);
       }
     }
 
     console.log('\n=== End Diagnostic Report ===');
+  }
+
+  /**
+   * Enhanced test of analytics service methods with detailed diagnostics
+   */
+  private async testAnalyticsServiceWithDetails(avatarId: string): Promise<{
+    progress: { success: boolean; data?: LearningProgressData[]; error?: string; details?: string };
+    recommendations: { success: boolean; data?: LearningPathRecommendation[]; error?: string; details?: string };
+    metrics: { success: boolean; data?: PerformanceMetrics; error?: string; details?: string };
+  }> {
+    const results = {
+      progress: { success: false, error: '', details: '' },
+      recommendations: { success: false, error: '', details: '' },
+      metrics: { success: false, error: '', details: '' }
+    };
+
+    // Test getAvatarProgress with details
+    try {
+      const data = await analyticsService.getAvatarProgress(avatarId);
+      results.progress = { 
+        success: true, 
+        data, 
+        error: '',
+        details: `Found ${data.length} progress records. Latest: ${data[0]?.gameId || 'none'}`
+      };
+    } catch (err) {
+      results.progress = {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error',
+        details: 'Failed to fetch progress data'
+      };
+    }
+
+    // Test getLearningPathRecommendations with details
+    try {
+      const data = await analyticsService.getLearningPathRecommendations(avatarId, 3);
+      results.recommendations = { 
+        success: true, 
+        data, 
+        error: '',
+        details: `Generated ${data.length} recommendations. Top: ${data[0]?.gameId || 'none'}`
+      };
+    } catch (err) {
+      results.recommendations = {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error',
+        details: 'Failed to generate recommendations'
+      };
+    }
+
+    // Test getPerformanceMetrics with details
+    try {
+      const data = await analyticsService.getPerformanceMetrics(avatarId);
+      results.metrics = { 
+        success: true, 
+        data, 
+        error: '',
+        details: `Games played: ${data.totalGamesPlayed}, Engagement: ${data.engagementScore}`
+      };
+    } catch (err) {
+      results.metrics = {
+        success: false,
+        error: err instanceof Error ? err.message : 'Unknown error',
+        details: 'Failed to calculate metrics'
+      };
+    }
+
+    return results;
   }
 }
 

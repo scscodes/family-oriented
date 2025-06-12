@@ -22,6 +22,13 @@ export interface GameSessionData {
   completionStatus: 'completed' | 'abandoned' | 'in_progress';
   difficultyLevel: string;
   settingsUsed: Record<string, unknown>;
+  scoreData?: {
+    finalScore: number;
+    accuracy: number;
+    questionsCorrect: number;
+    questionsAttempted: number;
+    completionRate: number;
+  };
 }
 
 export interface GameEventData {
@@ -250,6 +257,9 @@ export class SupabaseAnalyticsService {
    * Get game sessions for an avatar (Supabase-integrated)
    */
   async getAvatarSessions(avatarId: string, limit?: number): Promise<GameSessionData[]> {
+    console.log('=== GETTING AVATAR SESSIONS ===');
+    console.log('Querying sessions for avatar ID:', avatarId);
+    
     let query = this.supabase
       .from('game_sessions')
       .select('*')
@@ -261,10 +271,26 @@ export class SupabaseAnalyticsService {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching sessions:', error);
+      throw error;
+    }
+
+    console.log('Raw session data from database:', data);
+    console.log('Number of sessions found:', data?.length || 0);
+
+    // Also check all sessions in database to see what avatar IDs exist
+    const { data: allSessions } = await this.supabase
+      .from('game_sessions')
+      .select('avatar_id, game_type, id')
+      .limit(10);
+    
+    console.log('Sample of all sessions in database:', allSessions);
+    const uniqueAvatarIds = [...new Set(allSessions?.map(s => s.avatar_id) || [])];
+    console.log('Unique avatar IDs that have sessions:', uniqueAvatarIds);
 
     // Transform Supabase data to our interface
-    return (data || []).map(row => ({
+    const transformedData = (data || []).map(row => ({
       id: row.id,
       avatarId: row.avatar_id,
       orgId: row.org_id || undefined,
@@ -276,8 +302,20 @@ export class SupabaseAnalyticsService {
       questionsCorrect: row.questions_correct || 0,
       completionStatus: row.completion_status as 'completed' | 'abandoned' | 'in_progress',
       difficultyLevel: row.difficulty_level,
-      settingsUsed: (row.settings_used as Record<string, unknown>) || {}
+      settingsUsed: (row.settings_used as Record<string, unknown>) || {},
+      scoreData: row.score_data as {
+        finalScore: number;
+        accuracy: number;
+        questionsCorrect: number;
+        questionsAttempted: number;
+        completionRate: number;
+      }
     }));
+
+    console.log('Transformed session data:', transformedData);
+    console.log('=== END GETTING AVATAR SESSIONS ===');
+    
+    return transformedData;
   }
 
   /**
@@ -289,20 +327,103 @@ export class SupabaseAnalyticsService {
 
     // Import games data for analysis
     const availableGames = this.getAvailableGames();
+    console.log('Available games:', availableGames.length);
 
-    for (const game of availableGames) {
-      const gameProgress = progress.find(p => p.gameId === game.id);
-      const recommendation = this.calculateGameRecommendation(game, gameProgress, progress);
-      
-      if (recommendation) {
-        recommendations.push(recommendation);
+    // If no progress yet, recommend beginner games
+    if (progress.length === 0) {
+      console.log('No progress found, recommending beginner games');
+      return availableGames
+        .filter(game => game.skillLevel === 'beginner')
+        .slice(0, maxRecommendations)
+        .map(game => ({
+          gameId: game.id,
+          reason: 'Great game to start with!',
+          priority: 8,
+          estimatedDifficulty: 'beginner',
+          learningObjectives: game.learningObjectives || [],
+          prerequisitesMet: true
+        }));
+    }
+
+    console.log('Processing recommendations for progress:', progress.length, 'games');
+
+    // First, recommend games that need improvement
+    const needsImprovement = progress
+      .filter(p => p.masteryScore < 70)
+      .sort((a, b) => a.masteryScore - b.masteryScore);
+
+    for (const gameProgress of needsImprovement) {
+      const game = availableGames.find(g => g.id === gameProgress.gameId);
+      if (game) {
+        recommendations.push({
+          gameId: game.id,
+          reason: `Keep practicing to improve your ${game.id} skills!`,
+          priority: 9,
+          estimatedDifficulty: gameProgress.skillLevel,
+          learningObjectives: game.learningObjectives || [],
+          prerequisitesMet: true
+        });
       }
     }
+
+    // Then, recommend new games in the same subject as games with good progress
+    const goodProgress = progress.filter(p => p.masteryScore >= 70);
+    const subjectsToExplore = new Set(goodProgress.map(p => this.getGameSubject(p.gameId)));
+
+    for (const subject of subjectsToExplore) {
+      const newGamesInSubject = availableGames
+        .filter(game => 
+          this.getGameSubject(game.id) === subject && 
+          !progress.some(p => p.gameId === game.id)
+        );
+
+      for (const game of newGamesInSubject) {
+        recommendations.push({
+          gameId: game.id,
+          reason: `Try this ${subject} game to expand your skills!`,
+          priority: 7,
+          estimatedDifficulty: 'beginner',
+          learningObjectives: game.learningObjectives || [],
+          prerequisitesMet: true
+        });
+      }
+    }
+
+    // Finally, add any remaining games not yet played
+    const playedGames = new Set(progress.map(p => p.gameId));
+    const unplayedGames = availableGames.filter(game => !playedGames.has(game.id));
+
+    for (const game of unplayedGames) {
+      if (recommendations.length < maxRecommendations) {
+        recommendations.push({
+          gameId: game.id,
+          reason: 'New game to explore!',
+          priority: 6,
+          estimatedDifficulty: 'beginner',
+          learningObjectives: game.learningObjectives || [],
+          prerequisitesMet: true
+        });
+      }
+    }
+
+    console.log('Generated recommendations:', recommendations.length);
 
     // Sort by priority and return top recommendations
     return recommendations
       .sort((a, b) => b.priority - a.priority)
       .slice(0, maxRecommendations);
+  }
+
+  private getGameSubject(gameId: string): string {
+    const subjectMap: Record<string, string> = {
+      'numbers': 'Mathematics',
+      'math': 'Mathematics',
+      'letters': 'Language Arts',
+      'colors': 'Visual Arts',
+      'shapes': 'Visual Arts',
+      'geography': 'Social Studies'
+    };
+    return subjectMap[gameId] || 'Other';
   }
 
   /**
@@ -314,27 +435,64 @@ export class SupabaseAnalyticsService {
       this.getAvatarSessions(avatarId)
     ]);
 
+    console.log('=== PERFORMANCE METRICS DEBUG ===');
+    console.log('Avatar ID:', avatarId);
+    console.log('Total sessions found:', sessions.length);
+    console.log('First few sessions:', sessions.slice(0, 3).map(s => ({
+      id: s.id,
+      gameId: s.gameId,
+      completionStatus: s.completionStatus,
+      totalDuration: s.totalDuration,
+      questionsAttempted: s.questionsAttempted,
+      questionsCorrect: s.questionsCorrect,
+      scoreData: s.scoreData
+    })));
+
+    // Basic metrics
     const totalGamesPlayed = sessions.length;
-    const averageSessionDuration = sessions.reduce((sum, s) => sum + s.totalDuration, 0) / totalGamesPlayed || 0;
+    console.log('Total games played:', totalGamesPlayed);
+    
     const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
-    const overallCompletionRate = completedSessions.length / totalGamesPlayed || 0;
+    console.log('Completed sessions:', completedSessions.length);
+    console.log('Completed sessions details:', completedSessions.map(s => ({
+      gameId: s.gameId,
+      totalDuration: s.totalDuration,
+      scoreData: s.scoreData
+    })));
+    
+    const averageSessionDuration = completedSessions.length > 0
+      ? completedSessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0) / completedSessions.length
+      : 0;
+    console.log('Average session duration (seconds):', averageSessionDuration);
+    
+    const overallCompletionRate = totalGamesPlayed > 0
+      ? completedSessions.length / totalGamesPlayed
+      : 0;
+    console.log('Overall completion rate:', overallCompletionRate);
 
     // Calculate skill level distribution
     const skillLevelDistribution = progress.reduce((dist, p) => {
       dist[p.skillLevel] = (dist[p.skillLevel] || 0) + 1;
       return dist;
     }, {} as Record<string, number>);
+    console.log('Skill level distribution:', skillLevelDistribution);
 
-    // Calculate subject preferences based on play frequency
+    // Calculate subject preferences based on play frequency and performance
     const subjectPreferences = this.calculateSubjectPreferences(sessions);
+    console.log('Subject preferences:', subjectPreferences);
 
     // Calculate learning velocity (objectives mastered per week)
     const learningVelocity = this.calculateLearningVelocity(progress);
+    console.log('Learning velocity:', learningVelocity);
 
     // Calculate engagement score based on various factors
     const engagementScore = this.calculateEngagementScore(sessions);
+    console.log('Engagement score calculation details:');
+    console.log('- Sessions for engagement:', sessions.length);
+    console.log('- Completed for engagement:', completedSessions.length);
+    console.log('- Final engagement score:', engagementScore);
 
-    return {
+    const metrics = {
       totalGamesPlayed,
       averageSessionDuration,
       overallCompletionRate,
@@ -343,6 +501,11 @@ export class SupabaseAnalyticsService {
       learningVelocity,
       engagementScore
     };
+
+    console.log('=== FINAL CALCULATED METRICS ===');
+    console.log(metrics);
+    console.log('=== END DEBUG ===');
+    return metrics;
   }
 
   /**
@@ -411,7 +574,14 @@ export class SupabaseAnalyticsService {
       questionsCorrect: row.questions_correct || 0,
       completionStatus: row.completion_status as 'completed' | 'abandoned' | 'in_progress',
       difficultyLevel: row.difficulty_level,
-      settingsUsed: (row.settings_used as Record<string, unknown>) || {}
+      settingsUsed: (row.settings_used as Record<string, unknown>) || {},
+      scoreData: row.score_data as {
+        finalScore: number;
+        accuracy: number;
+        questionsCorrect: number;
+        questionsAttempted: number;
+        completionRate: number;
+      }
     }));
 
     // Calculate learning effectiveness by subject
@@ -573,33 +743,73 @@ export class SupabaseAnalyticsService {
   }
 
   private calculateSubjectPreferences(sessions: GameSessionData[]): Record<string, number> {
-    // This would map game IDs to subjects using the GAMES array
-    // Placeholder implementation
-    const sessionCount = sessions.length;
-    const subject = this.getGameSubject();
-    return { [subject]: sessionCount };
+    const preferences: Record<string, number> = {};
+    const gameTypes = new Set(sessions.map(s => s.gameId));
+    
+    gameTypes.forEach(gameType => {
+      const gameSessions = sessions.filter(s => s.gameId === gameType);
+      const completedSessions = gameSessions.filter(s => s.completionStatus === 'completed');
+      
+      if (completedSessions.length > 0) {
+        const averageScore = completedSessions.reduce((sum, s) => {
+          // Use the scoreData field directly
+          const score = s.scoreData?.finalScore || 0;
+          return sum + score;
+        }, 0) / completedSessions.length;
+        
+        preferences[gameType] = averageScore;
+      }
+    });
+
+    return preferences;
   }
 
   private calculateLearningVelocity(progress: LearningProgressData[]): number {
-    // Calculate objectives mastered per week based on progress data
-    const totalObjectives = progress.reduce((sum, p) => sum + p.learningObjectivesMet.length, 0);
-    const weeksActive = this.calculateWeeksActive();
-    return weeksActive > 0 ? totalObjectives / weeksActive : 0;
+    if (progress.length === 0) return 0;
+
+    // Count objectives mastered in the last week
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const recentProgress = progress.filter(p => 
+      p.lastPlayed >= oneWeekAgo && p.masteryScore >= 80
+    );
+
+    return recentProgress.length;
   }
 
   private calculateEngagementScore(sessions: GameSessionData[]): number {
-    // Complex engagement calculation based on multiple factors
-    let score = 50; // base score
+    if (sessions.length === 0) return 0;
 
-    // Factor in completion rate
-    const completionRate = sessions.filter(s => s.completionStatus === 'completed').length / sessions.length || 0;
-    score += completionRate * 30;
+    const factors = {
+      sessionFrequency: 0,
+      completionRate: 0,
+      averageDuration: 0,
+      consistency: 0
+    };
 
-    // Factor in consistency (regular play)
-    const consistency = this.calculatePlayConsistency();
-    score += consistency * 20;
+    // Session frequency (0-25 points)
+    const sessionCount = sessions.length;
+    factors.sessionFrequency = Math.min(25, sessionCount * 2);
 
-    return Math.max(0, Math.min(100, score));
+    // Completion rate (0-25 points)
+    const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
+    const completionRate = completedSessions.length / sessionCount;
+    factors.completionRate = completionRate * 25;
+
+    // Average duration (0-25 points)
+    const totalDuration = completedSessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0);
+    const avgDuration = completedSessions.length > 0 ? totalDuration / completedSessions.length : 0;
+    factors.averageDuration = Math.min(25, avgDuration / 60); // Convert to minutes and cap at 25
+
+    // Consistency (0-25 points)
+    const recentSessions = sessions.slice(-5);
+    const recentCompletionRate = recentSessions.filter(s => s.completionStatus === 'completed').length / recentSessions.length;
+    factors.consistency = recentCompletionRate * 25;
+
+    // Calculate total engagement score (0-100)
+    const totalScore = Object.values(factors).reduce((sum, score) => sum + score, 0);
+    return Math.round(totalScore);
   }
 
   /**
@@ -609,16 +819,17 @@ export class SupabaseAnalyticsService {
     const gameEffectiveness: Record<string, { totalScore: number; sessionCount: number }> = {};
     
     sessions.forEach(session => {
-      const gameType = session.gameId;
-      const scoreData = session.settingsUsed as Record<string, unknown>;
-      const accuracy = typeof scoreData?.accuracy === 'number' ? scoreData.accuracy : 0;
-      
-      if (!gameEffectiveness[gameType]) {
-        gameEffectiveness[gameType] = { totalScore: 0, sessionCount: 0 };
+      if (session.completionStatus === 'completed') {
+        const gameType = session.gameId;
+        const accuracy = session.scoreData?.accuracy || 0;
+        
+        if (!gameEffectiveness[gameType]) {
+          gameEffectiveness[gameType] = { totalScore: 0, sessionCount: 0 };
+        }
+        
+        gameEffectiveness[gameType].totalScore += accuracy;
+        gameEffectiveness[gameType].sessionCount += 1;
       }
-      
-      gameEffectiveness[gameType].totalScore += accuracy;
-      gameEffectiveness[gameType].sessionCount += 1;
     });
 
     // Convert to average effectiveness scores
@@ -631,30 +842,150 @@ export class SupabaseAnalyticsService {
     return effectiveness;
   }
 
+  /**
+   * Get list of available games for recommendations
+   */
+  private getAvailableGames(): Array<{
+    id: string;
+    skillLevel: string;
+    learningObjectives: string[];
+    prerequisites?: string[];
+  }> {
+    // Define available games with their metadata
+    return [
+      {
+        id: 'numbers',
+        skillLevel: 'beginner',
+        learningObjectives: ['Number recognition', 'Basic counting'],
+        prerequisites: []
+      },
+      {
+        id: 'math',
+        skillLevel: 'beginner',
+        learningObjectives: ['Basic addition', 'Number patterns'],
+        prerequisites: ['numbers']
+      },
+      {
+        id: 'letters',
+        skillLevel: 'beginner',
+        learningObjectives: ['Letter recognition', 'Basic phonics'],
+        prerequisites: []
+      },
+      {
+        id: 'colors',
+        skillLevel: 'beginner',
+        learningObjectives: ['Color recognition', 'Color mixing'],
+        prerequisites: []
+      },
+      {
+        id: 'shapes',
+        skillLevel: 'beginner',
+        learningObjectives: ['Shape recognition', 'Basic geometry'],
+        prerequisites: []
+      },
+      {
+        id: 'geography',
+        skillLevel: 'beginner',
+        learningObjectives: ['Map reading', 'Basic geography'],
+        prerequisites: []
+      }
+    ];
+  }
+
   // Additional helper methods (preserved from original implementation)
-  private getAvailableGames(): Array<{ id: string; prerequisites?: string[]; learningObjectives?: string[] }> {
-    // This would return the GAMES array from gameData.ts
-    return [];
-  }
-
-  private getGameSubject(): string {
-    // This would look up the subject from the GAMES array
-    return 'Mathematics'; // placeholder
-  }
-
   private calculateWeeksActive(): number {
-    // Calculate weeks between first and last play
-    return 1; // placeholder
+    // Get first and last session dates from the database
+    const firstSession = this.getFirstSessionDate();
+    const lastSession = this.getLastSessionDate();
+    
+    if (!firstSession || !lastSession) {
+      return 0;
+    }
+
+    const weeksDiff = Math.ceil(
+      (lastSession.getTime() - firstSession.getTime()) / (7 * 24 * 60 * 60 * 1000)
+    );
+    
+    return Math.max(1, weeksDiff); // Minimum 1 week to avoid division by zero
   }
 
   private calculatePlayConsistency(): number {
-    // Calculate how consistently the user plays (0-1 score)
-    return 0.5; // placeholder
+    const sessions = this.getAvatarSessions();
+    if (sessions.length < 2) {
+      return 0.5; // Default for new users
+    }
+
+    // Sort sessions by date
+    const sortedSessions = sessions.sort((a, b) => 
+      a.sessionStart.getTime() - b.sessionStart.getTime()
+    );
+
+    // Calculate average days between sessions
+    let totalDays = 0;
+    for (let i = 1; i < sortedSessions.length; i++) {
+      const daysDiff = (sortedSessions[i].sessionStart.getTime() - 
+        sortedSessions[i-1].sessionStart.getTime()) / (24 * 60 * 60 * 1000);
+      totalDays += daysDiff;
+    }
+    const avgDaysBetween = totalDays / (sortedSessions.length - 1);
+
+    // Calculate consistency score (0-1)
+    // Lower average days between sessions = higher consistency
+    const maxExpectedDays = 7; // One session per week is considered consistent
+    const consistencyScore = Math.max(0, Math.min(1, 1 - (avgDaysBetween / maxExpectedDays)));
+
+    return consistencyScore;
   }
 
-  private calculateSubjectEffectiveness(): number {
-    // Calculate learning effectiveness for a specific subject
-    return 75; // placeholder percentage
+  private calculateSubjectEffectiveness(gameType: GameType): number {
+    const sessions = this.getAvatarSessions().filter(s => s.gameId === gameType);
+    if (sessions.length === 0) {
+      return 0;
+    }
+
+    // Calculate weighted average of recent performance
+    const recentSessions = sessions.slice(-5); // Last 5 sessions
+    const weights = [0.1, 0.15, 0.2, 0.25, 0.3]; // More weight to recent sessions
+    
+    let weightedSum = 0;
+    let totalWeight = 0;
+
+    recentSessions.forEach((session, index) => {
+      const weight = weights[index] || 0;
+      const score = (session.questionsCorrect / session.questionsAttempted) * 100;
+      weightedSum += score * weight;
+      totalWeight += weight;
+    });
+
+    return totalWeight > 0 ? weightedSum / totalWeight : 0;
+  }
+
+  private getFirstSessionDate(): Date | null {
+    const sessions = this.getAvatarSessions();
+    if (sessions.length === 0) {
+      return null;
+    }
+    return sessions.reduce((earliest, session) => 
+      session.sessionStart < earliest ? session.sessionStart : earliest,
+      sessions[0].sessionStart
+    );
+  }
+
+  private getLastSessionDate(): Date | null {
+    const sessions = this.getAvatarSessions();
+    if (sessions.length === 0) {
+      return null;
+    }
+    return sessions.reduce((latest, session) => 
+      session.sessionStart > latest ? session.sessionStart : latest,
+      sessions[0].sessionStart
+    );
+  }
+
+  private getAvatarSessions(): GameSessionData[] {
+    // This would fetch from Supabase in production
+    // For now, return mock data
+    return [];
   }
 }
 
