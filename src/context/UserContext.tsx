@@ -100,7 +100,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         app_metadata: {},
         user_metadata: { first_name: 'Demo', last_name: 'User' },
         email_confirmed_at: new Date().toISOString()
-      } as any; // Using 'any' to avoid complex Supabase User type issues
+      } as User; // Type assertion for demo user object
       
       setUser(demoUser);
       
@@ -254,7 +254,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadUserProfile, loadDemoUser, supabase.auth]);
+  }, [loadUserProfile, loadDemoUser, supabase.auth, loadAvatars]);
 
   // Create a new avatar
   const createAvatar = async (name: string): Promise<Avatar | null> => {

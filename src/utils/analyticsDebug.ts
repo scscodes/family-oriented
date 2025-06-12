@@ -6,6 +6,15 @@
 import { createClient } from '@/lib/supabase/client';
 import { analyticsService } from './analyticsService';
 import { mockDataGenerator } from './mockDataGenerator';
+import { User } from '@supabase/supabase-js';
+import { LearningProgressData, LearningPathRecommendation, PerformanceMetrics } from './analyticsService';
+
+interface Avatar {
+  id: string;
+  user_id: string;
+  name: string;
+  [key: string]: unknown;
+}
 
 export class AnalyticsDebugger {
   private supabase = createClient();
@@ -13,7 +22,7 @@ export class AnalyticsDebugger {
   /**
    * Test basic Supabase connectivity and permissions
    */
-  async testSupabaseConnection(): Promise<{ success: boolean; error?: string; user?: any }> {
+  async testSupabaseConnection(): Promise<{ success: boolean; error?: string; user?: User | null }> {
     try {
       // Test auth status
       const { data: { session }, error: authError } = await this.supabase.auth.getSession();
@@ -22,7 +31,7 @@ export class AnalyticsDebugger {
       console.log('Supabase Auth Session:', session);
 
       // Test basic query (should work without auth)
-      const { data, error } = await this.supabase
+      const { error } = await this.supabase
         .from('subscription_plans')
         .select('id, name')
         .limit(1);
@@ -44,7 +53,7 @@ export class AnalyticsDebugger {
   /**
    * Test avatar access and RLS policies
    */
-  async testAvatarAccess(avatarId: string): Promise<{ success: boolean; error?: string; avatar?: any }> {
+  async testAvatarAccess(avatarId: string): Promise<{ success: boolean; error?: string; avatar?: Avatar }> {
     try {
       console.log('Testing avatar access for:', avatarId);
 
@@ -141,9 +150,9 @@ export class AnalyticsDebugger {
    * Test analytics service methods
    */
   async testAnalyticsService(avatarId: string): Promise<{
-    progress: { success: boolean; data?: any; error?: string };
-    recommendations: { success: boolean; data?: any; error?: string };
-    metrics: { success: boolean; data?: any; error?: string };
+    progress: { success: boolean; data?: LearningProgressData[]; error?: string };
+    recommendations: { success: boolean; data?: LearningPathRecommendation[]; error?: string };
+    metrics: { success: boolean; data?: PerformanceMetrics; error?: string };
   }> {
     const results = {
       progress: { success: false, error: '' },
@@ -203,12 +212,19 @@ export class AnalyticsDebugger {
   }
 
   /**
-   * Generate comprehensive mock data for all demo avatars
+   * Generate comprehensive mock data for testing
    */
-  async generateComprehensiveMockData(): Promise<{ success: boolean; summary?: any; error?: string }> {
+  async generateComprehensiveMockData(): Promise<{ 
+    success: boolean; 
+    summary?: { 
+      avatarsProcessed: number; 
+      totalSessions: number; 
+      abandonedSessions: number; 
+    }; 
+    error?: string 
+  }> {
     try {
-      console.log('🎯 Generating comprehensive mock data for all demo avatars...');
-      return await mockDataGenerator.generateComprehensiveMockData();
+      return await mockDataGenerator.generateComprehensiveData();
     } catch (err) {
       return {
         success: false,

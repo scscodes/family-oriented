@@ -61,7 +61,7 @@ export default function DashboardPage() {
     }
   };
 
-  const handleAvatarChange = useCallback((e: any) => {
+  const handleAvatarChange = useCallback((e: React.ChangeEvent<{ name?: string; value: unknown }>) => {
     const selectedAvatar = avatars.find(a => a.id === e.target.value);
     if (selectedAvatar && selectedAvatar.id !== currentAvatar?.id) {
       console.log('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
