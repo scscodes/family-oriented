@@ -13,6 +13,17 @@ npm test        # Run tests
 npm run build   # Production build
 ```
 
+### Environment Setup
+For full functionality (analytics, user data), you'll need Supabase environment variables:
+
+```bash
+# Create .env.local file with:
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+📋 **For detailed setup instructions**: See [docs/environment-setup.md](docs/environment-setup.md)
+
 ## 🎮 Current Games (11 Total)
 - **Mathematics (3)**: Numbers, Addition, Subtraction
 - **Language Arts (3)**: Letters, Fill in the Blank, Rhyming Words  
