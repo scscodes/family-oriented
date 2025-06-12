@@ -99,7 +99,7 @@ export class AnalyticsDebugger {
         .eq('avatar_id', avatarId);
 
       if (error) throw error;
-      results.gameSessions = { success: true, count: data?.length || 0 };
+      results.gameSessions = { success: true, count: data?.length || 0, error: '' };
     } catch (err) {
       results.gameSessions = {
         success: false,
@@ -117,7 +117,7 @@ export class AnalyticsDebugger {
         .limit(10);
 
       if (error) throw error;
-      results.gameEvents = { success: true, count: data?.length || 0 };
+      results.gameEvents = { success: true, count: data?.length || 0, error: '' };
     } catch (err) {
       results.gameEvents = {
         success: false,
@@ -134,7 +134,7 @@ export class AnalyticsDebugger {
         .eq('avatar_id', avatarId);
 
       if (error) throw error;
-      results.learningProgress = { success: true, count: data?.length || 0 };
+      results.learningProgress = { success: true, count: data?.length || 0, error: '' };
     } catch (err) {
       results.learningProgress = {
         success: false,
@@ -154,7 +154,11 @@ export class AnalyticsDebugger {
     recommendations: { success: boolean; data?: LearningPathRecommendation[]; error?: string };
     metrics: { success: boolean; data?: PerformanceMetrics; error?: string };
   }> {
-    const results = {
+    const results: {
+      progress: { success: boolean; data?: LearningProgressData[]; error?: string };
+      recommendations: { success: boolean; data?: LearningPathRecommendation[]; error?: string };
+      metrics: { success: boolean; data?: PerformanceMetrics; error?: string };
+    } = {
       progress: { success: false, error: '' },
       recommendations: { success: false, error: '' },
       metrics: { success: false, error: '' }
@@ -163,7 +167,7 @@ export class AnalyticsDebugger {
     // Test getAvatarProgress
     try {
       const data = await analyticsService.getAvatarProgress(avatarId);
-      results.progress = { success: true, data };
+      results.progress = { success: true, data, error: '' };
     } catch (err) {
       results.progress = {
         success: false,
@@ -174,7 +178,7 @@ export class AnalyticsDebugger {
     // Test getLearningPathRecommendations
     try {
       const data = await analyticsService.getLearningPathRecommendations(avatarId, 3);
-      results.recommendations = { success: true, data };
+      results.recommendations = { success: true, data, error: '' };
     } catch (err) {
       results.recommendations = {
         success: false,
@@ -185,7 +189,7 @@ export class AnalyticsDebugger {
     // Test getPerformanceMetrics
     try {
       const data = await analyticsService.getPerformanceMetrics(avatarId);
-      results.metrics = { success: true, data };
+      results.metrics = { success: true, data, error: '' };
     } catch (err) {
       results.metrics = {
         success: false,
@@ -224,7 +228,7 @@ export class AnalyticsDebugger {
     error?: string 
   }> {
     try {
-      return await mockDataGenerator.generateComprehensiveData();
+      return await mockDataGenerator.generateComprehensiveMockData();
     } catch (err) {
       return {
         success: false,

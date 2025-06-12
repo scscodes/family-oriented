@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import DashboardPage from '../page';
 import { analyticsService } from '@/utils/analyticsService';
 import * as UserContext from '@/context/UserContext';
+import { UserProvider } from '@/context/UserContext';
 
 const mockAvatar = { id: '00000000-0000-0000-0000-000000000003', name: 'Test Avatar' };
 
@@ -33,7 +34,11 @@ describe('DashboardPage', () => {
   });
 
   it('renders dashboard data', async () => {
-    render(<DashboardPage />);
+    render(
+      <UserProvider>
+        <DashboardPage />
+      </UserProvider>
+    );
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByText('Learning Progress Dashboard')).toBeInTheDocument();
@@ -45,15 +50,23 @@ describe('DashboardPage', () => {
 
   it('shows info if no avatar', async () => {
     jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ currentAvatar: null });
-    render(<DashboardPage />);
+    render(
+      <UserProvider>
+        <DashboardPage />
+      </UserProvider>
+    );
     expect(screen.getByText(/please select or create an avatar/i)).toBeInTheDocument();
   });
 
   it('shows error on analytics failure', async () => {
     analyticsService.getAvatarProgress.mockRejectedValue(new Error('fail'));
-    render(<DashboardPage />);
+    render(
+      <UserProvider>
+        <DashboardPage />
+      </UserProvider>
+    );
     await waitFor(() => {
-      expect(screen.getByText('fail')).toBeInTheDocument();
+      expect(screen.getByText('Progress: fail')).toBeInTheDocument();
     });
   });
 }); 

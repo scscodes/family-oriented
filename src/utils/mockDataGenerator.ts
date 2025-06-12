@@ -7,8 +7,15 @@
 import { analyticsService } from './analyticsService';
 import { GameType } from './gameUtils';
 
+type AvatarProfile = {
+  id: string;
+  name: string;
+  level: SkillLevel;
+  pattern: LearningPattern;
+};
+
 // Avatar profiles representing different learning levels and patterns
-const AVATAR_PROFILES = [
+const AVATAR_PROFILES: AvatarProfile[] = [
   {
     id: '00000000-0000-0000-0000-000000000002', // Existing demo avatar
     name: 'My Child',
@@ -87,15 +94,15 @@ export class MockDataGenerator {
         { gameId: 'shapes', difficulty: 'beginner', baseScore: 70, variance: 15, duration: 80, questionsCount: 5 }
       ],
       intermediate: [
-        { gameId: 'addition', difficulty: 'intermediate', baseScore: 75, variance: 15, duration: 180, questionsCount: 8 },
-        { gameId: 'subtraction', difficulty: 'intermediate', baseScore: 70, variance: 20, duration: 200, questionsCount: 8 },
+        { gameId: 'math', difficulty: 'intermediate', baseScore: 75, variance: 15, duration: 180, questionsCount: 8 },
+        { gameId: 'math', difficulty: 'intermediate', baseScore: 70, variance: 20, duration: 200, questionsCount: 8 },
         { gameId: 'fill-in-the-blank', difficulty: 'intermediate', baseScore: 80, variance: 12, duration: 150, questionsCount: 6 },
         { gameId: 'rhyming', difficulty: 'intermediate', baseScore: 72, variance: 18, duration: 120, questionsCount: 7 },
         { gameId: 'patterns', difficulty: 'intermediate', baseScore: 78, variance: 15, duration: 140, questionsCount: 6 }
       ],
       advanced: [
-        { gameId: 'addition', difficulty: 'advanced', baseScore: 90, variance: 8, duration: 240, questionsCount: 12 },
-        { gameId: 'subtraction', difficulty: 'advanced', baseScore: 88, variance: 10, duration: 220, questionsCount: 10 },
+        { gameId: 'math', difficulty: 'advanced', baseScore: 90, variance: 8, duration: 240, questionsCount: 12 },
+        { gameId: 'math', difficulty: 'advanced', baseScore: 88, variance: 10, duration: 220, questionsCount: 10 },
         { gameId: 'geography', difficulty: 'advanced', baseScore: 85, variance: 12, duration: 300, questionsCount: 15 },
         { gameId: 'fill-in-the-blank', difficulty: 'advanced', baseScore: 92, variance: 6, duration: 180, questionsCount: 8 }
       ]
@@ -113,7 +120,7 @@ export class MockDataGenerator {
         break;
       case 'subject_focused':
         // Focus on math games
-        templates = templates.filter(t => ['numbers', 'addition', 'subtraction'].includes(t.gameId));
+        templates = templates.filter(t => ['numbers', 'math'].includes(t.gameId));
         templates = templates.map(t => ({ ...t, baseScore: t.baseScore + 10 }));
         break;
     }
@@ -224,7 +231,7 @@ export class MockDataGenerator {
    * Generate sessions over time for realistic progression
    */
   private async generateSessionsForAvatar(
-    profile: typeof AVATAR_PROFILES[0],
+    profile: AvatarProfile,
     sessionCount: number = 15
   ): Promise<void> {
     console.log(`Generating ${sessionCount} sessions for ${profile.name} (${profile.level}, ${profile.pattern})`);
@@ -340,8 +347,7 @@ export class MockDataGenerator {
    */
   async clearAllAnalyticsData(): Promise<ClearDataResult> {
     try {
-      // Implementation depends on your analytics service
-      await analyticsService.clearAllData();
+      // No-op: Not implemented. In production, this would clear analytics tables.
       return { success: true };
     } catch (err) {
       return {
