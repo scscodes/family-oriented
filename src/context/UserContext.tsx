@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
@@ -40,63 +40,48 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   const supabase = createClient();
 
-  // Load user session and profile on mount
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  // Load user profile from database
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
 
-        // Get current session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          throw sessionError;
-        }
+      if (error) throw error;
+      setUserProfile(data);
+    } catch (err) {
+      console.error('Error loading user profile:', err);
+      setError('Failed to load user profile');
+    }
+  }, [supabase]);
 
-        if (session?.user) {
-          setUser(session.user);
-          await loadUserProfile(session.user.id);
-          await loadAvatars(session.user.id);
-        } else {
-          // For demo purposes, create a default user/avatar
-          await createDemoUser();
-        }
-      } catch (err) {
-        console.error('Error loading user:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load user');
-        // Still create demo user on error for development
-        await createDemoUser();
-      } finally {
-        setLoading(false);
+  // Load avatars for the current user
+  const loadAvatars = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('avatars')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      
+      setAvatars(data || []);
+      
+      // Set first avatar as current if none selected
+      if (data && data.length > 0 && !currentAvatar) {
+        setCurrentAvatar(data[0]);
       }
-    };
-
-    loadUser();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        await loadUserProfile(session.user.id);
-        await loadAvatars(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setUserProfile(null);
-        setAvatars([]);
-        setCurrentAvatar(null);
-        // Create demo user for continued development
-        await createDemoUser();
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    } catch (err) {
+      console.error('Error loading avatars:', err);
+      setError('Failed to load avatars');
+    }
+  }, [supabase, currentAvatar]);
 
   // Create demo user for development/testing
-  const createDemoUser = async () => {
+  const createDemoUser = useCallback(async () => {
     try {
       // Create a demo user profile (not in auth, just in our users table)
       const demoUserId = 'demo-user-id';
@@ -137,47 +122,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
       console.error('Error creating demo user:', err);
       setError('Failed to initialize demo user');
     }
-  };
+  }, []);
 
-  // Load user profile from database
-  const loadUserProfile = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      setUserProfile(data);
-    } catch (err) {
-      console.error('Error loading user profile:', err);
-      setError('Failed to load user profile');
-    }
-  };
-
-  // Load avatars for the current user
-  const loadAvatars = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('avatars')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      
-      setAvatars(data || []);
-      
-      // Set first avatar as current if none selected
-      if (data && data.length > 0 && !currentAvatar) {
-        setCurrentAvatar(data[0]);
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          setUser(session.user);
+          await loadUserProfile(session.user.id);
+          await loadAvatars(session.user.id);
+        } else {
+          // Create demo user for continued development
+          await createDemoUser();
+        }
+      } catch (err) {
+        console.error('Error loading user:', err);
+        setError('Failed to load user');
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error('Error loading avatars:', err);
-      setError('Failed to load avatars');
-    }
-  };
+    };
+
+    loadUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        await loadUserProfile(session.user.id);
+        await loadAvatars(session.user.id);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setUserProfile(null);
+        setAvatars([]);
+        setCurrentAvatar(null);
+        // Create demo user for continued development
+        await createDemoUser();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [loadAvatars, loadUserProfile, createDemoUser, supabase.auth]);
 
   // Create a new avatar
   const createAvatar = async (name: string): Promise<Avatar | null> => {

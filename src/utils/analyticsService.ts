@@ -6,7 +6,7 @@
 
 import { GameType } from './gameUtils';
 import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/lib/supabase/database.types';
+import type { Json } from '@/lib/supabase/database.types';
 
 // Core interfaces for analytics data
 export interface GameSessionData {
@@ -92,7 +92,7 @@ export class SupabaseAnalyticsService {
         avatar_id: avatarId,
         org_id: orgId,
         game_type: gameType,
-        settings_used: settings as any,
+        settings_used: settings as Json,
         session_start: new Date().toISOString()
       })
       .select('id')
@@ -142,7 +142,7 @@ export class SupabaseAnalyticsService {
         session_id: sessionId,
         avatar_id: avatarId,
         event_type: eventType,
-        event_data: eventData as any,
+        event_data: eventData as Json,
         timestamp: new Date().toISOString(),
         sequence_number: sequenceNumber
       });
@@ -383,8 +383,9 @@ export class SupabaseAnalyticsService {
       stats[gameType].sessions++;
       if (session.completion_status === 'completed' && session.score_data) {
         stats[gameType].completedSessions++;
-        const scoreData = session.score_data as any;
-        stats[gameType].totalScore += scoreData.finalScore || 0;
+        const scoreData = session.score_data as Record<string, unknown>;
+        const finalScore = typeof scoreData?.finalScore === 'number' ? scoreData.finalScore : 0;
+        stats[gameType].totalScore += finalScore;
       }
       return stats;
     }, {} as Record<string, { sessions: number; totalScore: number; completedSessions: number }>);
@@ -397,8 +398,24 @@ export class SupabaseAnalyticsService {
       }))
       .sort((a, b) => b.sessions - a.sessions);
 
+    // Transform raw session data to GameSessionData format
+    const transformedSessions: GameSessionData[] = sessionData.map(row => ({
+      id: row.id,
+      avatarId: row.avatar_id,
+      orgId: row.org_id || undefined,
+      gameId: row.game_type as GameType,
+      sessionStart: new Date(row.session_start),
+      sessionEnd: row.session_end ? new Date(row.session_end) : undefined,
+      totalDuration: row.total_duration || 0,
+      questionsAttempted: row.questions_attempted || 0,
+      questionsCorrect: row.questions_correct || 0,
+      completionStatus: row.completion_status as 'completed' | 'abandoned' | 'in_progress',
+      difficultyLevel: row.difficulty_level,
+      settingsUsed: (row.settings_used as Record<string, unknown>) || {}
+    }));
+
     // Calculate learning effectiveness by subject
-    const learningEffectiveness = this.calculateLearningEffectivenessFromSessions(sessionData);
+    const learningEffectiveness = this.calculateLearningEffectivenessFromSessions(transformedSessions);
 
     return {
       totalSessions,
@@ -585,16 +602,33 @@ export class SupabaseAnalyticsService {
     return Math.max(0, Math.min(100, score));
   }
 
-  private calculateLearningEffectivenessFromSessions(sessions: any[]): Record<string, number> {
-    // Calculate effectiveness by subject based on improvement over time
-    const subjectEffectiveness: Record<string, number> = {};
+  /**
+   * Calculate learning effectiveness metrics from session data
+   */
+  private calculateLearningEffectivenessFromSessions(sessions: GameSessionData[]): Record<string, number> {
+    const gameEffectiveness: Record<string, { totalScore: number; sessionCount: number }> = {};
     
-    // Placeholder implementation - would group sessions by subject in real implementation
-    const subject = this.getGameSubject();
-    const effectiveness = sessions.length > 0 ? this.calculateSubjectEffectiveness() : 0;
-    subjectEffectiveness[subject] = effectiveness;
+    sessions.forEach(session => {
+      const gameType = session.gameId;
+      const scoreData = session.settingsUsed as Record<string, unknown>;
+      const accuracy = typeof scoreData?.accuracy === 'number' ? scoreData.accuracy : 0;
+      
+      if (!gameEffectiveness[gameType]) {
+        gameEffectiveness[gameType] = { totalScore: 0, sessionCount: 0 };
+      }
+      
+      gameEffectiveness[gameType].totalScore += accuracy;
+      gameEffectiveness[gameType].sessionCount += 1;
+    });
 
-    return subjectEffectiveness;
+    // Convert to average effectiveness scores
+    const effectiveness: Record<string, number> = {};
+    Object.keys(gameEffectiveness).forEach(gameType => {
+      const { totalScore, sessionCount } = gameEffectiveness[gameType];
+      effectiveness[gameType] = sessionCount > 0 ? totalScore / sessionCount : 0;
+    });
+
+    return effectiveness;
   }
 
   // Additional helper methods (preserved from original implementation)

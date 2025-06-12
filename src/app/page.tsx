@@ -21,6 +21,35 @@ import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
 
 /**
+ * Mix two hex colors with a given ratio
+ * @param color1 - First hex color (e.g., '#ff0000')
+ * @param color2 - Second hex color (e.g., '#0000ff')
+ * @param ratio - Mixing ratio (0.0 to 1.0, where 0.0 = color1, 1.0 = color2)
+ */
+const mixColors = (color1: string, color2: string, ratio: number): string => {
+  // Remove # from hex colors
+  const hex1 = color1.replace('#', '');
+  const hex2 = color2.replace('#', '');
+  
+  // Parse RGB values
+  const r1 = parseInt(hex1.slice(0, 2), 16);
+  const g1 = parseInt(hex1.slice(2, 4), 16);
+  const b1 = parseInt(hex1.slice(4, 6), 16);
+  
+  const r2 = parseInt(hex2.slice(0, 2), 16);
+  const g2 = parseInt(hex2.slice(2, 4), 16);
+  const b2 = parseInt(hex2.slice(4, 6), 16);
+  
+  // Mix colors
+  const r = Math.round(r1 * (1 - ratio) + r2 * ratio);
+  const g = Math.round(g1 * (1 - ratio) + g2 * ratio);
+  const b = Math.round(b1 * (1 - ratio) + b2 * ratio);
+  
+  // Convert back to hex
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+};
+
+/**
  * Modern marketing homepage designed to drive conversion and engagement
  */
 export default function Home() {
@@ -29,11 +58,11 @@ export default function Home() {
   // Generate heading colors from current theme
   const headingColors = {
     h1: themeConfig.primary,
-    h2: `color-mix(in srgb, ${themeConfig.primary} 90%, ${themeConfig.secondary} 10%)`,
-    h3: `color-mix(in srgb, ${themeConfig.primary} 80%, ${themeConfig.secondary} 20%)`,
-    h4: `color-mix(in srgb, ${themeConfig.primary} 70%, ${themeConfig.secondary} 30%)`,
-    h5: `color-mix(in srgb, ${themeConfig.primary} 60%, ${themeConfig.secondary} 40%)`,
-    h6: `color-mix(in srgb, ${themeConfig.primary} 50%, ${themeConfig.secondary} 50%)`
+    h2: mixColors(themeConfig.primary, themeConfig.secondary, 0.1), // 90% primary, 10% secondary
+    h3: mixColors(themeConfig.primary, themeConfig.secondary, 0.2), // 80% primary, 20% secondary
+    h4: mixColors(themeConfig.primary, themeConfig.secondary, 0.3), // 70% primary, 30% secondary
+    h5: mixColors(themeConfig.primary, themeConfig.secondary, 0.4), // 60% primary, 40% secondary
+    h6: mixColors(themeConfig.primary, themeConfig.secondary, 0.5)  // 50% primary, 50% secondary
   };
   
   // Subject configuration for current theme
