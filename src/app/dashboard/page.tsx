@@ -1,16 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAvatar } from "@/context/UserContext";
+import { useEffect, useState, useCallback } from "react";
+import { useAvatar, useUser } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
-import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Divider } from "@mui/material";
+import { analyticsDebugger } from "@/utils/analyticsDebug";
+import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Divider, Button, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 
 /**
  * User Dashboard page for learning progress, recommendations, and metrics.
  * Focuses on robust data flow and error handling.
  */
 export default function DashboardPage() {
-  const { currentAvatar } = useAvatar();
+  const { currentAvatar, setCurrentAvatar } = useAvatar();
+  const { avatars } = useUser();
   const avatarId = currentAvatar?.id;
 
   const [progress, setProgress] = useState<LearningProgressData[] | null>(null);
@@ -19,24 +21,116 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const runDiagnostic = async () => {
     if (!avatarId) return;
+    console.log('Running analytics diagnostic for avatar:', avatarId);
+    await analyticsDebugger.runFullDiagnostic(avatarId);
+  };
+
+  const createTestData = async () => {
+    if (!avatarId) return;
+    console.log('Creating simple test data for avatar:', avatarId);
+    try {
+      const result = await analyticsDebugger.createTestSessionData(avatarId);
+      console.log('Test data creation result:', result);
+      
+      if (result.success) {
+        // Reload dashboard data
+        window.location.reload();
+      }
+    } catch (err) {
+      console.error('Failed to create test data:', err);
+    }
+  };
+
+  const generateComprehensiveData = async () => {
+    console.log('Generating comprehensive mock data for all avatars...');
+    try {
+      const result = await analyticsDebugger.generateComprehensiveMockData();
+      console.log('Comprehensive data generation result:', result);
+      
+      if (result.success) {
+        alert(`✅ Generated mock data!\n\nSummary:\n- Avatars: ${result.summary?.avatarsProcessed}\n- Sessions: ${result.summary?.totalSessions}\n- Abandoned: ${result.summary?.abandonedSessions}\n\nReloading dashboard...`);
+        window.location.reload();
+      } else {
+        alert(`❌ Failed to generate data: ${result.error}`);
+      }
+    } catch (err) {
+      console.error('Failed to generate comprehensive data:', err);
+      alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    }
+  };
+
+  const handleAvatarChange = useCallback((e: any) => {
+    const selectedAvatar = avatars.find(a => a.id === e.target.value);
+    if (selectedAvatar && selectedAvatar.id !== currentAvatar?.id) {
+      console.log('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
+      setCurrentAvatar(selectedAvatar);
+    }
+  }, [avatars, currentAvatar, setCurrentAvatar]);
+
+  useEffect(() => {
+    if (!avatarId) {
+      setProgress(null);
+      setRecommendations(null);
+      setMetrics(null);
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
+    
+    console.log('Dashboard: Loading analytics for avatar:', avatarId);
+    
+    // Create an abort controller to prevent state updates if component unmounts or avatar changes
+    const abortController = new AbortController();
+    
     Promise.all([
-      analyticsService.getAvatarProgress(avatarId),
-      analyticsService.getLearningPathRecommendations(avatarId, 5),
-      analyticsService.getPerformanceMetrics(avatarId)
+      analyticsService.getAvatarProgress(avatarId).catch(err => {
+        console.error('Error loading avatar progress:', err);
+        throw new Error(`Progress: ${err.message}`);
+      }),
+      analyticsService.getLearningPathRecommendations(avatarId, 5).catch(err => {
+        console.error('Error loading recommendations:', err);
+        throw new Error(`Recommendations: ${err.message}`);
+      }),
+      analyticsService.getPerformanceMetrics(avatarId).catch(err => {
+        console.error('Error loading performance metrics:', err);
+        throw new Error(`Metrics: ${err.message}`);
+      })
     ])
       .then(([progressData, recs, metricsData]) => {
-        setProgress(progressData);
-        setRecommendations(recs);
-        setMetrics(metricsData);
+        // Only update state if not aborted
+        if (!abortController.signal.aborted) {
+          console.log('Dashboard: Successfully loaded analytics data', {
+            progress: progressData,
+            recommendations: recs,
+            metrics: metricsData
+          });
+          setProgress(progressData);
+          setRecommendations(recs);
+          setMetrics(metricsData);
+        }
       })
       .catch((err) => {
-        setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        // Only update state if not aborted
+        if (!abortController.signal.aborted) {
+          console.error('Dashboard: Analytics loading failed:', err);
+          setError(err instanceof Error ? err.message : "Failed to load dashboard data");
+        }
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        // Only update state if not aborted
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    // Cleanup function to abort on unmount or avatar change
+    return () => {
+      abortController.abort();
+    };
   }, [avatarId]);
 
   if (!avatarId) {
@@ -48,12 +142,64 @@ export default function DashboardPage() {
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return (
+      <Box maxWidth="md" mx="auto" py={4}>
+        <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+        <Box display="flex" gap={2} flexWrap="wrap">
+          <Button variant="outlined" onClick={runDiagnostic}>
+            Run Diagnostic
+          </Button>
+          <Button variant="outlined" onClick={createTestData}>
+            Quick Test Data
+          </Button>
+          <Button variant="contained" color="primary" onClick={generateComprehensiveData}>
+            Generate Full Mock Data
+          </Button>
+          <Button variant="outlined" onClick={() => window.location.reload()}>
+            Reload Page
+          </Button>
+        </Box>
+      </Box>
+    );
   }
 
   return (
     <Box maxWidth="md" mx="auto" py={4}>
       <Typography variant="h4" gutterBottom>Learning Progress Dashboard</Typography>
+      
+      {/* Avatar Selector */}
+      {avatars && avatars.length > 1 && (
+        <Box mb={3}>
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <InputLabel>Select Avatar</InputLabel>
+            <Select
+              value={currentAvatar?.id || ''}
+              label="Select Avatar"
+              onChange={handleAvatarChange}
+            >
+              {avatars.map((avatar) => (
+                <MenuItem key={avatar.id} value={avatar.id}>
+                  {avatar.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
+
+      {/* Mock Data Generation Controls */}
+      <Box mb={3} display="flex" gap={2} flexWrap="wrap">
+        <Button variant="outlined" size="small" onClick={runDiagnostic}>
+          Run Diagnostic
+        </Button>
+        <Button variant="outlined" size="small" onClick={createTestData}>
+          Quick Test Data
+        </Button>
+        <Button variant="contained" color="primary" size="small" onClick={generateComprehensiveData}>
+          Generate Full Mock Data
+        </Button>
+      </Box>
+      
       <Divider sx={{ mb: 3 }} />
 
       {/* Learning Progress */}

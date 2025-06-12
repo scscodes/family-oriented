@@ -32,7 +32,7 @@ beforeAll(() => {
 });
 
 describe('Analytics Service Validation', () => {
-  const testAvatarId = 'test-avatar-123';
+  const testAvatarId = '00000000-0000-0000-0000-000000000005';
   const testGameId = 'numbers' as const;
   const testSettings = { difficulty: 'easy', questionsPerSession: 5 };
 

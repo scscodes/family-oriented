@@ -18,7 +18,7 @@ import { type ThemeVariant } from '@/theme/theme';
  * Allows users to switch between different color themes
  */
 export default function ThemeSelector() {
-  const { currentTheme, setTheme, availableThemes } = useEnhancedTheme();
+  const { currentTheme, setTheme, availableThemes, isHydrated } = useEnhancedTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -86,7 +86,7 @@ export default function ThemeSelector() {
           <MenuItem
             key={key}
             onClick={() => handleThemeSelect(key as ThemeVariant)}
-            selected={currentTheme === key}
+            selected={isHydrated && currentTheme === key}
             sx={{
               mx: 1,
               mb: 0.5,

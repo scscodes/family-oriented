@@ -5,7 +5,7 @@ import { SettingsProvider } from '@/context/SettingsContext';
 
 jest.mock('@/utils/analyticsService');
 
-const mockAvatarId = 'test-avatar-id';
+const mockAvatarId = '00000000-0000-0000-0000-000000000004';
 const mockGameType = 'numbers';
 
 const mockSessionId = 'session-123';

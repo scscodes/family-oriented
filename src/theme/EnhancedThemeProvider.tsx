@@ -10,6 +10,7 @@ interface EnhancedThemeContextType {
   setTheme: (theme: ThemeVariant) => void;
   themeConfig: typeof themeVariants[ThemeVariant];
   availableThemes: typeof themeVariants;
+  isHydrated: boolean;
 }
 
 const EnhancedThemeContext = createContext<EnhancedThemeContextType | undefined>(undefined);
@@ -25,9 +26,11 @@ interface EnhancedThemeProviderProps {
 export function EnhancedThemeProvider({ children }: EnhancedThemeProviderProps) {
   const [currentTheme, setCurrentTheme] = useState<ThemeVariant>('purple');
   const [muiTheme, setMuiTheme] = useState(() => createEnhancedTheme('purple'));
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Load theme from localStorage on mount
+  // Load theme from localStorage after hydration
   useEffect(() => {
+    setIsHydrated(true);
     const savedTheme = localStorage.getItem('selectedTheme') as ThemeVariant;
     if (savedTheme && themeVariants[savedTheme]) {
       setCurrentTheme(savedTheme);
@@ -39,7 +42,9 @@ export function EnhancedThemeProvider({ children }: EnhancedThemeProviderProps) 
   const setTheme = (theme: ThemeVariant) => {
     setCurrentTheme(theme);
     setMuiTheme(createEnhancedTheme(theme));
-    localStorage.setItem('selectedTheme', theme);
+    if (isHydrated) {
+      localStorage.setItem('selectedTheme', theme);
+    }
   };
 
   const contextValue: EnhancedThemeContextType = {
@@ -47,6 +52,7 @@ export function EnhancedThemeProvider({ children }: EnhancedThemeProviderProps) 
     setTheme,
     themeConfig: themeVariants[currentTheme],
     availableThemes: themeVariants,
+    isHydrated,
   };
 
   return (

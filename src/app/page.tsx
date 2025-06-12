@@ -53,7 +53,7 @@ const mixColors = (color1: string, color2: string, ratio: number): string => {
  * Modern marketing homepage designed to drive conversion and engagement
  */
 export default function Home() {
-  const { themeConfig } = useEnhancedTheme();
+  const { themeConfig, isHydrated } = useEnhancedTheme();
   
   // Generate heading colors from current theme
   const headingColors = {
@@ -65,12 +65,23 @@ export default function Home() {
     h6: mixColors(themeConfig.primary, themeConfig.secondary, 0.5)  // 50% primary, 50% secondary
   };
   
+  // During hydration, use default theme colors to prevent mismatch
+  const safeThemeConfig = isHydrated ? themeConfig : { primary: '#9381ff', secondary: '#4361ee', accent: '#00d9ff' };
+  const safeHeadingColors = isHydrated ? headingColors : {
+    h1: '#9381ff',
+    h2: '#8b7dfd',
+    h3: '#8479fa',
+    h4: '#7c75f8',
+    h5: '#7471f5',
+    h6: '#6c6df3'
+  };
+
   // Subject configuration for current theme
   const subjects = {
-    'Language Arts': { color: headingColors.h5, icon: '📚' },
-    'Mathematics': { color: headingColors.h5, icon: '🔢' },
-    'Social Studies': { color: headingColors.h5, icon: '🌍' },
-    'Visual Arts': { color: headingColors.h5, icon: '🎨' }
+    'Language Arts': { color: safeHeadingColors.h5, icon: '📚' },
+    'Mathematics': { color: safeHeadingColors.h5, icon: '🔢' },
+    'Social Studies': { color: safeHeadingColors.h5, icon: '🌍' },
+    'Visual Arts': { color: safeHeadingColors.h5, icon: '🎨' }
   };
 
   // Get featured games using the discovery engine
@@ -79,7 +90,7 @@ export default function Home() {
     description: game.description,
     href: game.href,
     emoji: game.emoji,
-    color: headingColors.h5
+    color: safeHeadingColors.h5
   }));
 
   return (
@@ -107,7 +118,7 @@ export default function Home() {
 
       {/* Hero Section */}
       <Box sx={{
-        background: `linear-gradient(135deg, ${themeConfig.primary} 0%, ${themeConfig.secondary} 100%)`,
+        background: `linear-gradient(135deg, ${safeThemeConfig.primary} 0%, ${safeThemeConfig.secondary} 100%)`,
         color: 'white',
         py: { xs: 8, md: 12 },
         position: 'relative',
@@ -158,14 +169,14 @@ export default function Home() {
                   size="large"
                   startIcon={<PlayArrowIcon />}
                   sx={{
-                    backgroundColor: themeConfig.primary,
+                    backgroundColor: safeThemeConfig.primary,
                     color: 'white',
                     py: 2,
                     px: 4,
                     fontSize: '1.1rem',
                     fontWeight: 600,
                     '&:hover': { 
-                      backgroundColor: `${themeConfig.primary}dd`
+                      backgroundColor: `${safeThemeConfig.primary}dd`
                     }
                   }}
                 >
@@ -214,7 +225,7 @@ export default function Home() {
           <Box textAlign="center" mb={4}>
             <Typography variant="h3" component="h2" gutterBottom sx={{ 
               fontWeight: 700,
-              color: headingColors.h3,
+              color: safeHeadingColors.h3,
               mb: 1
             }}>
               Jump Into Learning
@@ -246,9 +257,9 @@ export default function Home() {
                     height: 140,
                     textAlign: 'center',
                     p: 3,
-                    border: `2px solid ${headingColors.h6}20`,
-                    background: `linear-gradient(135deg, ${headingColors.h6}08, ${headingColors.h6}15)`,
-                    boxShadow: `0 4px 20px ${headingColors.h6}20`,
+                    border: `2px solid ${safeHeadingColors.h6}20`,
+                    background: `linear-gradient(135deg, ${safeHeadingColors.h6}08, ${safeHeadingColors.h6}15)`,
+                    boxShadow: `0 4px 20px ${safeHeadingColors.h6}20`,
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
                     textDecoration: 'none',
@@ -256,10 +267,10 @@ export default function Home() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: `0 12px 32px ${headingColors.h6}40`
-                    }
+                                          '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: `0 12px 32px ${safeHeadingColors.h6}40`
+                      }
                   }}
                 >
                   <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
@@ -269,7 +280,7 @@ export default function Home() {
                     <Typography variant="h5" component="h3" sx={{ 
                       fontWeight: 700, 
                       lineHeight: 1.2,
-                      color: headingColors.h5,
+                      color: safeHeadingColors.h5,
                       mb: 1
                     }}>
                       {subject}
@@ -307,7 +318,7 @@ export default function Home() {
         <Box textAlign="center" mb={6}>
           <Typography variant="h3" component="h2" gutterBottom sx={{ 
             fontWeight: 700,
-            color: headingColors.h3
+            color: safeHeadingColors.h3
           }}>
             Why Parents Choose This or That
           </Typography>
@@ -326,8 +337,8 @@ export default function Home() {
             textAlign: 'center',
             p: 3
           }}>
-            <SchoolIcon sx={{ fontSize: 60, color: headingColors.h5, mb: 2 }} />
-            <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600, color: headingColors.h5 }}>
+            <SchoolIcon sx={{ fontSize: 60, color: safeHeadingColors.h5, mb: 2 }} />
+            <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600, color: safeHeadingColors.h5 }}>
               Educational Focus
             </Typography>
             <Typography color="text.secondary">
@@ -339,8 +350,8 @@ export default function Home() {
             textAlign: 'center',
             p: 3
           }}>
-            <FamilyRestroomIcon sx={{ fontSize: 60, color: headingColors.h5, mb: 2 }} />
-            <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600, color: headingColors.h5 }}>
+            <FamilyRestroomIcon sx={{ fontSize: 60, color: safeHeadingColors.h5, mb: 2 }} />
+            <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600, color: safeHeadingColors.h5 }}>
               Family-Friendly
             </Typography>
             <Typography color="text.secondary">
@@ -352,8 +363,8 @@ export default function Home() {
             textAlign: 'center',
             p: 3
           }}>
-            <TrendingUpIcon sx={{ fontSize: 60, color: headingColors.h5, mb: 2 }} />
-            <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600, color: headingColors.h5 }}>
+            <TrendingUpIcon sx={{ fontSize: 60, color: safeHeadingColors.h5, mb: 2 }} />
+            <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600, color: safeHeadingColors.h5 }}>
               Progress Tracking
             </Typography>
             <Typography color="text.secondary">
@@ -372,7 +383,7 @@ export default function Home() {
           <Box textAlign="center" mb={6}>
             <Typography variant="h3" component="h2" gutterBottom sx={{ 
               fontWeight: 700,
-              color: headingColors.h3
+              color: safeHeadingColors.h3
             }}>
               Featured Games
             </Typography>
@@ -399,8 +410,8 @@ export default function Home() {
                     transform: 'translateY(-8px)',
                     boxShadow: '0 12px 24px rgba(0,0,0,0.15)'
                   },
-                  background: `linear-gradient(135deg, ${headingColors.h5}20, ${headingColors.h5}40)`,
-                  border: `2px solid ${headingColors.h5}40`
+                  background: `linear-gradient(135deg, ${safeHeadingColors.h5}20, ${safeHeadingColors.h5}40)`,
+                  border: `2px solid ${safeHeadingColors.h5}40`
                 }}>
                   <CardContent sx={{ p: 4, textAlign: 'center' }}>
                     <Box sx={{ fontSize: '3rem', mb: 2 }}>
@@ -408,7 +419,7 @@ export default function Home() {
                     </Box>
                     <Typography variant="h5" component="h3" gutterBottom sx={{ 
                       fontWeight: 600,
-                      color: headingColors.h5
+                      color: safeHeadingColors.h5
                     }}>
                       {game?.title}
                     </Typography>
@@ -420,8 +431,8 @@ export default function Home() {
                       href={game?.href || '/games'}
                       variant="contained"
                       sx={{
-                        backgroundColor: headingColors.h5,
-                        '&:hover': { backgroundColor: `${headingColors.h5}dd` }
+                        backgroundColor: safeHeadingColors.h5,
+                        '&:hover': { backgroundColor: `${safeHeadingColors.h5}dd` }
                       }}
                     >
                       Play Now
@@ -448,7 +459,7 @@ export default function Home() {
 
       {/* CTA Section */}
       <Box sx={{
-        background: `linear-gradient(135deg, ${themeConfig.secondary} 0%, ${themeConfig.accent} 100%)`,
+        background: `linear-gradient(135deg, ${safeThemeConfig.secondary} 0%, ${safeThemeConfig.accent} 100%)`,
         color: 'white',
         py: 8,
         textAlign: 'center'

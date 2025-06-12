@@ -5,10 +5,10 @@ import DashboardPage from '../page';
 import { analyticsService } from '@/utils/analyticsService';
 import * as UserContext from '@/context/UserContext';
 
-const mockAvatar = { id: 'test-avatar-id', name: 'Test Avatar' };
+const mockAvatar = { id: '00000000-0000-0000-0000-000000000003', name: 'Test Avatar' };
 
 const mockProgress = [
-  { gameId: 'numbers', skillLevel: 'beginner', masteryScore: 80, lastPlayed: new Date(), learningObjectivesMet: [], prerequisiteCompletion: {}, avatarId: 'test-avatar-id', totalSessions: 2, averagePerformance: 80, improvementTrend: 'improving' }
+  { gameId: 'numbers', skillLevel: 'beginner', masteryScore: 80, lastPlayed: new Date(), learningObjectivesMet: [], prerequisiteCompletion: {}, avatarId: '00000000-0000-0000-0000-000000000003', totalSessions: 2, averagePerformance: 80, improvementTrend: 'improving' }
 ];
 const mockRecommendations = [
   { gameId: 'letters', reason: 'Try letters next!', priority: 8, estimatedDifficulty: 'beginner', learningObjectives: [], prerequisitesMet: true }

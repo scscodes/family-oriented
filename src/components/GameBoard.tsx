@@ -47,7 +47,7 @@ export default function GameBoard({
   
   // Avatar context for analytics
   const { currentAvatar } = useAvatar();
-  const avatarId = currentAvatar?.id || 'demo-avatar-id';
+  const avatarId = currentAvatar?.id || '00000000-0000-0000-0000-000000000002';
 
   // Analytics hook
   const analytics = useGameAnalytics({
