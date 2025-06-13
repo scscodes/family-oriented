@@ -392,7 +392,7 @@ export class SupabaseAnalyticsService {
 
     // Finally, add any remaining games not yet played
     const playedGames = new Set(progress.map(p => p.gameId));
-    const unplayedGames = availableGames.filter(game => !playedGames.has(game.id));
+    const unplayedGames = availableGames.filter(game => !playedGames.has(game.id as GameType));
 
     for (const game of unplayedGames) {
       if (recommendations.length < maxRecommendations) {
@@ -911,83 +911,26 @@ export class SupabaseAnalyticsService {
   }
 
   private calculatePlayConsistency(): number {
-    const sessions = this.getAvatarSessions();
-    if (sessions.length < 2) {
-      return 0.5; // Default for new users
-    }
-
-    // Sort sessions by date
-    const sortedSessions = sessions.sort((a, b) => 
-      a.sessionStart.getTime() - b.sessionStart.getTime()
-    );
-
-    // Calculate average days between sessions
-    let totalDays = 0;
-    for (let i = 1; i < sortedSessions.length; i++) {
-      const daysDiff = (sortedSessions[i].sessionStart.getTime() - 
-        sortedSessions[i-1].sessionStart.getTime()) / (24 * 60 * 60 * 1000);
-      totalDays += daysDiff;
-    }
-    const avgDaysBetween = totalDays / (sortedSessions.length - 1);
-
-    // Calculate consistency score (0-1)
-    // Lower average days between sessions = higher consistency
-    const maxExpectedDays = 7; // One session per week is considered consistent
-    const consistencyScore = Math.max(0, Math.min(1, 1 - (avgDaysBetween / maxExpectedDays)));
-
-    return consistencyScore;
+    // Legacy method - return default value
+    return 0.5; // Default for new users
   }
 
-  private calculateSubjectEffectiveness(gameType: GameType): number {
-    const sessions = this.getAvatarSessions().filter(s => s.gameId === gameType);
-    if (sessions.length === 0) {
-      return 0;
-    }
-
-    // Calculate weighted average of recent performance
-    const recentSessions = sessions.slice(-5); // Last 5 sessions
-    const weights = [0.1, 0.15, 0.2, 0.25, 0.3]; // More weight to recent sessions
-    
-    let weightedSum = 0;
-    let totalWeight = 0;
-
-    recentSessions.forEach((session, index) => {
-      const weight = weights[index] || 0;
-      const score = (session.questionsCorrect / session.questionsAttempted) * 100;
-      weightedSum += score * weight;
-      totalWeight += weight;
-    });
-
-    return totalWeight > 0 ? weightedSum / totalWeight : 0;
+  private calculateSubjectEffectiveness(): number {
+    // Legacy method - return default value
+    return 0;
   }
 
   private getFirstSessionDate(): Date | null {
-    const sessions = this.getAvatarSessions();
-    if (sessions.length === 0) {
-      return null;
-    }
-    return sessions.reduce((earliest, session) => 
-      session.sessionStart < earliest ? session.sessionStart : earliest,
-      sessions[0].sessionStart
-    );
+    // Legacy method - return null
+    return null;
   }
 
   private getLastSessionDate(): Date | null {
-    const sessions = this.getAvatarSessions();
-    if (sessions.length === 0) {
-      return null;
-    }
-    return sessions.reduce((latest, session) => 
-      session.sessionStart > latest ? session.sessionStart : latest,
-      sessions[0].sessionStart
-    );
+    // Legacy method - return null
+    return null;
   }
 
-  private getAvatarSessions(): GameSessionData[] {
-    // This would fetch from Supabase in production
-    // For now, return mock data
-    return [];
-  }
+
 }
 
 // Export singleton instance

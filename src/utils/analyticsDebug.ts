@@ -303,7 +303,11 @@ export class AnalyticsDebugger {
     recommendations: { success: boolean; data?: LearningPathRecommendation[]; error?: string; details?: string };
     metrics: { success: boolean; data?: PerformanceMetrics; error?: string; details?: string };
   }> {
-    const results = {
+    const results: {
+      progress: { success: boolean; data?: LearningProgressData[]; error: string; details: string };
+      recommendations: { success: boolean; data?: LearningPathRecommendation[]; error: string; details: string };
+      metrics: { success: boolean; data?: PerformanceMetrics; error: string; details: string };
+    } = {
       progress: { success: false, error: '', details: '' },
       recommendations: { success: false, error: '', details: '' },
       metrics: { success: false, error: '', details: '' }

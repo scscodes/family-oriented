@@ -1051,8 +1051,8 @@ export class GameDiscoveryEngine {
     if (features.length > 0) result.features = features;
 
     // Extract subject
-    Object.entries(SUBJECTS).forEach(([key, value]) => {
-      if (queryLower.includes(value.toLowerCase())) {
+    Object.keys(SUBJECTS).forEach((key) => {
+      if (queryLower.includes(key.toLowerCase())) {
         result.subject = key;
       }
     });
@@ -1118,8 +1118,8 @@ export class GameDiscoveryEngine {
     // Sort games by tag count (proxy for popularity) and completion rate
     return [...this.games]
       .sort((a, b) => {
-        const aScore = a.tags.length + (a.completionRate || 0);
-        const bScore = b.tags.length + (b.completionRate || 0);
+        const aScore = a.tags.length;
+        const bScore = b.tags.length;
         return bScore - aScore;
       })
       .slice(0, 5); // Return top 5 games

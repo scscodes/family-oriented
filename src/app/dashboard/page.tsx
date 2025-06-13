@@ -5,11 +5,11 @@ import { useAvatar, useUser } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
 import { logger } from "@/utils/logger";
-import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Divider, Button, FormControl, InputLabel, Select, MenuItem, Grid, Card, CardContent, CardActions } from "@mui/material";
+import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Button, FormControl, InputLabel, Select, MenuItem, Card, CardContent } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import { PlayArrow, Star, History, Download, CompareArrows } from '@mui/icons-material';
-import { format, subWeeks, subMonths, subQuarters, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { useTheme } from '@mui/material/styles';
 
 /**
@@ -28,7 +28,7 @@ export default function DashboardPage() {
     progress: LearningProgressData[];
     metrics: PerformanceMetrics;
   } | null>(null);
-  const [comparisonLabel, setComparisonLabel] = useState<string>('');
+  const [comparisonLabel] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,8 +70,6 @@ export default function DashboardPage() {
           `- Avatars: ${result.summary?.avatarsProcessed}`,
           `- Sessions: ${result.summary?.totalSessions}`,
           `- Abandoned: ${result.summary?.abandonedSessions}`,
-          '',
-          result.message || '',
           '',
           'Reloading dashboard...'
         ].filter(Boolean).join('\n');
@@ -118,39 +116,9 @@ export default function DashboardPage() {
   const handleComparisonChange = useCallback(async (value: string) => {
     if (!currentAvatar) return;
 
-    let startDate: Date;
-    let label: string;
-
-    switch (value) {
-      case 'last_week':
-        startDate = subWeeks(new Date(), 1);
-        label = 'Last Week';
-        break;
-      case 'last_month':
-        startDate = subMonths(new Date(), 1);
-        label = 'Last Month';
-        break;
-      case 'last_quarter':
-        startDate = subQuarters(new Date(), 1);
-        label = 'Last Quarter';
-        break;
-      default:
-        return;
-    }
-
-    try {
-      const historicalData = await analyticsService.getHistoricalData(
-        currentAvatar.id,
-        startDate,
-        new Date()
-      );
-
-      setComparisonData(historicalData);
-      setComparisonLabel(label);
-    } catch (err) {
-      console.error('Error fetching comparison data:', err);
-      setError('Failed to load comparison data');
-    }
+    // TODO: Implement historical data comparison once getHistoricalData is available
+    logger.info('Comparison feature not yet implemented:', value);
+    setError('Historical comparison feature coming soon');
   }, [currentAvatar]);
 
   // Load analytics data for the selected avatar
@@ -179,11 +147,15 @@ export default function DashboardPage() {
         const metrics = await analyticsService.getPerformanceMetrics(avatarId);
         logger.info('Raw metrics data:', metrics);
         
-        // Transform metrics for display
-        const transformedMetrics = {
+        // Transform metrics for display (ensure all required properties are present)
+        const transformedMetrics: PerformanceMetrics = {
           totalGamesPlayed: metrics.totalGamesPlayed,
           averageSessionDuration: Math.round(metrics.averageSessionDuration / 60), // Convert to minutes
-          engagementScore: Math.round(metrics.engagementScore)
+          engagementScore: Math.round(metrics.engagementScore),
+          overallCompletionRate: metrics.overallCompletionRate,
+          skillLevelDistribution: metrics.skillLevelDistribution,
+          subjectPreferences: metrics.subjectPreferences,
+          learningVelocity: metrics.learningVelocity
         };
         logger.info('Transformed metrics:', transformedMetrics);
         
@@ -261,9 +233,9 @@ export default function DashboardPage() {
       {/* Quick Access Section */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
         <Typography variant="h6" gutterBottom>Quick Access</Typography>
-        <Grid container spacing={2}>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
           {/* Recently Played */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: 1 }}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle1" gutterBottom>
@@ -291,10 +263,10 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
           {/* Recommended Next */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: 1 }}>
             <Card>
               <CardContent>
                 <Typography variant="subtitle1" gutterBottom>
@@ -322,8 +294,8 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Analytics Controls */}
@@ -337,9 +309,9 @@ export default function DashboardPage() {
         elevation={2}
       >
         <Typography variant="h6" gutterBottom>Analytics Controls</Typography>
-        <Grid container spacing={2}>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
           {/* Export Controls */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: 1 }}>
             <Card sx={{ bgcolor: theme.palette.background.default }}>
               <CardContent>
                 <Typography variant="subtitle1" gutterBottom>
@@ -377,7 +349,7 @@ export default function DashboardPage() {
                     onClick={() => {
                       const csv = [
                         ['Game ID', 'Mastery Score', 'Skill Level', 'Last Played'],
-                        ...progress.map(p => [
+                        ...(progress || []).map(p => [
                           p.gameId,
                           p.masteryScore.toFixed(1),
                           p.skillLevel,
@@ -401,10 +373,10 @@ export default function DashboardPage() {
                 </Box>
               </CardContent>
             </Card>
-          </Grid>
+          </Box>
 
           {/* Comparative Analytics */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: 1 }}>
             <Card sx={{ bgcolor: theme.palette.background.default }}>
               <CardContent>
                 <Typography variant="subtitle1" gutterBottom>
@@ -435,8 +407,8 @@ export default function DashboardPage() {
                 )}
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Analytics Charts */}

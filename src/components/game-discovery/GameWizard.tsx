@@ -32,7 +32,7 @@ export function GameWizard({ onClose }: GameWizardProps) {
         const session = await gameWizard.startSession(avatar.id);
         
         // Get recommendations
-        const result = await gameWizard.getRecommendations(session.id, selections);
+        await gameWizard.getRecommendations(session.id, selections);
         
         // Navigate to games page with recommendations
         router.push(`/games?wizard=${session.id}`);

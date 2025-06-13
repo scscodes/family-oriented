@@ -7,10 +7,14 @@ import { logger } from '@/utils/logger';
 interface Avatar {
   id: string;
   name: string;
-  age: number;
-  preferences?: Record<string, unknown>;
-  created_at: string;
-  updated_at: string;
+  user_id: string;
+  org_id: string | null;
+  encrypted_pii: unknown;
+  game_preferences: unknown;
+  theme_settings: unknown;
+  last_active: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 interface UseAvatarReturn {
@@ -75,8 +79,6 @@ export function useAvatar(): UseAvatarReturn {
     try {
       setLoading(true);
       setError(null);
-
-      const supabase = createClient();
 
       const selectedAvatar = avatars.find(a => a.id === id);
       if (!selectedAvatar) {

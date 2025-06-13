@@ -5,7 +5,7 @@
  * Implements responsive, accessible charts for learning analytics
  */
 
-import { useMemo, useCallback } from 'react';
+import { useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -17,11 +17,18 @@ import {
   Legend,
   ArcElement,
   RadialLinearScale,
-  Filler
+  Filler,
+  TooltipItem
 } from 'chart.js';
-import { Line, Doughnut, Radar } from 'react-chartjs-2';
-import { Box, Paper, Typography, useTheme } from '@mui/material';
+import { Line, Doughnut } from 'react-chartjs-2';
+import { Box, Paper, useTheme } from '@mui/material';
 import type { LearningProgressData, PerformanceMetrics } from '@/utils/analyticsService';
+
+interface LearningRecommendation {
+  gameId: string;
+  reason: string;
+  priority: number;
+}
 
 // Register ChartJS components
 ChartJS.register(
@@ -87,7 +94,7 @@ const MasteryProgressChart: React.FC<{
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => `Mastery: ${context.raw.toFixed(1)}%`
+          label: (context: TooltipItem<'line'>) => `Mastery: ${(context.raw as number).toFixed(1)}%`
         }
       }
     },
@@ -234,9 +241,9 @@ const EngagementMetricsChart: React.FC<{
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: TooltipItem<'doughnut'>) => {
             if (context.label === 'Engagement') {
-              return `Engagement: ${context.raw.toFixed(1)}%`;
+              return `Engagement: ${(context.raw as number).toFixed(1)}%`;
             }
             return '';
           }
@@ -265,7 +272,7 @@ const EngagementMetricsChart: React.FC<{
  */
 const LearningPathChart: React.FC<{
   progress: LearningProgressData[];
-  recommendations: any[];
+  recommendations: LearningRecommendation[];
 }> = ({ progress, recommendations }) => {
   const theme = useTheme();
 
@@ -309,9 +316,9 @@ const LearningPathChart: React.FC<{
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: TooltipItem<'line'>) => {
             const label = context.dataset.label;
-            const value = context.raw;
+            const value = context.raw as number;
             const gameId = progress[context.dataIndex].gameId;
             const recommendation = recommendations.find(r => r.gameId === gameId);
             
@@ -411,9 +418,9 @@ const ComparisonChart: React.FC<{
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => {
+          label: (context: TooltipItem<'line'>) => {
             const label = context.dataset.label;
-            const value = context.raw;
+            const value = context.raw as number;
             return `${label}: ${value.toFixed(1)}%`;
           }
         }

@@ -27,7 +27,6 @@ import AccordionCategory from "@/components/AccordionCategory";
 import { SUBJECTS, gameDiscovery, Game, EnhancedGameFilter, SortOptions, ViewPreferences } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
-import { gameWizard } from '@/utils/gameWizardService';
 
 /**
  * Browse all available games with search and filtering capabilities

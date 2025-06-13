@@ -505,18 +505,18 @@ export class MockDataGenerator {
       
       // Check for regular sessions (15 sessions)
       const hasRegularSessions = sessions.filter(s => 
-        !s.abandoned && s.gameType !== 'math' && s.gameType !== 'numbers'
+        s.completionStatus !== 'abandoned' && s.gameId !== 'math' && s.gameId !== 'numbers'
       ).length >= 15;
 
       // Check for abandoned sessions (2 sessions)
       const hasAbandonedSessions = sessions.filter(s => 
-        s.abandoned
+        s.completionStatus === 'abandoned'
       ).length >= 2;
 
       // Check for validation scenarios (16 sessions across 4 scenarios)
       const hasValidationScenarios = sessions.filter(s => 
-        (s.gameType === 'math' || s.gameType === 'numbers') && 
-        !s.abandoned
+        (s.gameId === 'math' || s.gameId === 'numbers') && 
+        s.completionStatus !== 'abandoned'
       ).length >= 16;
 
       return {
@@ -679,7 +679,13 @@ export class MockDataGenerator {
 
         logger.info(`\nCalculating learning progress for ${avatar.name}:`);
         logger.info(`Found ${newAvatarSessions.length} sessions for progress calculation`);
-        const progress = this.calculateLearningProgress(newAvatarSessions);
+        const progress = this.calculateLearningProgress(
+          newAvatarSessions.map(session => ({
+            game_type: session.game_type as GameType,
+            completion_status: session.completion_status || 'completed',
+            score_data: session.score_data as { finalScore?: number } | null
+          }))
+        );
         logger.info('Progress data:', progress);
 
         // Store progress in learning_progress table
@@ -750,7 +756,7 @@ export class MockDataGenerator {
       }
       
       // Determine skill level based on average score
-      let skillLevel = 'beginner';
+      let skillLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
       if (averageScore >= 90) {
         skillLevel = 'advanced';
       } else if (averageScore >= 70) {
@@ -761,7 +767,7 @@ export class MockDataGenerator {
       const masteryScore = Math.min(100, averageScore);
 
       // Determine improvement trend
-      let improvementTrend = 'stable';
+      let improvementTrend: 'improving' | 'stable' | 'declining' = 'stable';
       if (totalSessions >= 3) {
         const recentSessions = completedSessions.slice(-3);
         if (recentSessions.length > 0) {

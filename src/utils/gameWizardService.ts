@@ -1,4 +1,3 @@
-import { createClient } from '@/lib/supabase/client';
 import { gameDiscovery } from './gameData';
 import { logger } from './logger';
 
@@ -13,7 +12,7 @@ interface WizardStep {
 interface WizardOption {
   id: string;
   label: string;
-  value: string | number | boolean;
+  value: string | number | boolean | number[];
   icon?: string;
   description?: string;
 }
@@ -86,28 +85,12 @@ export class GameWizardService {
    * Start a new wizard session
    */
   async startSession(avatarId: string): Promise<WizardSession> {
-    try {
-      const supabase = createClient();
-      const { data, error } = await supabase
-        .from('game_wizard_sessions')
-        .insert({
-          avatar_id: avatarId,
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return {
-        id: data.id,
-        avatarId: data.avatar_id,
-        createdAt: new Date(data.created_at)
-      };
-    } catch (error) {
-      logger.error('Failed to start wizard session:', error);
-      throw error;
-    }
+    // TODO: Implement with Supabase when game_wizard_sessions table is created
+    return {
+      id: `session_${Date.now()}`,
+      avatarId,
+      createdAt: new Date()
+    };
   }
 
   /**
@@ -124,40 +107,18 @@ export class GameWizardService {
     sessionId: string,
     selections: Record<string, unknown>
   ): Promise<WizardSession> {
-    try {
-      const supabase = createClient();
-      // Parse selections into game filters
-      const filters = this.parseSelections(selections);
+    // TODO: Implement with Supabase when game_wizard_sessions table is created
+    const filters = this.parseSelections(selections);
+    const recommendations = gameDiscovery.getRecommendedGames('', filters);
 
-      // Get recommended games
-      const recommendations = gameDiscovery.getRecommendedGames('', filters);
-
-      // Update session with recommendations
-      const { data, error } = await supabase
-        .from('game_wizard_sessions')
-        .update({
-          parsed_filters: filters,
-          selected_games: recommendations.map(r => r.game.id),
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', sessionId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return {
-        id: data.id,
-        avatarId: data.avatar_id,
-        parsedFilters: data.parsed_filters,
-        selectedGames: data.selected_games,
-        createdAt: new Date(data.created_at),
-        completedAt: data.completed_at ? new Date(data.completed_at) : undefined
-      };
-    } catch (error) {
-      logger.error('Failed to get recommendations:', error);
-      throw error;
-    }
+    return {
+      id: sessionId,
+      avatarId: 'temp',
+      parsedFilters: filters,
+      selectedGames: recommendations.map(r => r.game.id),
+      createdAt: new Date(),
+      completedAt: new Date()
+    };
   }
 
   /**
@@ -169,55 +130,16 @@ export class GameWizardService {
     score: number,
     timeSpent: number
   ): Promise<void> {
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('game_wizard_completions')
-        .insert({
-          wizard_session_id: sessionId,
-          game_id: gameId,
-          score,
-          time_spent: timeSpent
-        });
-
-      if (error) throw error;
-
-      // Update session completion rate
-      await this.updateCompletionRate(sessionId);
-    } catch (error) {
-      logger.error('Failed to track completion:', error);
-      throw error;
-    }
+    // TODO: Implement with Supabase when game_wizard_completions table is created
+    logger.info('Tracking completion:', { sessionId, gameId, score, timeSpent });
   }
 
   /**
    * Update session completion rate
    */
   private async updateCompletionRate(sessionId: string): Promise<void> {
-    try {
-      const supabase = createClient();
-      // Get all completions for this session
-      const { data: completions, error: completionsError } = await supabase
-        .from('game_wizard_completions')
-        .select('score')
-        .eq('wizard_session_id', sessionId);
-
-      if (completionsError) throw completionsError;
-
-      // Calculate average score
-      const avgScore = completions.reduce((sum, c) => sum + c.score, 0) / completions.length;
-
-      // Update session
-      const { error: updateError } = await supabase
-        .from('game_wizard_sessions')
-        .update({ completion_rate: avgScore })
-        .eq('id', sessionId);
-
-      if (updateError) throw updateError;
-    } catch (error) {
-      logger.error('Failed to update completion rate:', error);
-      throw error;
-    }
+    // TODO: Implement with Supabase when tables are created
+    logger.info('Updating completion rate for session:', sessionId);
   }
 
   /**
