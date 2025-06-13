@@ -17,6 +17,7 @@ export type GameType =
 import type { GameSettings } from './settingsUtils';
 import { generateUniqueOptions } from './arrayUtils';
 import { GAME_TIMINGS, GAME_DEFAULTS } from './constants';
+import { logger } from './logger';
 
 /**
  * Basic structure for all game questions
@@ -112,7 +113,7 @@ export const questionGenerators: Record<
   numbers: (s) => {
     // Ensure numberRange exists and has required properties
     if (!s.numberRange || typeof s.numberRange.min !== 'number' || typeof s.numberRange.max !== 'number') {
-      console.error('Invalid numberRange in settings:', s);
+      logger.error('Invalid numberRange in settings:', s);
       return [];
     }
     
@@ -360,9 +361,28 @@ export function generatePatternQuestions(count: number = 5, optionsCount: number
       const startChar = String.fromCharCode(65 + Math.floor(Math.random() * 20)); // A-T
       const isUppercase = Math.random() > 0.5;
       const step = Math.floor(Math.random() * 3) + 1;
-      sequence = PATTERN_GENERATORS.alphabetic(isUppercase ? startChar : startChar.toLowerCase(), step, 4);
-      const fullSequence = PATTERN_GENERATORS.alphabetic(isUppercase ? startChar : startChar.toLowerCase(), step, 5);
-      answer = fullSequence[4] || sequence[3]; // Fallback if sequence too long
+
+      const fullSequence = PATTERN_GENERATORS.alphabetic(
+        isUppercase ? startChar : startChar.toLowerCase(),
+        step,
+        5
+      );
+      sequence = fullSequence.slice(0, 4);
+
+      // Fallback if the generated sequence is shorter than expected
+      if (fullSequence.length >= 5) {
+        answer = fullSequence[4];
+      } else {
+        const lastChar = fullSequence[fullSequence.length - 1];
+        if (lastChar) {
+          const nextCode = lastChar.charCodeAt(0) + step;
+          const nextChar = String.fromCharCode(Math.min(nextCode, 90));
+          answer = isUppercase ? nextChar : nextChar.toLowerCase();
+        } else {
+          // Extremely unlikely, but ensure a fallback
+          answer = isUppercase ? startChar : startChar.toLowerCase();
+        }
+      }
     } else {
       // Simple geometric or custom patterns (30% chance)
       const start = Math.floor(Math.random() * 5) + 1;

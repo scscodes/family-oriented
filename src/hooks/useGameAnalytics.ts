@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { GameType } from '@/utils/gameUtils';
 import { analyticsService, GameSessionData, LearningPathRecommendation, PerformanceMetrics } from '@/utils/analyticsService';
 import { useSettings } from '@/context/SettingsContext';
+import { logger } from '@/utils/logger';
 
 interface UseGameAnalyticsOptions {
   gameType: GameType;
@@ -46,7 +47,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
    */
   const startSession = useCallback(async () => {
     if (state.isTracking) {
-      console.warn('Session already in progress');
+      logger.warn('Session already in progress');
       return state.sessionId;
     }
 
@@ -65,7 +66,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
 
       return sessionId;
     } catch (error) {
-      console.error('Failed to start analytics session:', error);
+      logger.error('Failed to start analytics session:', error);
       return null;
     }
   }, [avatarId, gameType, settings, orgId, state.isTracking, state.sessionId]);
@@ -75,7 +76,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
    */
   const trackQuestionAttempt = useCallback(async (isCorrect: boolean, questionData?: Record<string, unknown>) => {
     if (!state.sessionId || !state.isTracking) {
-      console.warn('No active session for question tracking');
+      logger.warn('No active session for question tracking');
       return;
     }
 
@@ -96,7 +97,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
         }
       );
     } catch (error) {
-      console.error('Failed to track question attempt:', error);
+      logger.error('Failed to track question attempt:', error);
     }
   }, [state.sessionId, state.isTracking, avatarId]);
 
@@ -105,14 +106,14 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
    */
   const trackEvent = useCallback(async (eventType: 'game_start' | 'game_complete' | 'question_start' | 'hint_used' | 'game_pause' | 'game_resume' | 'difficulty_change' | 'game_abandon', eventData?: Record<string, unknown>) => {
     if (!state.sessionId || !state.isTracking) {
-      console.warn('No active session for event tracking');
+      logger.warn('No active session for event tracking');
       return;
     }
 
     try {
       await analyticsService.trackEvent(state.sessionId, avatarId, eventType, eventData || {});
     } catch (error) {
-      console.error(`Failed to track ${eventType} event:`, error);
+      logger.error(`Failed to track ${eventType} event:`, error);
     }
   }, [state.sessionId, state.isTracking, avatarId]);
 
@@ -121,7 +122,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
    */
   const completeSession = useCallback(async (finalScore?: number) => {
     if (!state.sessionId || !state.isTracking) {
-      console.warn('No active session to complete');
+      logger.warn('No active session to complete');
       return;
     }
 
@@ -156,11 +157,11 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
             performanceMetrics: metrics
           }));
         } catch (error) {
-          console.error('Failed to load post-session data:', error);
+          logger.error('Failed to load post-session data:', error);
         }
       }, 0);
     } catch (error) {
-      console.error('Failed to complete session:', error);
+      logger.error('Failed to complete session:', error);
     }
   }, [state.sessionId, state.isTracking, avatarId]);
 
@@ -181,7 +182,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
           : 0
       });
     } catch (error) {
-      console.error('Failed to track session abandonment:', error);
+      logger.error('Failed to track session abandonment:', error);
     }
 
     setState(prev => ({
@@ -203,7 +204,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
         recommendations
       }));
     } catch (error) {
-      console.error('Failed to load recommendations:', error);
+      logger.error('Failed to load recommendations:', error);
     }
   }, [avatarId]);
 
@@ -218,7 +219,7 @@ export function useGameAnalytics(options: UseGameAnalyticsOptions) {
         performanceMetrics: metrics
       }));
     } catch (error) {
-      console.error('Failed to load performance metrics:', error);
+      logger.error('Failed to load performance metrics:', error);
     }
   }, [avatarId]);
 
@@ -302,7 +303,7 @@ export function useAggregateAnalytics(orgId?: string) {
       const data = analyticsService.getAggregateAnalytics(orgId);
       setAnalytics(data);
     } catch (error) {
-      console.error('Failed to load aggregate analytics:', error);
+      logger.error('Failed to load aggregate analytics:', error);
     } finally {
       setLoading(false);
     }

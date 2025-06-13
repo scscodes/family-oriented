@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { GameType, GameQuestion, questionGenerators } from "@/utils/gameUtils";
 import { useSettings } from "@/context/SettingsContext";
 import { DEFAULT_SETTINGS } from "@/utils/settingsUtils";
+import { logger } from "@/utils/logger";
 
 /**
  * Shared hook to generate questions and handle settings for different games.
@@ -46,14 +47,14 @@ export function useGame(gameType: GameType) {
       const generatedQuestions = generator(gameSettings);
       setQuestions(generatedQuestions);
     } catch (error) {
-      console.error(`Error generating questions for ${gameType}:`, error);
+      logger.error(`Error generating questions for ${gameType}:`, error);
       setQuestions([]);
     }
   }, [globalSettings, gameType]);
 
   const handleSettingsChange = (newSettings: Record<string, unknown>) => {
     // This function could be expanded to update specific settings
-    console.log("Settings change requested:", newSettings);
+    logger.debug('Settings change requested:', newSettings);
     // Implementation would depend on how you want to handle game-specific settings
   };
 

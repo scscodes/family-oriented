@@ -8,6 +8,7 @@ import { analyticsService } from './analyticsService';
 import { mockDataGenerator } from './mockDataGenerator';
 import { User } from '@supabase/supabase-js';
 import { LearningProgressData, LearningPathRecommendation, PerformanceMetrics } from './analyticsService';
+import { logger } from './logger';
 
 interface Avatar {
   id: string;
@@ -28,7 +29,7 @@ export class AnalyticsDebugger {
       const { data: { session }, error: authError } = await this.supabase.auth.getSession();
       if (authError) throw authError;
 
-      console.log('Supabase Auth Session:', session);
+      logger.info('Supabase Auth Session:', session);
 
       // Test basic query (should work without auth)
       const { error } = await this.supabase
@@ -55,7 +56,7 @@ export class AnalyticsDebugger {
    */
   async testAvatarAccess(avatarId: string): Promise<{ success: boolean; error?: string; avatar?: Avatar }> {
     try {
-      console.log('Testing avatar access for:', avatarId);
+      logger.info('Testing avatar access for:', avatarId);
 
       const { data, error } = await this.supabase
         .from('avatars')
@@ -205,7 +206,7 @@ export class AnalyticsDebugger {
    */
   async createTestSessionData(avatarId: string): Promise<{ success: boolean; sessionId?: string; error?: string }> {
     try {
-      console.log('Creating simple test session for avatar:', avatarId);
+      logger.info('Creating simple test session for avatar:', avatarId);
       return await mockDataGenerator.generateQuickTestData(avatarId);
     } catch (err) {
       return {
@@ -255,43 +256,43 @@ export class AnalyticsDebugger {
    * Run comprehensive analytics diagnostics
    */
   async runFullDiagnostic(avatarId: string): Promise<void> {
-    console.log('=== Analytics Diagnostic Report ===');
-    console.log('Avatar ID:', avatarId);
+    logger.info('=== Analytics Diagnostic Report ===');
+    logger.info('Avatar ID:', avatarId);
 
     // Test Supabase connection
-    console.log('\n1. Testing Supabase Connection...');
+    logger.info('\n1. Testing Supabase Connection...');
     const connectionTest = await this.testSupabaseConnection();
-    console.log('Connection:', connectionTest);
+    logger.info('Connection:', connectionTest);
 
     // Test avatar access
-    console.log('\n2. Testing Avatar Access...');
+    logger.info('\n2. Testing Avatar Access...');
     const avatarTest = await this.testAvatarAccess(avatarId);
-    console.log('Avatar Access:', avatarTest);
+    logger.info('Avatar Access:', avatarTest);
 
     // Test analytics tables
-    console.log('\n3. Testing Analytics Tables Access...');
+    logger.info('\n3. Testing Analytics Tables Access...');
     const tablesTest = await this.testAnalyticsTablesAccess(avatarId);
-    console.log('Tables Access:', tablesTest);
+    logger.info('Tables Access:', tablesTest);
 
     // Test analytics service methods with detailed logging
-    console.log('\n4. Testing Analytics Service Methods...');
+    logger.info('\n4. Testing Analytics Service Methods...');
     const serviceTest = await this.testAnalyticsServiceWithDetails(avatarId);
-    console.log('Service Methods:', serviceTest);
+    logger.info('Service Methods:', serviceTest);
 
     // If no data exists, create test data
     if (tablesTest.gameSessions.success && tablesTest.gameSessions.count === 0) {
-      console.log('\n5. No analytics data found. Creating test data...');
+      logger.info('\n5. No analytics data found. Creating test data...');
       const testDataResult = await this.createTestSessionData(avatarId);
-      console.log('Test Data Creation:', testDataResult);
+      logger.info('Test Data Creation:', testDataResult);
 
       if (testDataResult.success) {
-        console.log('\n6. Re-testing Analytics Service after test data creation...');
+        logger.info('\n6. Re-testing Analytics Service after test data creation...');
         const retestService = await this.testAnalyticsServiceWithDetails(avatarId);
-        console.log('Service Methods (After Test Data):', retestService);
+        logger.info('Service Methods (After Test Data):', retestService);
       }
     }
 
-    console.log('\n=== End Diagnostic Report ===');
+    logger.info('\n=== End Diagnostic Report ===');
   }
 
   /**

@@ -7,6 +7,7 @@
 import { GameType } from './gameUtils';
 import { createClient } from '@/lib/supabase/client';
 import type { Json } from '@/lib/supabase/database.types';
+import { logger } from './logger';
 
 // Core interfaces for analytics data
 export interface GameSessionData {
@@ -257,8 +258,8 @@ export class SupabaseAnalyticsService {
    * Get game sessions for an avatar (Supabase-integrated)
    */
   async getAvatarSessions(avatarId: string, limit?: number): Promise<GameSessionData[]> {
-    console.log('=== GETTING AVATAR SESSIONS ===');
-    console.log('Querying sessions for avatar ID:', avatarId);
+    logger.debug('=== GETTING AVATAR SESSIONS ===');
+    logger.debug('Querying sessions for avatar ID:', avatarId);
     
     let query = this.supabase
       .from('game_sessions')
@@ -272,12 +273,12 @@ export class SupabaseAnalyticsService {
 
     const { data, error } = await query;
     if (error) {
-      console.error('Error fetching sessions:', error);
+      logger.error('Error fetching sessions:', error);
       throw error;
     }
 
-    console.log('Raw session data from database:', data);
-    console.log('Number of sessions found:', data?.length || 0);
+    logger.debug('Raw session data from database:', data);
+    logger.debug('Number of sessions found:', data?.length || 0);
 
     // Also check all sessions in database to see what avatar IDs exist
     const { data: allSessions } = await this.supabase
@@ -285,9 +286,9 @@ export class SupabaseAnalyticsService {
       .select('avatar_id, game_type, id')
       .limit(10);
     
-    console.log('Sample of all sessions in database:', allSessions);
+    logger.debug('Sample of all sessions in database:', allSessions);
     const uniqueAvatarIds = [...new Set(allSessions?.map(s => s.avatar_id) || [])];
-    console.log('Unique avatar IDs that have sessions:', uniqueAvatarIds);
+    logger.debug('Unique avatar IDs that have sessions:', uniqueAvatarIds);
 
     // Transform Supabase data to our interface
     const transformedData = (data || []).map(row => ({
@@ -312,8 +313,8 @@ export class SupabaseAnalyticsService {
       }
     }));
 
-    console.log('Transformed session data:', transformedData);
-    console.log('=== END GETTING AVATAR SESSIONS ===');
+    logger.debug('Transformed session data:', transformedData);
+    logger.debug('=== END GETTING AVATAR SESSIONS ===');
     
     return transformedData;
   }
@@ -327,11 +328,11 @@ export class SupabaseAnalyticsService {
 
     // Import games data for analysis
     const availableGames = this.getAvailableGames();
-    console.log('Available games:', availableGames.length);
+    logger.debug('Available games:', availableGames.length);
 
     // If no progress yet, recommend beginner games
     if (progress.length === 0) {
-      console.log('No progress found, recommending beginner games');
+      logger.debug('No progress found, recommending beginner games');
       return availableGames
         .filter(game => game.skillLevel === 'beginner')
         .slice(0, maxRecommendations)
@@ -345,7 +346,7 @@ export class SupabaseAnalyticsService {
         }));
     }
 
-    console.log('Processing recommendations for progress:', progress.length, 'games');
+    logger.debug('Processing recommendations for progress:', progress.length, 'games');
 
     // First, recommend games that need improvement
     const needsImprovement = progress
@@ -406,7 +407,7 @@ export class SupabaseAnalyticsService {
       }
     }
 
-    console.log('Generated recommendations:', recommendations.length);
+    logger.debug('Generated recommendations:', recommendations.length);
 
     // Sort by priority and return top recommendations
     return recommendations
@@ -435,10 +436,10 @@ export class SupabaseAnalyticsService {
       this.getAvatarSessions(avatarId)
     ]);
 
-    console.log('=== PERFORMANCE METRICS DEBUG ===');
-    console.log('Avatar ID:', avatarId);
-    console.log('Total sessions found:', sessions.length);
-    console.log('First few sessions:', sessions.slice(0, 3).map(s => ({
+    logger.debug('=== PERFORMANCE METRICS DEBUG ===');
+    logger.debug('Avatar ID:', avatarId);
+    logger.debug('Total sessions found:', sessions.length);
+    logger.debug('First few sessions:', sessions.slice(0, 3).map(s => ({
       id: s.id,
       gameId: s.gameId,
       completionStatus: s.completionStatus,
@@ -450,11 +451,11 @@ export class SupabaseAnalyticsService {
 
     // Basic metrics
     const totalGamesPlayed = sessions.length;
-    console.log('Total games played:', totalGamesPlayed);
+    logger.debug('Total games played:', totalGamesPlayed);
     
     const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
-    console.log('Completed sessions:', completedSessions.length);
-    console.log('Completed sessions details:', completedSessions.map(s => ({
+    logger.debug('Completed sessions:', completedSessions.length);
+    logger.debug('Completed sessions details:', completedSessions.map(s => ({
       gameId: s.gameId,
       totalDuration: s.totalDuration,
       scoreData: s.scoreData
@@ -463,34 +464,34 @@ export class SupabaseAnalyticsService {
     const averageSessionDuration = completedSessions.length > 0
       ? completedSessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0) / completedSessions.length
       : 0;
-    console.log('Average session duration (seconds):', averageSessionDuration);
+    logger.debug('Average session duration (seconds):', averageSessionDuration);
     
     const overallCompletionRate = totalGamesPlayed > 0
       ? completedSessions.length / totalGamesPlayed
       : 0;
-    console.log('Overall completion rate:', overallCompletionRate);
+    logger.debug('Overall completion rate:', overallCompletionRate);
 
     // Calculate skill level distribution
     const skillLevelDistribution = progress.reduce((dist, p) => {
       dist[p.skillLevel] = (dist[p.skillLevel] || 0) + 1;
       return dist;
     }, {} as Record<string, number>);
-    console.log('Skill level distribution:', skillLevelDistribution);
+    logger.debug('Skill level distribution:', skillLevelDistribution);
 
     // Calculate subject preferences based on play frequency and performance
     const subjectPreferences = this.calculateSubjectPreferences(sessions);
-    console.log('Subject preferences:', subjectPreferences);
+    logger.debug('Subject preferences:', subjectPreferences);
 
     // Calculate learning velocity (objectives mastered per week)
     const learningVelocity = this.calculateLearningVelocity(progress);
-    console.log('Learning velocity:', learningVelocity);
+    logger.debug('Learning velocity:', learningVelocity);
 
     // Calculate engagement score based on various factors
     const engagementScore = this.calculateEngagementScore(sessions);
-    console.log('Engagement score calculation details:');
-    console.log('- Sessions for engagement:', sessions.length);
-    console.log('- Completed for engagement:', completedSessions.length);
-    console.log('- Final engagement score:', engagementScore);
+    logger.debug('Engagement score calculation details:');
+    logger.debug('- Sessions for engagement:', sessions.length);
+    logger.debug('- Completed for engagement:', completedSessions.length);
+    logger.debug('- Final engagement score:', engagementScore);
 
     const metrics = {
       totalGamesPlayed,
@@ -502,9 +503,9 @@ export class SupabaseAnalyticsService {
       engagementScore
     };
 
-    console.log('=== FINAL CALCULATED METRICS ===');
-    console.log(metrics);
-    console.log('=== END DEBUG ===');
+    logger.debug('=== FINAL CALCULATED METRICS ===');
+    logger.debug(metrics);
+    logger.debug('=== END DEBUG ===');
     return metrics;
   }
 

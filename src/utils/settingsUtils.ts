@@ -2,6 +2,8 @@
  * Game settings management
  */
 
+import { logger } from './logger';
+
 /**
  * Default game settings
  */
@@ -95,7 +97,7 @@ export function getSettings(gameType: string): GameSettings {
     try {
       return JSON.parse(savedSettings);
     } catch (e) {
-      console.error('Failed to parse saved settings', e);
+      logger.error('Failed to parse saved settings', e);
     }
   }
   

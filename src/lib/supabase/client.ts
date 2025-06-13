@@ -1,5 +1,6 @@
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import type { Database } from './database.types'
+import { logger } from '@/utils/logger'
 
 /**
  * Client-side Supabase client for use in React components, context, and hooks
@@ -14,7 +15,7 @@ export const createClient = () => {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn(
+    logger.warn(
       '⚠️ Supabase environment variables are missing!\n' +
       'Required variables:\n' +
       '- NEXT_PUBLIC_SUPABASE_URL\n' +

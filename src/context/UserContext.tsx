@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
+import { logger } from '@/utils/logger';
 
 // Types
 type Avatar = Database['public']['Tables']['avatars']['Row'];
@@ -43,20 +44,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Load user profile from database
   const loadUserProfile = useCallback(async (userId: string) => {
     try {
-      console.log('🔍 Loading user profile for ID:', userId);
+      logger.debug('🔍 Loading user profile for ID:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
 
-      console.log('📊 User profile query result:', { data, error });
+      logger.debug('📊 User profile query result:', { data, error });
       
       if (error) throw error;
       setUserProfile(data);
-      console.log('✅ User profile loaded successfully');
+      logger.debug('✅ User profile loaded successfully');
     } catch (err) {
-      console.error('❌ Error loading user profile:', err);
+      logger.error('❌ Error loading user profile:', err);
       throw err; // Re-throw to trigger fallback in loadDemoUser
     }
   }, [supabase]);
@@ -79,7 +80,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setCurrentAvatar(prev => prev || data[0]);
       }
     } catch (err) {
-      console.error('Error loading avatars:', err);
+      logger.error('Error loading avatars:', err);
       setError('Failed to load avatars');
     }
   }, [supabase]);
@@ -107,9 +108,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // Try to load demo user profile from database, fallback to in-memory if needed
       try {
         await loadUserProfile(demoUserId);
-        console.log('✅ Demo user profile loaded from database');
+        logger.debug('✅ Demo user profile loaded from database');
       } catch (profileErr) {
-        console.warn('⚠️ Could not load demo user profile from database, using fallback:', profileErr);
+        logger.warn('⚠️ Could not load demo user profile from database, using fallback:', profileErr);
         // Fallback to in-memory demo profile
         const demoProfile: UserProfile = {
           id: demoUserId,
@@ -126,15 +127,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
           updated_at: new Date().toISOString()
         };
         setUserProfile(demoProfile);
-        console.log('✅ Using fallback demo user profile');
+        logger.debug('✅ Using fallback demo user profile');
       }
       
       // Try to load demo avatars from database, fallback to in-memory if needed
       try {
         await loadAvatars(demoUserId);
-        console.log('✅ Demo avatars loaded from database');
+        logger.debug('✅ Demo avatars loaded from database');
       } catch (avatarErr) {
-        console.warn('⚠️ Could not load demo avatars from database, using fallback:', avatarErr);
+        logger.warn('⚠️ Could not load demo avatars from database, using fallback:', avatarErr);
         // Fallback to in-memory demo avatars
         const demoAvatars: Avatar[] = [
           {
@@ -200,13 +201,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
         ];
         setAvatars(demoAvatars);
         setCurrentAvatar(demoAvatars[0]);
-        console.log('✅ Using fallback demo avatars');
+        logger.debug('✅ Using fallback demo avatars');
       }
       
       // Clear any previous errors since we successfully loaded demo data
       setError(null);
     } catch (err) {
-      console.error('❌ Error loading demo user:', err);
+      logger.error('❌ Error loading demo user:', err);
       setError(`Failed to load demo user: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   }, [loadUserProfile, loadAvatars]);
@@ -226,7 +227,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           await loadDemoUser();
         }
       } catch (err) {
-        console.error('Error loading user:', err);
+        logger.error('Error loading user:', err);
         setError('Failed to load user');
       } finally {
         setLoading(false);
@@ -283,7 +284,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       
       return data;
     } catch (err) {
-      console.error('Error creating avatar:', err);
+      logger.error('Error creating avatar:', err);
       setError(err instanceof Error ? err.message : 'Failed to create avatar');
       return null;
     }
@@ -302,7 +303,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
     } catch (err) {
-      console.error('Error signing out:', err);
+      logger.error('Error signing out:', err);
       setError('Failed to sign out');
     }
   };

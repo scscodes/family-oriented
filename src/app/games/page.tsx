@@ -17,6 +17,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import { logger } from "@/utils/logger";
 import AutocompleteSearchBar from "@/components/AutocompleteSearchBar";
 import TagFilter from "@/components/TagFilter";
 import FacetedSidebar from "@/components/FacetedSidebar";
@@ -65,7 +66,7 @@ function BrowseGamesContent() {
         setResultsPerPage(preferences.resultsPerPage);
       }
     } catch (error) {
-      console.warn('Failed to load saved preferences:', error);
+      logger.warn('Failed to load saved preferences:', error);
     }
   }, []);
 
@@ -80,7 +81,7 @@ function BrowseGamesContent() {
       };
       localStorage.setItem('gameDiscoveryPreferences', JSON.stringify(currentPreferences));
     } catch (error) {
-      console.warn('Failed to save preferences:', error);
+      logger.warn('Failed to save preferences:', error);
     }
   }, [sortOptions, viewType, resultsPerPage]);
 

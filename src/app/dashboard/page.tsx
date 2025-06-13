@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useAvatar, useUser } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
+import { logger } from "@/utils/logger";
 import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Divider, Button, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
 
@@ -24,31 +25,31 @@ export default function DashboardPage() {
 
   const runDiagnostic = async () => {
     if (!avatarId) return;
-    console.log('Running analytics diagnostic for avatar:', avatarId);
+    logger.info('Running analytics diagnostic for avatar:', avatarId);
     await analyticsDebugger.runFullDiagnostic(avatarId);
   };
 
   const createTestData = async () => {
     if (!avatarId) return;
-    console.log('Creating simple test data for avatar:', avatarId);
+    logger.info('Creating simple test data for avatar:', avatarId);
     try {
       const result = await analyticsDebugger.createTestSessionData(avatarId);
-      console.log('Test data creation result:', result);
+      logger.info('Test data creation result:', result);
       
       if (result.success) {
         // Reload dashboard data
         window.location.reload();
       }
     } catch (err) {
-      console.error('Failed to create test data:', err);
+      logger.error('Failed to create test data:', err);
     }
   };
 
   const generateComprehensiveData = async () => {
-    console.log('Generating comprehensive mock data for all avatars...');
+    logger.info('Generating comprehensive mock data for all avatars...');
     try {
       const result = await analyticsDebugger.generateComprehensiveMockData();
-      console.log('Comprehensive data generation result:', result);
+      logger.info('Comprehensive data generation result:', result);
       
       if (result.success) {
         const message = [
@@ -70,7 +71,7 @@ export default function DashboardPage() {
         alert(`❌ Failed to generate data: ${result.error}`);
       }
     } catch (err) {
-      console.error('Failed to generate comprehensive data:', err);
+      logger.error('Failed to generate comprehensive data:', err);
       alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
@@ -80,7 +81,7 @@ export default function DashboardPage() {
       return;
     }
 
-    console.log('Clearing all analytics data...');
+    logger.info('Clearing all analytics data...');
     try {
       const result = await analyticsDebugger.clearAllAnalyticsData();
       if (result.success) {
@@ -90,7 +91,7 @@ export default function DashboardPage() {
         alert(`❌ Failed to clear data: ${result.error}`);
       }
     } catch (err) {
-      console.error('Failed to clear data:', err);
+      logger.error('Failed to clear data:', err);
       alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
@@ -98,7 +99,7 @@ export default function DashboardPage() {
   const handleAvatarChange = useCallback((event: SelectChangeEvent<string>) => {
     const selectedAvatar = avatars.find(a => a.id === event.target.value);
     if (selectedAvatar && selectedAvatar.id !== currentAvatar?.id) {
-      console.log('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
+      logger.info('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
       setCurrentAvatar(selectedAvatar);
     }
   }, [avatars, currentAvatar, setCurrentAvatar]);
@@ -112,22 +113,22 @@ export default function DashboardPage() {
       setError(null);
       
       try {
-        console.log('=== DASHBOARD LOADING DATA ===');
-        console.log('Selected avatar ID from state:', avatarId);
+        logger.info('=== DASHBOARD LOADING DATA ===');
+        logger.info('Selected avatar ID from state:', avatarId);
         
         // Load progress data
         const progress = await analyticsService.getAvatarProgress(avatarId);
-        console.log('Progress data:', progress);
+        logger.info('Progress data:', progress);
         setProgress(progress);
         
         // Load recommendations
         const recommendations = await analyticsService.getLearningPathRecommendations(avatarId);
-        console.log('Recommendations:', recommendations);
+        logger.info('Recommendations:', recommendations);
         setRecommendations(recommendations);
         
         // Load performance metrics
         const metrics = await analyticsService.getPerformanceMetrics(avatarId);
-        console.log('Raw metrics data:', metrics);
+        logger.info('Raw metrics data:', metrics);
         
         // Transform metrics for display
         const transformedMetrics = {
@@ -135,12 +136,12 @@ export default function DashboardPage() {
           averageSessionDuration: Math.round(metrics.averageSessionDuration / 60), // Convert to minutes
           engagementScore: Math.round(metrics.engagementScore)
         };
-        console.log('Transformed metrics:', transformedMetrics);
+        logger.info('Transformed metrics:', transformedMetrics);
         
         setMetrics(transformedMetrics);
-        console.log('=== END DASHBOARD LOADING ===');
+        logger.info('=== END DASHBOARD LOADING ===');
       } catch (err) {
-        console.error('Error loading analytics data:', err);
+        logger.error('Error loading analytics data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load analytics data');
         // Reset state on error
         setProgress(null);
