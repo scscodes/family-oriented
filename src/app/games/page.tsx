@@ -17,6 +17,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import { logger } from "@/utils/logger";
 import AutocompleteSearchBar from "@/components/AutocompleteSearchBar";
 import TagFilter from "@/components/TagFilter";
 import FacetedSidebar from "@/components/FacetedSidebar";
@@ -37,6 +38,7 @@ function BrowseGamesContent() {
   const pathname = usePathname();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const wizardId = searchParams.get('wizard');
   
   // State management
   const [search, setSearch] = useState("");
@@ -65,7 +67,7 @@ function BrowseGamesContent() {
         setResultsPerPage(preferences.resultsPerPage);
       }
     } catch (error) {
-      console.warn('Failed to load saved preferences:', error);
+      logger.warn('Failed to load saved preferences:', error);
     }
   }, []);
 
@@ -80,7 +82,7 @@ function BrowseGamesContent() {
       };
       localStorage.setItem('gameDiscoveryPreferences', JSON.stringify(currentPreferences));
     } catch (error) {
-      console.warn('Failed to save preferences:', error);
+      logger.warn('Failed to save preferences:', error);
     }
   }, [sortOptions, viewType, resultsPerPage]);
 
@@ -104,6 +106,15 @@ function BrowseGamesContent() {
       setSearch(searchParam);
     }
   }, [searchParams]);
+
+  // Load wizard recommendations if present
+  useEffect(() => {
+    if (wizardId) {
+      // TODO: Load wizard session and apply recommendations
+      // This will be implemented when we have the analytics dashboard
+      logger.info('Wizard session:', wizardId);
+    }
+  }, [wizardId]);
 
   // Update URL when filters change
   const updateURL = (newSearch: string, newSubject: string | null, newTags: string[]) => {

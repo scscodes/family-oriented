@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { logger } from '@/utils/logger';
 
 // Define the structure for our global settings
 export interface GlobalSettings {
@@ -88,7 +89,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           };
         }
       } catch (error) {
-        console.error('Error loading settings from localStorage:', error);
+        logger.error('Error loading settings from localStorage:', error);
         // If there's an error, return defaults
       }
     }
@@ -101,7 +102,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       try {
         localStorage.setItem('globalGameSettings', JSON.stringify(settings));
       } catch (error) {
-        console.error('Error saving settings to localStorage:', error);
+        logger.error('Error saving settings to localStorage:', error);
       }
     }
   }, [settings]);

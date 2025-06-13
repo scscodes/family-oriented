@@ -19,6 +19,9 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { SUBJECTS, gameDiscovery } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
+import { useState } from 'react';
+import { GameWizardDialog } from '@/components/game-discovery/GameWizardDialog';
+import SearchIcon from '@mui/icons-material/Search';
 
 /**
  * Mix two hex colors with a given ratio
@@ -54,6 +57,7 @@ const mixColors = (color1: string, color2: string, ratio: number): string => {
  */
 export default function Home() {
   const { themeConfig, isHydrated } = useEnhancedTheme();
+  const [wizardOpen, setWizardOpen] = useState(false);
   
   // Generate heading colors from current theme
   const headingColors = {
@@ -183,10 +187,10 @@ export default function Home() {
                   Start Playing
                 </Button>
                 <Button
-                  component={Link}
-                  href="/games"
+                  onClick={() => setWizardOpen(true)}
                   variant="outlined"
                   size="large"
+                  startIcon={<SearchIcon />}
                   sx={{
                     borderColor: 'white',
                     color: 'white',
@@ -201,7 +205,7 @@ export default function Home() {
                     }
                   }}
                 >
-                  Browse Games
+                  Find Perfect Games
                 </Button>
               </Box>
             </Box>
@@ -218,6 +222,12 @@ export default function Home() {
           </Box>
         </Container>
       </Box>
+
+      {/* Game Wizard Dialog */}
+      <GameWizardDialog 
+        open={wizardOpen}
+        onClose={() => setWizardOpen(false)}
+      />
 
       {/* Quick Category Jump Section */}
       <Box sx={{ py: 6, backgroundColor: 'rgba(255, 255, 255, 0.95)' }}>

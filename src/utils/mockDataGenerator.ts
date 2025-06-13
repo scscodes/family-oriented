@@ -7,6 +7,7 @@
 import { analyticsService } from './analyticsService';
 import { GameType } from './gameUtils';
 import { createClient } from '@/lib/supabase/client';
+import { logger } from './logger';
 
 type AvatarProfile = {
   id: string;
@@ -61,11 +62,6 @@ interface GameSessionTemplate {
   questionsCount: number;
 }
 
-interface MockDataSummary {
-  avatarsProcessed: number;
-  totalSessions: number;
-  abandonedSessions: number;
-}
 
 interface QuickTestResult {
   success: boolean;
@@ -76,6 +72,22 @@ interface QuickTestResult {
 interface ClearDataResult {
   success: boolean;
   error?: string;
+}
+
+interface SessionForProgress {
+  game_type: GameType;
+  completion_status: string;
+  score_data?: { finalScore?: number } | null;
+}
+
+interface ProgressSummary {
+  skillLevel: 'beginner' | 'intermediate' | 'advanced';
+  masteryScore: number;
+  learningObjectivesMet: string[];
+  prerequisiteCompletion: Record<string, boolean>;
+  totalSessions: number;
+  averagePerformance: number;
+  improvementTrend: 'improving' | 'stable' | 'declining';
 }
 
 /**
@@ -223,15 +235,6 @@ export class MockDataGenerator {
       }
     }
 
-    // Complete session with proper score data structure
-    const scoreData = {
-      finalScore,
-      accuracy: correct / attempted,
-      questionsCorrect: correct,
-      questionsAttempted: attempted,
-      completionRate: 1.0
-    };
-
     await analyticsService.completeGameSession(sessionId, finalScore, attempted, correct);
 
     return sessionId;
@@ -244,7 +247,7 @@ export class MockDataGenerator {
     profile: AvatarProfile,
     sessionCount: number = 15
   ): Promise<void> {
-    console.log(`Generating ${sessionCount} sessions for ${profile.name} (${profile.level}, ${profile.pattern})`);
+    logger.info(`Generating ${sessionCount} sessions for ${profile.name} (${profile.level}, ${profile.pattern})`);
     
     const templates = this.getSessionTemplatesForProfile(profile.level, profile.pattern);
     
@@ -254,12 +257,12 @@ export class MockDataGenerator {
       
       try {
         const sessionId = await this.generateGameSession(profile.id, template, i + 1, profile.pattern);
-        console.log(`  Session ${i + 1}/${sessionCount}: ${template.gameId} - ${sessionId}`);
+        logger.info(`  Session ${i + 1}/${sessionCount}: ${template.gameId} - ${sessionId}`);
         
         // Small delay to avoid overwhelming the database
         await new Promise(resolve => setTimeout(resolve, 100));
       } catch (error) {
-        console.error(`Failed to generate session ${i + 1} for ${profile.name}:`, error);
+        logger.error(`Failed to generate session ${i + 1} for ${profile.name}:`, error);
       }
     }
   }
@@ -268,7 +271,7 @@ export class MockDataGenerator {
    * Generate some abandoned sessions for realistic data
    */
   private async generateAbandonedSessions(avatarId: string, count: number = 2): Promise<void> {
-    console.log(`Generating ${count} abandoned sessions for avatar ${avatarId}`);
+    logger.info(`Generating ${count} abandoned sessions for avatar ${avatarId}`);
     
     for (let i = 0; i < count; i++) {
       try {
@@ -292,9 +295,9 @@ export class MockDataGenerator {
         }
 
         // Don't complete the session - it will remain as abandoned
-        console.log(`  Abandoned session: ${sessionId}`);
+        logger.info(`  Abandoned session: ${sessionId}`);
       } catch (error) {
-        console.error(`Failed to generate abandoned session ${i + 1}:`, error);
+        logger.error(`Failed to generate abandoned session ${i + 1}:`, error);
       }
     }
   }
@@ -303,7 +306,7 @@ export class MockDataGenerator {
    * Generate validation scenarios for specific test cases
    */
   private async generateValidationScenarios(): Promise<void> {
-    console.log('Generating validation scenarios...');
+    logger.info('Generating validation scenarios...');
 
     // Scenario 1: Rapid skill advancement
     await this.generateRapidAdvancementScenario();
@@ -502,18 +505,18 @@ export class MockDataGenerator {
       
       // Check for regular sessions (15 sessions)
       const hasRegularSessions = sessions.filter(s => 
-        !s.abandoned && s.gameType !== 'math' && s.gameType !== 'numbers'
+        s.completionStatus !== 'abandoned' && s.gameId !== 'math' && s.gameId !== 'numbers'
       ).length >= 15;
 
       // Check for abandoned sessions (2 sessions)
       const hasAbandonedSessions = sessions.filter(s => 
-        s.abandoned
+        s.completionStatus === 'abandoned'
       ).length >= 2;
 
       // Check for validation scenarios (16 sessions across 4 scenarios)
       const hasValidationScenarios = sessions.filter(s => 
-        (s.gameType === 'math' || s.gameType === 'numbers') && 
-        !s.abandoned
+        (s.gameId === 'math' || s.gameId === 'numbers') && 
+        s.completionStatus !== 'abandoned'
       ).length >= 16;
 
       return {
@@ -522,7 +525,7 @@ export class MockDataGenerator {
         hasValidationScenarios
       };
     } catch (err) {
-      console.error('Error checking data patterns:', err);
+      logger.error('Error checking data patterns:', err);
       return {
         hasRegularSessions: false,
         hasAbandonedSessions: false,
@@ -536,7 +539,7 @@ export class MockDataGenerator {
    */
   async generateComprehensiveMockData(): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('Starting comprehensive mock data generation...');
+      logger.info('Starting comprehensive mock data generation...');
       
       // Get all avatars
       const { data: avatars, error: avatarError } = await this.supabase
@@ -546,8 +549,8 @@ export class MockDataGenerator {
       if (avatarError) throw avatarError;
       if (!avatars?.length) throw new Error('No avatars found');
       
-      console.log(`Found ${avatars.length} avatars to generate data for`);
-      console.log('Avatar details:', avatars.map(a => ({ id: a.id, name: a.name })));
+      logger.info(`Found ${avatars.length} avatars to generate data for`);
+      logger.info('Avatar details:', avatars.map(a => ({ id: a.id, name: a.name })));
 
       // Check for existing game sessions
       const { data: existingSessions, error: sessionError } = await this.supabase
@@ -555,24 +558,24 @@ export class MockDataGenerator {
         .select('*');
       
       if (sessionError) throw sessionError;
-      console.log(`Found ${existingSessions?.length || 0} existing game sessions`);
+      logger.info(`Found ${existingSessions?.length || 0} existing game sessions`);
 
       // Generate data for each avatar
       for (const avatar of avatars) {
-        console.log(`\nGenerating data for avatar: ${avatar.name} (${avatar.id})`);
+        logger.info(`\nGenerating data for avatar: ${avatar.name} (${avatar.id})`);
         
         // Check if this avatar already has sessions
         const existingAvatarSessions = existingSessions?.filter(s => s.avatar_id === avatar.id) || [];
-        console.log(`Avatar ${avatar.name} already has ${existingAvatarSessions.length} sessions`);
+        logger.info(`Avatar ${avatar.name} already has ${existingAvatarSessions.length} sessions`);
         
         if (existingAvatarSessions.length > 0) {
-          console.log(`Skipping ${avatar.name} - already has sessions`);
+          logger.info(`Skipping ${avatar.name} - already has sessions`);
           continue;
         }
         
         // Generate 15-20 game sessions per avatar
         const sessionCount = Math.floor(Math.random() * 6) + 15; // 15-20 sessions
-        console.log(`Will generate ${sessionCount} sessions for this avatar`);
+        logger.info(`Will generate ${sessionCount} sessions for this avatar`);
 
         for (let i = 0; i < sessionCount; i++) {
           const gameType = this.getRandomGameType();
@@ -607,13 +610,13 @@ export class MockDataGenerator {
             }
           };
 
-          console.log(`\nGenerating session ${i + 1}/${sessionCount} for ${avatar.name}:`);
-          console.log('- Avatar ID:', avatar.id);
-          console.log('- Game Type:', gameType);
-          console.log('- Duration:', session.total_duration, 'seconds');
-          console.log('- Questions:', session.questions_attempted, 'attempted,', session.questions_correct, 'correct');
-          console.log('- Score:', session.score_data.finalScore);
-          console.log('- Status:', session.completion_status);
+          logger.info(`\nGenerating session ${i + 1}/${sessionCount} for ${avatar.name}:`);
+          logger.info('- Avatar ID:', avatar.id);
+          logger.info('- Game Type:', gameType);
+          logger.info('- Duration:', session.total_duration, 'seconds');
+          logger.info('- Questions:', session.questions_attempted, 'attempted,', session.questions_correct, 'correct');
+          logger.info('- Score:', session.score_data.finalScore);
+          logger.info('- Status:', session.completion_status);
 
           const { data: sessionData, error: sessionError } = await this.supabase
             .from('game_sessions')
@@ -622,19 +625,19 @@ export class MockDataGenerator {
             .single();
 
           if (sessionError) {
-            console.error('Error creating session:', sessionError);
+            logger.error('Error creating session:', sessionError);
             throw sessionError;
           }
           if (!sessionData) {
-            console.warn('No session data returned after insert');
+            logger.warn('No session data returned after insert');
             continue;
           }
 
-          console.log('Successfully created session with ID:', sessionData.id);
+          logger.info('Successfully created session with ID:', sessionData.id);
 
           // Generate 5-10 events per session
           const eventCount = Math.floor(Math.random() * 6) + 5;
-          console.log(`Generating ${eventCount} events for this session`);
+          logger.info(`Generating ${eventCount} events for this session`);
 
           for (let j = 0; j < eventCount; j++) {
             const event = {
@@ -656,7 +659,7 @@ export class MockDataGenerator {
               .insert(event);
 
             if (eventError) {
-              console.error('Error creating event:', eventError);
+              logger.error('Error creating event:', eventError);
               throw eventError;
             }
           }
@@ -670,14 +673,20 @@ export class MockDataGenerator {
 
         if (progressError) throw progressError;
         if (!newAvatarSessions?.length) {
-          console.warn(`No sessions found for avatar ${avatar.id} to calculate progress`);
+          logger.warn(`No sessions found for avatar ${avatar.id} to calculate progress`);
           continue;
         }
 
-        console.log(`\nCalculating learning progress for ${avatar.name}:`);
-        console.log(`Found ${newAvatarSessions.length} sessions for progress calculation`);
-        const progress = this.calculateLearningProgress(newAvatarSessions);
-        console.log('Progress data:', progress);
+        logger.info(`\nCalculating learning progress for ${avatar.name}:`);
+        logger.info(`Found ${newAvatarSessions.length} sessions for progress calculation`);
+        const progress = this.calculateLearningProgress(
+          newAvatarSessions.map(session => ({
+            game_type: session.game_type as GameType,
+            completion_status: session.completion_status || 'completed',
+            score_data: session.score_data as { finalScore?: number } | null
+          }))
+        );
+        logger.info('Progress data:', progress);
 
         // Store progress in learning_progress table
         for (const [gameType, gameProgress] of Object.entries(progress)) {
@@ -697,19 +706,19 @@ export class MockDataGenerator {
             });
 
           if (insertError) {
-            console.error('Error storing progress:', insertError);
+            logger.error('Error storing progress:', insertError);
             throw insertError;
           }
         }
       }
 
-      console.log('\nMock data generation completed successfully');
+      logger.info('\nMock data generation completed successfully');
       return {
         success: true,
         message: `Generated mock data for ${avatars.length} avatars`
       };
     } catch (err) {
-      console.error('Error generating mock data:', err);
+      logger.error('Error generating mock data:', err);
       return {
         success: false,
         message: err instanceof Error ? err.message : 'Unknown error'
@@ -717,17 +726,19 @@ export class MockDataGenerator {
     }
   }
 
-  private calculateLearningProgress(sessions: any[]): Record<string, any> {
-    const progress: Record<string, any> = {};
+  private calculateLearningProgress(
+    sessions: SessionForProgress[]
+  ): Record<string, ProgressSummary> {
+    const progress: Record<string, ProgressSummary> = {};
     
     // Group sessions by game type
-    const sessionsByGame = sessions.reduce((acc, session) => {
+    const sessionsByGame = sessions.reduce<Record<string, SessionForProgress[]>>( (acc, session) => {
       if (!acc[session.game_type]) {
         acc[session.game_type] = [];
       }
       acc[session.game_type].push(session);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {});
 
     // Calculate progress for each game type
     for (const [gameType, gameSessions] of Object.entries(sessionsByGame)) {
@@ -745,7 +756,7 @@ export class MockDataGenerator {
       }
       
       // Determine skill level based on average score
-      let skillLevel = 'beginner';
+      let skillLevel: 'beginner' | 'intermediate' | 'advanced' = 'beginner';
       if (averageScore >= 90) {
         skillLevel = 'advanced';
       } else if (averageScore >= 70) {
@@ -756,7 +767,7 @@ export class MockDataGenerator {
       const masteryScore = Math.min(100, averageScore);
 
       // Determine improvement trend
-      let improvementTrend = 'stable';
+      let improvementTrend: 'improving' | 'stable' | 'declining' = 'stable';
       if (totalSessions >= 3) {
         const recentSessions = completedSessions.slice(-3);
         if (recentSessions.length > 0) {
@@ -851,7 +862,7 @@ export class MockDataGenerator {
 
       return { success: true };
     } catch (err) {
-      console.error('Failed to clear analytics data:', err);
+      logger.error('Failed to clear analytics data:', err);
       return {
         success: false,
         error: err instanceof Error ? err.message : 'Unknown error'

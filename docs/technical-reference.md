@@ -261,6 +261,223 @@ questionGenerators['adaptiveMath'] = adaptiveGenerator;
 - Allow users to opt-out of AI features
 - Implement data retention policies for analytics
 
+## 📊 Analytics Implementation
+
+### Core Analytics Service
+```typescript
+// Analytics service implementation
+export class SupabaseAnalyticsService {
+  // Session tracking
+  async trackGameSession(session: GameSessionData): Promise<void>
+  async getAvatarSessions(avatarId: string): Promise<GameSessionData[]>
+  
+  // Performance metrics
+  async getPerformanceMetrics(avatarId: string): Promise<PerformanceMetrics>
+  async getLearningPathRecommendations(avatarId: string): Promise<LearningPathRecommendation[]>
+}
+```
+
+### Analytics Testing
+1. **Session Tracking**
+   - Verify session start/end recording
+   - Validate duration calculations
+   - Check completion status updates
+
+2. **Performance Metrics**
+   - Test accuracy calculations
+   - Verify skill level progression
+   - Validate learning path recommendations
+
+3. **Data Integrity**
+   - Check data consistency
+   - Verify proper error handling
+   - Validate data transformations
+
+### Implementation Guidelines
+1. **Session Management**
+   - Track session start/end times
+   - Record completion status
+   - Calculate performance metrics
+
+2. **Performance Tracking**
+   - Monitor accuracy rates
+   - Track skill progression
+   - Record learning objectives
+
+3. **Data Storage**
+   - Use Supabase for persistence
+   - Implement proper indexing
+   - Ensure data consistency
+
+### Testing Checklist
+- [ ] Session tracking accuracy
+- [ ] Performance metric calculations
+- [ ] Data transformation integrity
+- [ ] Error handling coverage
+- [ ] Edge case handling
+- [ ] Performance benchmarks
+
 ---
 
-**See [`development.md`](./development.md) for complete development guide and common tasks.** 
+**See [`development.md`](./development.md) for complete development guide and common tasks.**
+
+## 🎮 Game Features Reference
+
+### Mathematics Games
+1. **Numbers (ages 3-6, beginner)**
+   - Learning Focus: Number recognition, counting 1-10
+   - Features: Audio pronunciation, visual displays
+   - Implementation: Click-based selection with feedback
+
+2. **Addition (ages 5-8, intermediate)**
+   - Learning Focus: Basic addition facts
+   - Features: Visual representations, difficulty levels
+   - Implementation: Interactive problem solving
+
+3. **Subtraction (ages 5-8, intermediate)**
+   - Learning Focus: Subtraction concepts
+   - Features: Visual aids, progressive difficulty
+   - Implementation: Interactive problem solving
+
+### Language Arts Games
+1. **Letters (ages 3-5, beginner)**
+   - Learning Focus: Letter recognition, phonics
+   - Features: Audio sounds, case practice
+   - Implementation: Multi-modal learning
+
+2. **Fill in the Blank (ages 6-10, intermediate)**
+   - Learning Focus: Vocabulary, comprehension
+   - Features: Word lists, hint system
+   - Implementation: Text input with validation
+
+3. **Rhyming Words (ages 4-8, intermediate)**
+   - Learning Focus: Phonological awareness
+   - Features: Audio pronunciation, pattern matching
+   - Implementation: Audio-visual matching
+
+### Visual Arts Games
+1. **Shapes (ages 3-6, beginner)**
+   - Learning Focus: Shape recognition
+   - Features: Interactive exploration
+   - Implementation: Touch/click interaction
+
+2. **Shape Sorter (ages 4-7, intermediate)**
+   - Learning Focus: Classification, logic
+   - Features: Drag-and-drop sorting
+   - Implementation: Physics-based interaction
+
+3. **Colors (ages 2-5, beginner)**
+   - Learning Focus: Color recognition
+   - Features: Vibrant displays, mixing
+   - Implementation: Interactive selection
+
+4. **Patterns (ages 4-8, intermediate)**
+   - Learning Focus: Pattern recognition
+   - Features: Progressive complexity
+   - Implementation: Pattern completion
+
+### Social Studies Games
+1. **Geography (ages 6-12, intermediate)**
+   - Learning Focus: Spatial awareness
+   - Features: Interactive maps
+   - Implementation: Map-based learning
+
+### Common Features Across Games
+- Audio Support: Voice instructions, sound effects
+- Visual Feedback: Animations, color changes
+- Progressive Difficulty: Adaptive challenge levels
+- Accessibility: Keyboard navigation, screen reader support
+- Mobile Responsive: Touch-friendly interfaces
+
+### Educational Design Principles
+- Immediate Feedback: Instant response to actions
+- Positive Reinforcement: Encouragement for attempts
+- Error Recovery: Gentle correction
+- Scaffolding: Gradual complexity increase
+- Multiple Modalities: Visual, auditory, kinesthetic 
+
+## 🗄️ Database Management
+
+### Migration Process
+```bash
+# Apply migrations to remote Supabase database
+npx supabase db push --include-all
+
+# This will:
+# 1. Connect to the remote database
+# 2. Show pending migrations
+# 3. Apply them in order
+# 4. Create necessary indexes and policies
+```
+
+### Game Wizard Schema
+```sql
+-- Core tables for game discovery wizard
+CREATE TABLE game_wizard_sessions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  avatar_id UUID REFERENCES avatars(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completed_at TIMESTAMPTZ,
+  query TEXT,
+  parsed_filters JSONB,
+  selected_games UUID[],
+  completion_rate DECIMAL
+);
+
+CREATE TABLE game_wizard_completions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  wizard_session_id UUID REFERENCES game_wizard_sessions(id) ON DELETE CASCADE,
+  game_id UUID NOT NULL,
+  completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  score DECIMAL,
+  time_spent INTEGER
+);
+
+-- Key indexes for performance
+CREATE INDEX idx_wizard_sessions_avatar ON game_wizard_sessions(avatar_id);
+CREATE INDEX idx_wizard_sessions_created ON game_wizard_sessions(created_at);
+CREATE INDEX idx_wizard_completions_session ON game_wizard_completions(wizard_session_id);
+CREATE INDEX idx_wizard_completions_game ON game_wizard_completions(game_id);
+```
+
+### Row Level Security (RLS)
+```sql
+-- Wizard sessions RLS
+CREATE POLICY "Users can view their own wizard sessions"
+  ON game_wizard_sessions FOR SELECT
+  USING (avatar_id IN (
+    SELECT id FROM avatars WHERE user_id = auth.uid()
+  ));
+
+-- Completions RLS
+CREATE POLICY "Users can view their own wizard completions"
+  ON game_wizard_completions FOR SELECT
+  USING (wizard_session_id IN (
+    SELECT id FROM game_wizard_sessions 
+    WHERE avatar_id IN (
+      SELECT id FROM avatars WHERE user_id = auth.uid()
+    )
+  ));
+```
+
+### Analytics Queries
+```sql
+-- Get wizard effectiveness metrics
+SELECT 
+  COUNT(*) as total_sessions,
+  AVG(completion_rate) as avg_completion_rate,
+  COUNT(DISTINCT avatar_id) as unique_users
+FROM game_wizard_sessions
+WHERE completed_at IS NOT NULL;
+
+-- Get game completion stats by wizard session
+SELECT 
+  g.title,
+  COUNT(*) as times_completed,
+  AVG(wc.score) as avg_score,
+  AVG(wc.time_spent) as avg_time
+FROM game_wizard_completions wc
+JOIN games g ON g.id = wc.game_id
+GROUP BY g.title
+ORDER BY times_completed DESC;
+``` 

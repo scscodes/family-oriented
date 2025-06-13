@@ -473,6 +473,20 @@ export const GAME_GROUPINGS: GameGroup[] = [
   }
 ];
 
+interface ParsedQuery {
+  skillLevel?: string;
+  duration?: string;
+  features?: string[];
+  subject?: string;
+  ageRange?: [number, number];
+}
+
+interface GameRecommendation {
+  game: Game;
+  score: number;
+  reason: string;
+}
+
 // Game discovery and filtering engine
 export class GameDiscoveryEngine {
   private games: Game[];
@@ -1008,6 +1022,107 @@ export class GameDiscoveryEngine {
         g.ageRange[0] <= range.max && g.ageRange[1] >= range.min
       ).length
     })).filter(range => range.count > 0);
+  }
+
+  /**
+   * Parse natural language query into structured filters
+   */
+  parseNaturalLanguageQuery(query: string): ParsedQuery {
+    const queryLower = query.toLowerCase();
+    const result: ParsedQuery = {};
+
+    // Extract skill level
+    if (queryLower.includes('beginner')) result.skillLevel = 'beginner';
+    else if (queryLower.includes('intermediate')) result.skillLevel = 'intermediate';
+    else if (queryLower.includes('advanced')) result.skillLevel = 'advanced';
+
+    // Extract duration
+    if (queryLower.includes('quick') || queryLower.includes('under 5')) result.duration = 'quick';
+    else if (queryLower.includes('short') || queryLower.includes('5-10')) result.duration = 'short';
+    else if (queryLower.includes('medium') || queryLower.includes('10-15')) result.duration = 'medium';
+    else if (queryLower.includes('long') || queryLower.includes('15+')) result.duration = 'long';
+
+    // Extract features
+    const features: string[] = [];
+    if (queryLower.includes('audio')) features.push('audio');
+    if (queryLower.includes('multiplayer')) features.push('multiplayer');
+    if (queryLower.includes('interactive')) features.push('interactive');
+    if (queryLower.includes('visual')) features.push('visuals');
+    if (features.length > 0) result.features = features;
+
+    // Extract subject
+    Object.keys(SUBJECTS).forEach((key) => {
+      if (queryLower.includes(key.toLowerCase())) {
+        result.subject = key;
+      }
+    });
+
+    // Extract age range
+    const ageMatch = queryLower.match(/(\d+)[-+]?\s*(?:years?|yrs?)?/);
+    if (ageMatch) {
+      const age = parseInt(ageMatch[1]);
+      if (age >= 2 && age <= 6) {
+        result.ageRange = [age, age + 1];
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get recommended games based on query and filters
+   * Falls back to popular games if no matches found
+   */
+  getRecommendedGames(query: string = '', filters: GameFilter = {}): GameRecommendation[] {
+    // First try exact matches
+    const exactMatches = this.searchWithFacets(query, filters);
+    if (exactMatches.length > 0) {
+      return exactMatches.map(game => ({
+        game,
+        score: 1,
+        reason: 'Exact match'
+      }));
+    }
+
+    // Try natural language parsing
+    const parsedQuery = this.parseNaturalLanguageQuery(query);
+    const naturalMatches = this.searchWithFacets('', {
+      ...filters,
+      skillLevels: parsedQuery.skillLevel ? [parsedQuery.skillLevel] : undefined,
+      subjects: parsedQuery.subject ? [parsedQuery.subject] : undefined,
+      features: parsedQuery.features,
+      ageRange: parsedQuery.ageRange
+    });
+
+    if (naturalMatches.length > 0) {
+      return naturalMatches.map(game => ({
+        game,
+        score: 0.8,
+        reason: 'Natural language match'
+      }));
+    }
+
+    // Fallback to popular games
+    const popularGames = this.getPopularGames();
+    return popularGames.map(game => ({
+      game,
+      score: 0.6,
+      reason: 'Popular game'
+    }));
+  }
+
+  /**
+   * Get popular games based on completion rate and engagement
+   */
+  private getPopularGames(): Game[] {
+    // Sort games by tag count (proxy for popularity) and completion rate
+    return [...this.games]
+      .sort((a, b) => {
+        const aScore = a.tags.length;
+        const bScore = b.tags.length;
+        return bScore - aScore;
+      })
+      .slice(0, 5); // Return top 5 games
   }
 }
 

@@ -4,8 +4,13 @@ import { useEffect, useState, useCallback } from "react";
 import { useAvatar, useUser } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
-import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Divider, Button, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { logger } from "@/utils/logger";
+import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Button, FormControl, InputLabel, Select, MenuItem, Card, CardContent } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
+import DashboardCharts from '@/components/dashboard/DashboardCharts';
+import { PlayArrow, Star, History, Download, CompareArrows } from '@mui/icons-material';
+import { format } from 'date-fns';
+import { useTheme } from '@mui/material/styles';
 
 /**
  * User Dashboard page for learning progress, recommendations, and metrics.
@@ -19,36 +24,43 @@ export default function DashboardPage() {
   const [progress, setProgress] = useState<LearningProgressData[] | null>(null);
   const [recommendations, setRecommendations] = useState<LearningPathRecommendation[] | null>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
+  const [comparisonData, setComparisonData] = useState<{
+    progress: LearningProgressData[];
+    metrics: PerformanceMetrics;
+  } | null>(null);
+  const [comparisonLabel] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const theme = useTheme();
+
   const runDiagnostic = async () => {
     if (!avatarId) return;
-    console.log('Running analytics diagnostic for avatar:', avatarId);
+    logger.info('Running analytics diagnostic for avatar:', avatarId);
     await analyticsDebugger.runFullDiagnostic(avatarId);
   };
 
   const createTestData = async () => {
     if (!avatarId) return;
-    console.log('Creating simple test data for avatar:', avatarId);
+    logger.info('Creating simple test data for avatar:', avatarId);
     try {
       const result = await analyticsDebugger.createTestSessionData(avatarId);
-      console.log('Test data creation result:', result);
+      logger.info('Test data creation result:', result);
       
       if (result.success) {
         // Reload dashboard data
         window.location.reload();
       }
     } catch (err) {
-      console.error('Failed to create test data:', err);
+      logger.error('Failed to create test data:', err);
     }
   };
 
   const generateComprehensiveData = async () => {
-    console.log('Generating comprehensive mock data for all avatars...');
+    logger.info('Generating comprehensive mock data for all avatars...');
     try {
       const result = await analyticsDebugger.generateComprehensiveMockData();
-      console.log('Comprehensive data generation result:', result);
+      logger.info('Comprehensive data generation result:', result);
       
       if (result.success) {
         const message = [
@@ -59,8 +71,6 @@ export default function DashboardPage() {
           `- Sessions: ${result.summary?.totalSessions}`,
           `- Abandoned: ${result.summary?.abandonedSessions}`,
           '',
-          result.message || '',
-          '',
           'Reloading dashboard...'
         ].filter(Boolean).join('\n');
         
@@ -70,7 +80,7 @@ export default function DashboardPage() {
         alert(`❌ Failed to generate data: ${result.error}`);
       }
     } catch (err) {
-      console.error('Failed to generate comprehensive data:', err);
+      logger.error('Failed to generate comprehensive data:', err);
       alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
@@ -80,7 +90,7 @@ export default function DashboardPage() {
       return;
     }
 
-    console.log('Clearing all analytics data...');
+    logger.info('Clearing all analytics data...');
     try {
       const result = await analyticsDebugger.clearAllAnalyticsData();
       if (result.success) {
@@ -90,7 +100,7 @@ export default function DashboardPage() {
         alert(`❌ Failed to clear data: ${result.error}`);
       }
     } catch (err) {
-      console.error('Failed to clear data:', err);
+      logger.error('Failed to clear data:', err);
       alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   };
@@ -98,10 +108,18 @@ export default function DashboardPage() {
   const handleAvatarChange = useCallback((event: SelectChangeEvent<string>) => {
     const selectedAvatar = avatars.find(a => a.id === event.target.value);
     if (selectedAvatar && selectedAvatar.id !== currentAvatar?.id) {
-      console.log('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
+      logger.info('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
       setCurrentAvatar(selectedAvatar);
     }
   }, [avatars, currentAvatar, setCurrentAvatar]);
+
+  const handleComparisonChange = useCallback(async (value: string) => {
+    if (!currentAvatar) return;
+
+    // TODO: Implement historical data comparison once getHistoricalData is available
+    logger.info('Comparison feature not yet implemented:', value);
+    setError('Historical comparison feature coming soon');
+  }, [currentAvatar]);
 
   // Load analytics data for the selected avatar
   useEffect(() => {
@@ -112,35 +130,39 @@ export default function DashboardPage() {
       setError(null);
       
       try {
-        console.log('=== DASHBOARD LOADING DATA ===');
-        console.log('Selected avatar ID from state:', avatarId);
+        logger.info('=== DASHBOARD LOADING DATA ===');
+        logger.info('Selected avatar ID from state:', avatarId);
         
         // Load progress data
         const progress = await analyticsService.getAvatarProgress(avatarId);
-        console.log('Progress data:', progress);
+        logger.info('Progress data:', progress);
         setProgress(progress);
         
         // Load recommendations
         const recommendations = await analyticsService.getLearningPathRecommendations(avatarId);
-        console.log('Recommendations:', recommendations);
+        logger.info('Recommendations:', recommendations);
         setRecommendations(recommendations);
         
         // Load performance metrics
         const metrics = await analyticsService.getPerformanceMetrics(avatarId);
-        console.log('Raw metrics data:', metrics);
+        logger.info('Raw metrics data:', metrics);
         
-        // Transform metrics for display
-        const transformedMetrics = {
+        // Transform metrics for display (ensure all required properties are present)
+        const transformedMetrics: PerformanceMetrics = {
           totalGamesPlayed: metrics.totalGamesPlayed,
           averageSessionDuration: Math.round(metrics.averageSessionDuration / 60), // Convert to minutes
-          engagementScore: Math.round(metrics.engagementScore)
+          engagementScore: Math.round(metrics.engagementScore),
+          overallCompletionRate: metrics.overallCompletionRate,
+          skillLevelDistribution: metrics.skillLevelDistribution,
+          subjectPreferences: metrics.subjectPreferences,
+          learningVelocity: metrics.learningVelocity
         };
-        console.log('Transformed metrics:', transformedMetrics);
+        logger.info('Transformed metrics:', transformedMetrics);
         
         setMetrics(transformedMetrics);
-        console.log('=== END DASHBOARD LOADING ===');
+        logger.info('=== END DASHBOARD LOADING ===');
       } catch (err) {
-        console.error('Error loading analytics data:', err);
+        logger.error('Error loading analytics data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load analytics data');
         // Reset state on error
         setProgress(null);
@@ -175,7 +197,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <Box maxWidth="md" mx="auto" py={4}>
+    <Box maxWidth="lg" mx="auto" py={4}>
       <Typography variant="h4" gutterBottom>Learning Progress Dashboard</Typography>
       
       {/* Avatar Selection */}
@@ -208,56 +230,198 @@ export default function DashboardPage() {
         </Paper>
       )}
 
-      {/* Controls */}
-      <Box display="flex" gap={2} flexWrap="wrap" mb={3}>
-        <Button variant="outlined" size="small" onClick={runDiagnostic}>
-          Run Diagnostic
-        </Button>
-        <Button variant="outlined" size="small" onClick={createTestData}>
-          Quick Test Data
-        </Button>
-        <Button variant="contained" color="primary" size="small" onClick={generateComprehensiveData}>
-          Generate Full Mock Data
-        </Button>
-        <Button variant="outlined" color="error" size="small" onClick={clearAllData}>
-          Clear All Data
-        </Button>
-      </Box>
-      
-      <Divider sx={{ mb: 3 }} />
-
-      {/* Learning Progress */}
+      {/* Quick Access Section */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>Learning Progress</Typography>
-        {progress && progress.length > 0 ? (
-          <List>
-            {progress.map((p) => (
-              <ListItem key={`progress-${p.gameId}-${p.lastPlayed}`}>
-                <ListItemText
-                  primary={p.gameId}
-                  secondary={
-                    <>
-                      <Typography component="span" variant="body2" color="text.primary">
-                        Skill: {p.skillLevel}
-                      </Typography>
-                      <br />
-                      <Typography component="span" variant="body2">
-                        Mastery: {p.masteryScore.toFixed(1)}%
-                      </Typography>
-                      <br />
-                      <Typography component="span" variant="body2">
-                        Last Played: {new Date(p.lastPlayed).toLocaleDateString()}
-                      </Typography>
-                    </>
-                  }
-                />
-              </ListItem>
-            ))}
-          </List>
-        ) : (
-          <Typography>No progress data yet. Play some games to get started!</Typography>
-        )}
+        <Typography variant="h6" gutterBottom>Quick Access</Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+          {/* Recently Played */}
+          <Box sx={{ flex: 1 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  <History sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Recently Played
+                </Typography>
+                {progress && progress.length > 0 ? (
+                  <List dense>
+                    {progress.slice(0, 3).map((p) => (
+                      <ListItem key={`recent-${p.gameId}`}>
+                        <ListItemText
+                          primary={p.gameId}
+                          secondary={`Mastery: ${p.masteryScore.toFixed(1)}%`}
+                        />
+                        <Button size="small" startIcon={<PlayArrow />}>
+                          Play Again
+                        </Button>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No recent games played
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+
+          {/* Recommended Next */}
+          <Box sx={{ flex: 1 }}>
+            <Card>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  <Star sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Recommended Next
+                </Typography>
+                {recommendations && recommendations.length > 0 ? (
+                  <List dense>
+                    {recommendations.slice(0, 3).map((rec, index) => (
+                      <ListItem key={`rec-${rec.gameId}-${index}`}>
+                        <ListItemText
+                          primary={rec.gameId}
+                          secondary={rec.reason}
+                        />
+                        <Button size="small" startIcon={<PlayArrow />}>
+                          Play
+                        </Button>
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    No recommendations available
+                  </Typography>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
       </Paper>
+
+      {/* Analytics Controls */}
+      <Paper 
+        sx={{ 
+          p: 2, 
+          mb: 3,
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary
+        }} 
+        elevation={2}
+      >
+        <Typography variant="h6" gutterBottom>Analytics Controls</Typography>
+        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
+          {/* Export Controls */}
+          <Box sx={{ flex: 1 }}>
+            <Card sx={{ bgcolor: theme.palette.background.default }}>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  <Download sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Export Data
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      const data = {
+                        progress,
+                        metrics,
+                        comparisonData,
+                        timestamp: new Date().toISOString(),
+                        avatar: currentAvatar?.name
+                      };
+                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `analytics-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Export JSON
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => {
+                      const csv = [
+                        ['Game ID', 'Mastery Score', 'Skill Level', 'Last Played'],
+                        ...(progress || []).map(p => [
+                          p.gameId,
+                          p.masteryScore.toFixed(1),
+                          p.skillLevel,
+                          new Date(p.lastPlayed).toLocaleDateString()
+                        ])
+                      ].map(row => row.join(',')).join('\n');
+                      
+                      const blob = new Blob([csv], { type: 'text/csv' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `progress-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Box>
+
+          {/* Comparative Analytics */}
+          <Box sx={{ flex: 1 }}>
+            <Card sx={{ bgcolor: theme.palette.background.default }}>
+              <CardContent>
+                <Typography variant="subtitle1" gutterBottom>
+                  <CompareArrows sx={{ mr: 1, verticalAlign: 'middle' }} />
+                  Compare Progress
+                </Typography>
+                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+                  <InputLabel>Compare With</InputLabel>
+                  <Select
+                    value={comparisonLabel ? 'custom' : ''}
+                    label="Compare With"
+                    onChange={(e) => handleComparisonChange(e.target.value)}
+                  >
+                    <MenuItem value="last_week">Last Week</MenuItem>
+                    <MenuItem value="last_month">Last Month</MenuItem>
+                    <MenuItem value="last_quarter">Last Quarter</MenuItem>
+                  </Select>
+                </FormControl>
+                {comparisonData && (
+                  <Button
+                    variant="contained"
+                    size="small"
+                    fullWidth
+                    onClick={() => setComparisonData(null)}
+                  >
+                    Clear Comparison
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* Analytics Charts */}
+      {progress && metrics && (
+        <Box sx={{ mb: 4 }}>
+          <DashboardCharts 
+            progress={progress} 
+            metrics={metrics}
+            comparisonData={comparisonData || undefined}
+            comparisonLabel={comparisonLabel}
+          />
+        </Box>
+      )}
 
       {/* Recommendations */}
       <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
@@ -304,40 +468,23 @@ export default function DashboardPage() {
         )}
       </Paper>
 
-      {/* Performance Metrics */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>Performance Metrics</Typography>
-        {metrics ? (
-          <>
-            <List>
-              <ListItem>
-                <ListItemText
-                  primary="Total Games Played"
-                  secondary={metrics.totalGamesPlayed || 0}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="Average Session Duration"
-                  secondary={`${Math.round((metrics.averageSessionDuration || 0) / 60)} minutes`}
-                />
-              </ListItem>
-              <ListItem>
-                <ListItemText
-                  primary="Engagement Score"
-                  secondary={`${(metrics.engagementScore || 0).toFixed(1)}/10`}
-                />
-              </ListItem>
-            </List>
-            <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">
-                Raw metrics data: {JSON.stringify(metrics, null, 2)}
-              </Typography>
-            </Box>
-          </>
-        ) : (
-          <Typography>No metrics available yet.</Typography>
-        )}
+      {/* Debug Controls */}
+      <Paper sx={{ p: 2 }} elevation={2}>
+        <Typography variant="h6" gutterBottom>Debug Tools</Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" size="small" onClick={runDiagnostic}>
+            Run Diagnostic
+          </Button>
+          <Button variant="outlined" size="small" onClick={createTestData}>
+            Quick Test Data
+          </Button>
+          <Button variant="contained" color="primary" size="small" onClick={generateComprehensiveData}>
+            Generate Full Mock Data
+          </Button>
+          <Button variant="outlined" color="error" size="small" onClick={clearAllData}>
+            Clear All Data
+          </Button>
+        </Box>
       </Paper>
     </Box>
   );

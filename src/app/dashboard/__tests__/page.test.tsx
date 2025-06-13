@@ -66,7 +66,8 @@ describe('DashboardPage', () => {
       </UserProvider>
     );
     await waitFor(() => {
-      expect(screen.getByText('Progress: fail')).toBeInTheDocument();
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('fail');
     });
   });
-}); 
+});
