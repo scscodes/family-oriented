@@ -27,6 +27,7 @@ import AccordionCategory from "@/components/AccordionCategory";
 import { SUBJECTS, gameDiscovery, Game, EnhancedGameFilter, SortOptions, ViewPreferences } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
+import { gameWizard } from '@/utils/gameWizardService';
 
 /**
  * Browse all available games with search and filtering capabilities
@@ -38,6 +39,7 @@ function BrowseGamesContent() {
   const pathname = usePathname();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const wizardId = searchParams.get('wizard');
   
   // State management
   const [search, setSearch] = useState("");
@@ -105,6 +107,15 @@ function BrowseGamesContent() {
       setSearch(searchParam);
     }
   }, [searchParams]);
+
+  // Load wizard recommendations if present
+  useEffect(() => {
+    if (wizardId) {
+      // TODO: Load wizard session and apply recommendations
+      // This will be implemented when we have the analytics dashboard
+      logger.info('Wizard session:', wizardId);
+    }
+  }, [wizardId]);
 
   // Update URL when filters change
   const updateURL = (newSearch: string, newSubject: string | null, newTags: string[]) => {
