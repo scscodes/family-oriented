@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Button, Card, CardContent, Typography, Stepper, Step, StepLabel, IconButton } from '@mui/material';
+import { Box, Button, Card, CardContent, Typography, Stepper, Step, StepLabel, IconButton, Alert, CircularProgress } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { gameWizard } from '@/utils/gameWizardService';
 import { useAvatar } from '@/hooks/useAvatar';
@@ -18,6 +18,7 @@ export function GameWizard({ onClose }: GameWizardProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [selections, setSelections] = useState<Record<string, unknown>>({});
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const steps = gameWizard.getSteps();
 
@@ -25,6 +26,7 @@ export function GameWizard({ onClose }: GameWizardProps) {
     if (activeStep === steps.length - 1) {
       // Final step - get recommendations
       setLoading(true);
+      setError(null);
       try {
         if (!avatar?.id) throw new Error('No avatar selected');
 
@@ -39,7 +41,7 @@ export function GameWizard({ onClose }: GameWizardProps) {
         onClose();
       } catch (error) {
         logger.error('Failed to get recommendations:', error);
-        // TODO: Show error message to user
+        setError(error instanceof Error ? error.message : 'Failed to get game recommendations');
       } finally {
         setLoading(false);
       }
@@ -82,6 +84,12 @@ export function GameWizard({ onClose }: GameWizardProps) {
           ))}
         </Stepper>
 
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
         <Box sx={{ mb: 4 }}>
           <Typography variant="h6" gutterBottom>
             {currentStep.title}
@@ -96,6 +104,7 @@ export function GameWizard({ onClose }: GameWizardProps) {
                 key={option.id}
                 variant={selections[currentStep.type] === option.value ? 'contained' : 'outlined'}
                 onClick={() => handleSelection(currentStep.type, option.value)}
+                disabled={loading}
                 sx={{ 
                   height: 100,
                   display: 'flex',
@@ -110,9 +119,9 @@ export function GameWizard({ onClose }: GameWizardProps) {
           </Box>
         </Box>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
           <Button
-            disabled={activeStep === 0}
+            disabled={activeStep === 0 || loading}
             onClick={handleBack}
           >
             Back
@@ -122,7 +131,11 @@ export function GameWizard({ onClose }: GameWizardProps) {
             onClick={handleNext}
             disabled={!selections[currentStep.type] || loading}
           >
-            {activeStep === steps.length - 1 ? 'Find Games' : 'Next'}
+            {loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              activeStep === steps.length - 1 ? 'Find Games' : 'Next'
+            )}
           </Button>
         </Box>
       </CardContent>

@@ -7,7 +7,13 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 
 describe('SettingsContext', () => {
   beforeEach(() => {
-    localStorage.clear();
+    // Clear all localStorage mock calls
+    (localStorage.clear as jest.Mock).mockClear();
+    (localStorage.getItem as jest.Mock).mockClear();
+    (localStorage.setItem as jest.Mock).mockClear();
+    
+    // Reset to default behavior
+    (localStorage.getItem as jest.Mock).mockReturnValue(null);
   });
 
   it('provides default settings when none saved', () => {
@@ -17,8 +23,7 @@ describe('SettingsContext', () => {
   });
 
   it('loads settings from localStorage', () => {
-    localStorage.setItem(
-      'globalGameSettings',
+    (localStorage.getItem as jest.Mock).mockReturnValue(
       JSON.stringify({ questionsPerSession: 5 })
     );
     const { result } = renderHook(() => useSettings(), { wrapper });

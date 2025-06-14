@@ -1,0 +1,12 @@
+---
+description: Angular framework-specific rules
+globs: 
+alwaysApply: true
+---
+
+## Angular Framework Rules
+
+- Use standalone components and `inject()` syntax where possible.
+- Prefer reactive patterns (`signals`, `RxJS`) over async/await.
+- Split feature modules by domain and lazy-load them.
+- Maintain strict type safety in component bindings and inputs.

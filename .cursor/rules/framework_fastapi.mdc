@@ -1,0 +1,15 @@
+---
+description: FastAPI project rules
+globs:
+  - "app/**/*.py"
+  - "api/**/*.py"
+  - "routers/**/*.py"
+alwaysApply: true
+---
+
+## FastAPI Rules
+
+- Use `pydantic` models for request validation and responses.
+- Define routes in logically grouped routers (e.g., `users.py`, `items.py`).
+- Apply response models explicitly for docs and consistency.
+- Include example inputs/outputs for each endpoint in comments or docstrings.

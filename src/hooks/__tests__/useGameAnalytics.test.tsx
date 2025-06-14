@@ -10,15 +10,18 @@ const mockGameType = 'numbers';
 
 const mockSessionId = 'session-123';
 
+// Mock the analytics service methods
+const mockAnalyticsService = analyticsService as jest.Mocked<typeof analyticsService>;
+
 beforeEach(() => {
   jest.clearAllMocks();
-  analyticsService.startGameSession.mockResolvedValue(mockSessionId);
-  analyticsService.trackEvent.mockResolvedValue(undefined);
-  analyticsService.completeGameSession.mockResolvedValue(undefined);
-  analyticsService.getLearningPathRecommendations.mockResolvedValue([
+  mockAnalyticsService.startGameSession.mockResolvedValue(mockSessionId);
+  mockAnalyticsService.trackEvent.mockResolvedValue(undefined);
+  mockAnalyticsService.completeGameSession.mockResolvedValue(undefined);
+  mockAnalyticsService.getLearningPathRecommendations.mockResolvedValue([
     { gameId: 'letters', reason: 'Try letters next!', priority: 8, estimatedDifficulty: 'beginner', learningObjectives: [], prerequisitesMet: true }
   ]);
-  analyticsService.getPerformanceMetrics.mockResolvedValue({
+  mockAnalyticsService.getPerformanceMetrics.mockResolvedValue({
     totalGamesPlayed: 1,
     averageSessionDuration: 60,
     overallCompletionRate: 1,
@@ -45,7 +48,7 @@ describe('useGameAnalytics', () => {
     await act(async () => {
       await result.current.startSession();
     });
-    expect(analyticsService.startGameSession).toHaveBeenCalledWith(
+    expect(mockAnalyticsService.startGameSession).toHaveBeenCalledWith(
       mockAvatarId,
       mockGameType,
       expect.any(Object),
@@ -57,7 +60,7 @@ describe('useGameAnalytics', () => {
     await act(async () => {
       await result.current.trackQuestionAttempt(true, { questionIndex: 0 });
     });
-    expect(analyticsService.trackEvent).toHaveBeenCalledWith(
+    expect(mockAnalyticsService.trackEvent).toHaveBeenCalledWith(
       mockSessionId,
       mockAvatarId,
       'question_answer',
@@ -82,7 +85,7 @@ describe('useGameAnalytics', () => {
     await act(async () => {
       await result.current.completeSession(90);
     });
-    expect(analyticsService.completeGameSession).toHaveBeenCalledWith(
+    expect(mockAnalyticsService.completeGameSession).toHaveBeenCalledWith(
       mockSessionId,
       90,
       expect.any(Number),

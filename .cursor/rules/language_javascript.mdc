@@ -1,0 +1,14 @@
+---
+description: Base rules for JavaScript projects
+globs:
+  - "**/*.js"
+  - "**/*.jsx"
+alwaysApply: true
+---
+
+## JavaScript Language Rules
+
+- Use `const` and `let` over `var`.
+- Avoid function hoisting by using arrow functions or declarations.
+- Document top-level functions with JSDoc.
+- Use strict equality (`===`) over loose equality (`==`).

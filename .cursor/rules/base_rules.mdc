@@ -1,0 +1,43 @@
+---
+description: Universal code quality and collaboration guidance
+globs: 
+alwaysApply: true
+---
+
+## AI Guidance
+
+### Net-New Code
+- Use a technical and concise tone.
+- Provide clear structure with consistent formatting and conventions.
+- Include usage examples, mock outputs, or test snippets where helpful.
+- Use standard libraries or lightweight dependencies unless directed otherwise.
+- Align new files or modules with common project layouts (e.g., `src/`, `services/`, `tests/`).
+
+### Refactoring / Rewrites
+- Explain why a change is being made — clarity, performance, structure, etc.
+- Call out tradeoffs explicitly (e.g., fewer lines vs. readability).
+- Avoid introducing new dependencies or frameworks unless requested.
+- Maintain backward compatibility unless specified.
+- When optimizing, preserve original logic unless simplifying or improving clarity.
+
+### Best Practices
+- Confirm your working directory between tasks.
+- Follow idiomatic language and framework patterns.
+- Include basic error handling, logging, and validation.
+- Favor readability and testability over cleverness.
+- Avoid code duplication by extracting common logic or components.
+
+### Data Structures & Algorithms
+- Use appropriate built-in data structures (e.g., sets, dicts, enums, tuples) to simplify logic.
+- Choose clarity over cleverness — prefer a clear list + loop over a deeply nested comprehension.
+- Use collections, maps, or data classes instead of parallel arrays when representing structured data.
+- Avoid reinventing algorithms when standard ones (sorting, filtering, grouping, etc.) apply.
+- When applicable, annotate with time/space tradeoffs or performance notes.
+
+### Interaction Behavior
+- Ask clarifying questions before assuming context in ambiguous requests.
+- Use summary comments when responding with multi-step changes or files.
+
+### Testing Context
+- Include small runnable examples or test cases when applicable.
+- Prefer descriptive, isolated test functions with minimal setup.

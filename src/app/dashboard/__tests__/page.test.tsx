@@ -6,10 +6,22 @@ import { analyticsService } from '@/utils/analyticsService';
 import * as UserContext from '@/context/UserContext';
 import { UserProvider } from '@/context/UserContext';
 
-const mockAvatar = { id: '00000000-0000-0000-0000-000000000003', name: 'Test Avatar' };
+// Create proper mock avatar with all required properties
+const mockAvatar = { 
+  id: '00000000-0000-0000-0000-000000000003', 
+  name: 'Test Avatar',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  user_id: 'test-user',
+  org_id: null,
+  last_active: new Date().toISOString(),
+  encrypted_pii: {},
+  game_preferences: {},
+  theme_settings: {}
+};
 
 const mockProgress = [
-  { gameId: 'numbers', skillLevel: 'beginner', masteryScore: 80, lastPlayed: new Date(), learningObjectivesMet: [], prerequisiteCompletion: {}, avatarId: '00000000-0000-0000-0000-000000000003', totalSessions: 2, averagePerformance: 80, improvementTrend: 'improving' }
+  { gameId: 'numbers' as const, skillLevel: 'beginner' as const, masteryScore: 80, lastPlayed: new Date(), learningObjectivesMet: [], prerequisiteCompletion: {}, avatarId: '00000000-0000-0000-0000-000000000003', totalSessions: 2, averagePerformance: 80, improvementTrend: 'improving' as const }
 ];
 const mockRecommendations = [
   { gameId: 'letters', reason: 'Try letters next!', priority: 8, estimatedDifficulty: 'beginner', learningObjectives: [], prerequisitesMet: true }
@@ -24,13 +36,20 @@ const mockMetrics = {
   engagementScore: 80
 };
 
+// Mock the analytics service methods
+const mockAnalyticsService = analyticsService as jest.Mocked<typeof analyticsService>;
+
 describe('DashboardPage', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    analyticsService.getAvatarProgress.mockResolvedValue(mockProgress);
-    analyticsService.getLearningPathRecommendations.mockResolvedValue(mockRecommendations);
-    analyticsService.getPerformanceMetrics.mockResolvedValue(mockMetrics);
-    jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ currentAvatar: mockAvatar });
+    mockAnalyticsService.getAvatarProgress.mockResolvedValue(mockProgress);
+    mockAnalyticsService.getLearningPathRecommendations.mockResolvedValue(mockRecommendations);
+    mockAnalyticsService.getPerformanceMetrics.mockResolvedValue(mockMetrics);
+    jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ 
+      currentAvatar: mockAvatar,
+      avatars: [mockAvatar],
+      setCurrentAvatar: jest.fn()
+    });
   });
 
   it('renders dashboard data', async () => {
@@ -49,7 +68,11 @@ describe('DashboardPage', () => {
   });
 
   it('shows info if no avatar', async () => {
-    jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ currentAvatar: null });
+    jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ 
+      currentAvatar: null,
+      avatars: [],
+      setCurrentAvatar: jest.fn()
+    });
     render(
       <UserProvider>
         <DashboardPage />
@@ -59,7 +82,7 @@ describe('DashboardPage', () => {
   });
 
   it('shows error on analytics failure', async () => {
-    analyticsService.getAvatarProgress.mockRejectedValue(new Error('fail'));
+    mockAnalyticsService.getAvatarProgress.mockRejectedValue(new Error('fail'));
     render(
       <UserProvider>
         <DashboardPage />

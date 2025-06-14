@@ -1,0 +1,13 @@
+---
+description: Jupyter notebook and data exploration guidance
+globs:
+  - "**/*.ipynb"
+alwaysApply: true
+---
+
+## Jupyter Notebook Rules
+
+- Keep notebooks focused on one topic or analysis.
+- Use markdown cells to explain logic between code cells.
+- Avoid writing production logic in notebooks; export functions to `.py` modules.
+- Restart and clear outputs before committing or sharing notebooks.

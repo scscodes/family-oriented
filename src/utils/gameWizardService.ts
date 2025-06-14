@@ -1,5 +1,6 @@
 import { gameDiscovery } from './gameData';
-import { logger } from './logger';
+import { createClient } from '@/lib/supabase/client';
+import { analyticsService } from './analyticsService';
 
 interface WizardStep {
   id: string;
@@ -29,6 +30,7 @@ interface WizardSession {
 }
 
 export class GameWizardService {
+  private supabase = createClient();
   private readonly steps: WizardStep[] = [
     {
       id: 'age',
@@ -85,10 +87,18 @@ export class GameWizardService {
    * Start a new wizard session
    */
   async startSession(avatarId: string): Promise<WizardSession> {
-    // TODO: Implement with Supabase when game_wizard_sessions table is created
+    // Create a temporary session ID for now
+    // TODO: Implement proper database storage when game_wizard_sessions table is created
+    const sessionId = `wizard_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Track wizard start
+    await analyticsService.trackEvent(sessionId, avatarId, 'wizard_start', {
+      timestamp: new Date().toISOString()
+    });
+
     return {
-      id: `session_${Date.now()}`,
-      avatarId,
+      id: sessionId,
+      avatarId: avatarId,
       createdAt: new Date()
     };
   }
@@ -107,18 +117,31 @@ export class GameWizardService {
     sessionId: string,
     selections: Record<string, unknown>
   ): Promise<WizardSession> {
-    // TODO: Implement with Supabase when game_wizard_sessions table is created
     const filters = this.parseSelections(selections);
     const recommendations = gameDiscovery.getRecommendedGames('', filters);
 
-    return {
+    // TODO: Store in database when game_wizard_sessions table is created
+    const session: WizardSession = {
       id: sessionId,
-      avatarId: 'temp',
+      avatarId: sessionId.includes('_') ? sessionId.split('_')[1] : 'temp',
       parsedFilters: filters,
       selectedGames: recommendations.map(r => r.game.id),
       createdAt: new Date(),
       completedAt: new Date()
     };
+
+    // Track wizard completion
+    await analyticsService.trackEvent(sessionId, session.avatarId, 'wizard_complete', {
+      timestamp: new Date().toISOString(),
+      filters,
+      recommendations: recommendations.map(r => ({
+        gameId: r.game.id,
+        score: r.score,
+        reason: r.reason
+      }))
+    });
+
+    return session;
   }
 
   /**
@@ -130,16 +153,23 @@ export class GameWizardService {
     score: number,
     timeSpent: number
   ): Promise<void> {
-    // TODO: Implement with Supabase when game_wizard_completions table is created
-    logger.info('Tracking completion:', { sessionId, gameId, score, timeSpent });
+    // TODO: Store in database when game_wizard_completions table is created
+    
+    // Track game completion
+    await analyticsService.trackEvent(sessionId, 'temp', 'wizard_game_complete', {
+      gameId,
+      score,
+      timeSpent,
+      timestamp: new Date().toISOString()
+    });
   }
 
   /**
    * Update session completion rate
    */
-  private async updateCompletionRate(sessionId: string): Promise<void> {
-    // TODO: Implement with Supabase when tables are created
-    logger.info('Updating completion rate for session:', sessionId);
+  private async updateCompletionRate(): Promise<void> {
+    // TODO: Implement when database tables are available
+    // For now, this is a no-op
   }
 
   /**

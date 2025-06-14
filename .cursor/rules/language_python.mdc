@@ -1,0 +1,13 @@
+---
+description: Base rules for Python projects
+globs:
+  - "**/*.py"
+alwaysApply: true
+---
+
+## Python Language Rules
+
+- Follow PEP8 style guidelines.
+- Use type hints for all function signatures.
+- Avoid magic numbers and hardcoded strings.
+- Prefer list comprehensions over manual loops where applicable.

@@ -1,13 +1,16 @@
 'use client';
 
-import { Box, Card, CardContent, Typography, Chip, Avatar, Button } from '@mui/material';
+import { Box, Card, CardContent, Typography, Chip, Avatar, Button, CardActions } from '@mui/material';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SchoolIcon from '@mui/icons-material/School';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import TouchAppIcon from '@mui/icons-material/TouchApp';
 import GroupIcon from '@mui/icons-material/Group';
 import VisibilityIcon from '@mui/icons-material/Visibility';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import { GameCollectionButton } from './game-discovery/GameCollectionButton';
 
 import { Game, SUBJECTS } from '@/utils/gameData';
 
@@ -278,22 +281,25 @@ export default function GameGrid({ games, resultsPerPage }: GameGridProps) {
                 )}
 
                 {/* Play button */}
-                <Button
-                  variant="contained"
-                  fullWidth
-                  sx={{
-                    mt: 1,
-                    backgroundColor: subjectConfig.color,
-                    '&:hover': {
-                      backgroundColor: subjectConfig.color,
-                      opacity: 0.9
-                    },
-                    textTransform: 'none',
-                    fontWeight: 600
-                  }}
-                >
-                  Play Game
-                </Button>
+                <CardActions sx={{ justifyContent: 'space-between', pt: 0 }}>
+                  <Button
+                    component={Link}
+                    href={game.href}
+                    variant="contained"
+                    size="small"
+                    startIcon={<PlayArrowIcon />}
+                    sx={{ 
+                      bgcolor: game.color,
+                      '&:hover': { 
+                        bgcolor: game.color,
+                        filter: 'brightness(0.9)'
+                      }
+                    }}
+                  >
+                    Play
+                  </Button>
+                  <GameCollectionButton game={game} size="small" />
+                </CardActions>
               </Box>
             </CardContent>
           </Card>

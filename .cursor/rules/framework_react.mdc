@@ -1,0 +1,14 @@
+---
+description: React framework development rules
+globs:
+  - "src/**/*.jsx"
+  - "src/**/*.tsx"
+alwaysApply: true
+---
+
+## React Rules
+
+- Use functional components with React hooks.
+- Avoid prop drilling; prefer context or composition patterns.
+- Organize logic into custom hooks where possible.
+- Use memoization (`useMemo`, `useCallback`) to optimize rendering.

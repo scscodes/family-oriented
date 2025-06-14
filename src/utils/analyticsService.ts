@@ -35,7 +35,19 @@ export interface GameSessionData {
 export interface GameEventData {
   sessionId: string;
   avatarId: string;
-  eventType: 'game_start' | 'game_complete' | 'question_start' | 'question_answer' | 'hint_used' | 'game_pause' | 'game_resume' | 'difficulty_change' | 'game_abandon';
+  eventType: 
+    | 'game_start' 
+    | 'game_complete' 
+    | 'question_start' 
+    | 'question_answer' 
+    | 'hint_used' 
+    | 'game_pause' 
+    | 'game_resume' 
+    | 'difficulty_change' 
+    | 'game_abandon'
+    | 'wizard_start'
+    | 'wizard_complete'
+    | 'wizard_game_complete';
   eventData: Record<string, unknown>;
   timestamp: Date;
   sequenceNumber: number;

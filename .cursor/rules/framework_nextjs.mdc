@@ -1,0 +1,16 @@
+---
+description: Next.js framework rules for full-stack React apps
+globs:
+  - "pages/**/*.ts"
+  - "pages/**/*.tsx"
+  - "app/**/*.ts"
+  - "app/**/*.tsx"
+alwaysApply: true
+---
+
+## Next.js Rules
+
+- Use file-based routing in the `pages` or `app` directory appropriately.
+- Fetch data using `getServerSideProps`, `getStaticProps`, or `app router` conventions.
+- Avoid non-deterministic logic in server-rendered functions.
+- Keep shared layout and SEO meta setup in `_app.tsx` or layout.tsx.

@@ -1,0 +1,14 @@
+---
+description: Base rules for TypeScript projects
+globs:
+  - "**/*.ts"
+  - "**/*.tsx"
+alwaysApply: true
+---
+
+## TypeScript Language Rules
+
+- Use `interface` or `type` instead of inline object types.
+- Prefer `const` over `let` unless reassignment is required.
+- Enable `strict` mode in tsconfig.
+- Favor named exports over default exports for consistency.

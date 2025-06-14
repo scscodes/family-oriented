@@ -1,0 +1,15 @@
+---
+description: Flask framework-specific rules
+globs:
+  - "api/**/*.py"
+  - "routes/**/*.py"
+  - "**/app.py"
+alwaysApply: true
+---
+
+## Flask Framework Rules
+
+- Use Blueprints for routing.
+- Validate inputs using `pydantic` or custom decorators.
+- Organize route logic into service or controller modules.
+- Include response examples in comments or docstrings.

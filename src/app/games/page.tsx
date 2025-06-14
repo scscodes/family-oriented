@@ -17,6 +17,7 @@ import {
 import SettingsIcon from '@mui/icons-material/Settings';
 import HomeIcon from '@mui/icons-material/Home';
 import FilterListIcon from '@mui/icons-material/FilterList';
+import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { logger } from "@/utils/logger";
 import AutocompleteSearchBar from "@/components/AutocompleteSearchBar";
 import TagFilter from "@/components/TagFilter";
@@ -24,9 +25,11 @@ import FacetedSidebar from "@/components/FacetedSidebar";
 import SortControls from "@/components/SortControls";
 import GameGrid from "@/components/GameGrid";
 import AccordionCategory from "@/components/AccordionCategory";
+import AdvancedFilterBuilder from "@/components/AdvancedFilterBuilder";
 import { SUBJECTS, gameDiscovery, Game, EnhancedGameFilter, SortOptions, ViewPreferences } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
+import { gameWizard } from '@/utils/gameWizardService';
 
 /**
  * Browse all available games with search and filtering capabilities
@@ -55,6 +58,10 @@ function BrowseGamesContent() {
   const [viewType, setViewType] = useState<'grid' | 'list'>('list');
   const [resultsPerPage, setResultsPerPage] = useState(24);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  // Wizard-related state (for future wizard integration)
+  // const [selectedGames, setSelectedGames] = useState<Game[]>([]);
+  // const [selectedSkillLevel, setSelectedSkillLevel] = useState<string | null>(null);
+  // const [selectedAgeRange, setSelectedAgeRange] = useState<[number, number] | null>(null);
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -110,9 +117,24 @@ function BrowseGamesContent() {
   // Load wizard recommendations if present
   useEffect(() => {
     if (wizardId) {
-      // TODO: Load wizard session and apply recommendations
-      // This will be implemented when we have the analytics dashboard
-      logger.info('Wizard session:', wizardId);
+      const loadWizardSession = async () => {
+        try {
+          const session = await gameWizard.getRecommendations(wizardId, {});
+          if (session.selectedGames) {
+            // Apply wizard filters to current search
+                          if (session.parsedFilters) {
+                if (session.parsedFilters.subjects && Array.isArray(session.parsedFilters.subjects)) {
+                  setSelectedSubject(session.parsedFilters.subjects[0] as string);
+                }
+                // Additional wizard filter integration can be added here
+              }
+          }
+        } catch (error) {
+          logger.error('Failed to load wizard session:', error);
+          // Show error toast or notification
+        }
+      };
+      loadWizardSession();
     }
   }, [wizardId]);
 
@@ -248,6 +270,23 @@ function BrowseGamesContent() {
             </IconButton>
           )}
           
+          <Link href="/collections" style={{ textDecoration: 'none' }}>
+            <IconButton 
+              aria-label="collections"
+              sx={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(10px)',
+                color: 'rgba(0, 0, 0, 0.7)',
+                '&:hover': { 
+                  backgroundColor: 'rgba(255, 255, 255, 1)',
+                  color: 'rgba(0, 0, 0, 0.9)'
+                }
+              }}
+            >
+              <BookmarkIcon />
+            </IconButton>
+          </Link>
+          
           <ThemeSelector />
           <Link href="/settings" style={{ textDecoration: 'none' }}>
             <IconButton 
@@ -350,6 +389,22 @@ function BrowseGamesContent() {
                 status: ['active']
               }}
             />
+          </Box>
+
+          {/* Advanced Filter Builder */}
+          <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
+            <AdvancedFilterBuilder
+              currentFilters={currentFilters}
+              onFiltersChange={(filters) => {
+                if (filters.subjects) setSelectedSubject(filters.subjects[0] || null);
+                if (filters.tags) setSelectedTags(filters.tags);
+                if (filters.facets) setFacetFilters(filters.facets);
+                if (filters.sort) setSortOptions(filters.sort);
+              }}
+            />
+            <Typography variant="body2" color="text.secondary">
+              Build complex filter queries with AND/OR logic and save presets
+            </Typography>
           </Box>
 
           {/* Sort Controls */}

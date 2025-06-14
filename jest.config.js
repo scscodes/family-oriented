@@ -8,16 +8,31 @@ module.exports = {
     '\\.(svg)$': '<rootDir>/__mocks__/svgMock.js'
   },
   transform: {
-    '^.+\\.(ts|tsx|js|jsx)$': ['ts-jest', { tsconfig: 'tsconfig.jest.json', useESM: true }]
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
+      tsconfig: 'tsconfig.jest.json',
+    }],
   },
+  testMatch: [
+    '**/__tests__/**/*.test.(ts|tsx)',
+  ],
   transformIgnorePatterns: [
-    '/node_modules/(?!(jose|@supabase)/)'
+    '/node_modules/(?!(jose|@supabase|@testing-library|uuid|nanoid)/)'
   ],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  extensionsToTreatAsEsm: ['.ts', '.tsx'],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  }
+  collectCoverageFrom: [
+    'src/**/*.{ts,tsx}',
+    '!src/**/*.d.ts',
+    '!src/**/*.stories.{ts,tsx}',
+    '!src/test/**/*',
+  ],
+  coverageThreshold: {
+    global: {
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
+    },
+  },
+  testTimeout: 10000,
+  maxWorkers: 1,
 };

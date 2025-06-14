@@ -2,14 +2,15 @@ import { getSettings, saveSettings, DEFAULT_SETTINGS } from '../settingsUtils';
 
 describe('settingsUtils', () => {
   beforeEach(() => {
-    // @ts-expect-error localStorage is not defined in Node test environment
-    global.localStorage = {
-      store: {} as Record<string, string>,
-      getItem(key: string) { return this.store[key] || null; },
-      setItem(key: string, value: string) { this.store[key] = value; },
-      clear() { this.store = {}; }
-    };
-    localStorage.clear();
+    // Clear the localStorage mock
+    (localStorage.clear as jest.Mock).mockClear();
+    (localStorage.getItem as jest.Mock).mockClear();
+    (localStorage.setItem as jest.Mock).mockClear();
+    
+    // Reset localStorage mock to default behavior
+    (localStorage.getItem as jest.Mock).mockImplementation(() => null);
+    (localStorage.setItem as jest.Mock).mockImplementation(() => {});
+    (localStorage.clear as jest.Mock).mockImplementation(() => {});
   });
 
   it('returns default settings if nothing in localStorage', () => {
@@ -19,7 +20,7 @@ describe('settingsUtils', () => {
 
   it('returns saved settings from localStorage', () => {
     const custom = { ...DEFAULT_SETTINGS.numbers, questionCount: 5 };
-    localStorage.setItem('numbers_settings', JSON.stringify(custom));
+    (localStorage.getItem as jest.Mock).mockReturnValue(JSON.stringify(custom));
     const settings = getSettings('numbers');
     expect(settings).toEqual(custom);
   });
@@ -27,13 +28,12 @@ describe('settingsUtils', () => {
   it('saves settings to localStorage', () => {
     const custom = { ...DEFAULT_SETTINGS.numbers, questionCount: 7 };
     saveSettings('numbers', custom);
-    const stored = JSON.parse(localStorage.getItem('numbers_settings') ?? '');
-    expect(stored).toEqual(custom);
+    expect(localStorage.setItem).toHaveBeenCalledWith('numbers_settings', JSON.stringify(custom));
   });
 
   it('returns default if localStorage is corrupted', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    localStorage.setItem('numbers_settings', 'not-json');
+    (localStorage.getItem as jest.Mock).mockReturnValue('not-json');
     const settings = getSettings('numbers');
     expect(settings).toEqual(DEFAULT_SETTINGS.numbers);
     spy.mockRestore();
