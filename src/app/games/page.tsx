@@ -8,7 +8,6 @@ import {
   Container, 
   Box,
   IconButton,
-  Chip,
   Breadcrumbs,
   useMediaQuery,
   useTheme,
@@ -20,16 +19,17 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { logger } from "@/utils/logger";
 import AutocompleteSearchBar from "@/components/AutocompleteSearchBar";
-import TagFilter from "@/components/TagFilter";
 import FacetedSidebar from "@/components/FacetedSidebar";
 import SortControls from "@/components/SortControls";
 import GameGrid from "@/components/GameGrid";
 import AccordionCategory from "@/components/AccordionCategory";
-import AdvancedFilterBuilder from "@/components/AdvancedFilterBuilder";
+import ActiveFiltersDisplay from "@/components/ActiveFiltersDisplay";
 import { SUBJECTS, gameDiscovery, Game, EnhancedGameFilter, SortOptions, ViewPreferences } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
 import ThemeSelector from "@/components/ThemeSelector";
-import { gameWizard } from '@/utils/gameWizardService';
+
+import { GameWizardResults } from '@/components/game-discovery/GameWizardResults';
+import { GameWizardDialog } from '@/components/game-discovery/GameWizardDialog';
 
 /**
  * Browse all available games with search and filtering capabilities
@@ -58,10 +58,7 @@ function BrowseGamesContent() {
   const [viewType, setViewType] = useState<'grid' | 'list'>('list');
   const [resultsPerPage, setResultsPerPage] = useState(24);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  // Wizard-related state (for future wizard integration)
-  // const [selectedGames, setSelectedGames] = useState<Game[]>([]);
-  // const [selectedSkillLevel, setSelectedSkillLevel] = useState<string | null>(null);
-  // const [selectedAgeRange, setSelectedAgeRange] = useState<[number, number] | null>(null);
+  const [wizardDialogOpen, setWizardDialogOpen] = useState(false);
 
   // Load preferences from localStorage
   useEffect(() => {
@@ -114,29 +111,15 @@ function BrowseGamesContent() {
     }
   }, [searchParams]);
 
-  // Load wizard recommendations if present
-  useEffect(() => {
-    if (wizardId) {
-      const loadWizardSession = async () => {
-        try {
-          const session = await gameWizard.getRecommendations(wizardId, {});
-          if (session.selectedGames) {
-            // Apply wizard filters to current search
-                          if (session.parsedFilters) {
-                if (session.parsedFilters.subjects && Array.isArray(session.parsedFilters.subjects)) {
-                  setSelectedSubject(session.parsedFilters.subjects[0] as string);
-                }
-                // Additional wizard filter integration can be added here
-              }
-          }
-        } catch (error) {
-          logger.error('Failed to load wizard session:', error);
-          // Show error toast or notification
-        }
-      };
-      loadWizardSession();
-    }
-  }, [wizardId]);
+  const handleStartNewWizard = () => {
+    setWizardDialogOpen(true);
+  };
+
+  const handleWizardClose = () => {
+    setWizardDialogOpen(false);
+    // Clear wizard from URL
+    router.push('/games');
+  };
 
   // Update URL when filters change
   const updateURL = (newSearch: string, newSubject: string | null, newTags: string[]) => {
@@ -184,6 +167,14 @@ function BrowseGamesContent() {
     if (filters.facets) {
       setFacetFilters(filters.facets);
     }
+  };
+
+  // Handle individual facet filter changes from ActiveFiltersDisplay
+  const handleIndividualFacetFilterChange = (filters: Partial<typeof facetFilters>) => {
+    setFacetFilters(prev => ({
+      ...prev,
+      ...filters
+    }));
   };
 
   const handleSortChange = (sort: SortOptions) => {
@@ -310,18 +301,26 @@ function BrowseGamesContent() {
       {/* Main Content - Two Column Layout */}
       <Box sx={{ display: 'flex', gap: 3 }}>
         {/* Left Sidebar - Desktop Only */}
-        {!isMobile && (
+        {!isMobile && !wizardId && (
           <FacetedSidebar
             currentFilters={currentFilters}
             onFiltersChange={handleFacetFiltersChange}
+            selectedSubject={selectedSubject}
+            onSubjectChange={handleSubjectChange}
+            selectedTags={selectedTags}
+            onTagsChange={handleTagsChange}
           />
         )}
 
         {/* Mobile Sidebar - Drawer */}
-        {isMobile && (
+        {isMobile && !wizardId && (
           <FacetedSidebar
             currentFilters={currentFilters}
             onFiltersChange={handleFacetFiltersChange}
+            selectedSubject={selectedSubject}
+            onSubjectChange={handleSubjectChange}
+            selectedTags={selectedTags}
+            onTagsChange={handleTagsChange}
             mobileOpen={mobileFiltersOpen}
             onMobileToggle={() => setMobileFiltersOpen(!mobileFiltersOpen)}
           />
@@ -329,100 +328,52 @@ function BrowseGamesContent() {
 
         {/* Main Content Area */}
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {/* Search Bar */}
-          <Box sx={{ mb: 3 }}>
-            <AutocompleteSearchBar 
-              value={search}
-              onChange={handleSearchChange}
-            />
-          </Box>
+          {/* Search and Filter Controls - Hidden when showing wizard results */}
+          {!wizardId && (
+            <>
+              {/* Search Bar */}
+              <Box sx={{ mb: 3 }}>
+                <AutocompleteSearchBar 
+                  value={search}
+                  onChange={handleSearchChange}
+                />
+              </Box>
 
-          {/* Subject Filter Chips */}
-          <Box sx={{ mb: 4 }}>
-            <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
-              Filter by Subject
-            </Typography>
-            <Box display="flex" flexWrap="wrap" gap={1}>
-              <Chip
-                label="All Subjects"
-                onClick={() => handleSubjectChange(null)}
-                variant={selectedSubject === null ? "filled" : "outlined"}
-                sx={{ 
-                  backgroundColor: selectedSubject === null ? themeConfig.primary : 'transparent',
-                  color: selectedSubject === null ? '#fff' : themeConfig.primary,
-                  borderColor: themeConfig.primary,
-                  '&:hover': { 
-                    backgroundColor: selectedSubject === null ? themeConfig.primary : `${themeConfig.primary}20`
-                  }
-                }}
+              {/* Active Filters Display */}
+              <ActiveFiltersDisplay
+                selectedSubject={selectedSubject}
+                onSubjectChange={handleSubjectChange}
+                selectedTags={selectedTags}
+                onTagsChange={handleTagsChange}
+                facetFilters={facetFilters}
+                onFacetFiltersChange={handleIndividualFacetFilterChange}
+                searchTerm={search}
+                onSearchChange={handleSearchChange}
               />
-              {Object.entries(SUBJECTS).map(([subject, config]) => {
-                const gameCount = gameDiscovery.getGamesBySubject(subject as keyof typeof SUBJECTS).length;
-                
-                return (
-                  <Chip
-                    key={subject}
-                    label={`${config.icon} ${subject} (${gameCount})`}
-                    onClick={() => handleSubjectChange(selectedSubject === subject ? null : subject)}
-                    variant={selectedSubject === subject ? "filled" : "outlined"}
-                    sx={{ 
-                      backgroundColor: selectedSubject === subject ? config.color : 'transparent',
-                      color: selectedSubject === subject ? '#fff' : config.color,
-                      borderColor: config.color,
-                      '&:hover': { 
-                        backgroundColor: selectedSubject === subject ? config.color : `${config.color}20`
-                      }
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          </Box>
 
-          {/* Legacy Tag Filtering - Keep for backwards compatibility */}
-          <Box sx={{ mb: 4 }}>
-            <TagFilter
-              selectedTags={selectedTags}
-              onTagsChange={handleTagsChange}
-              currentFilters={{
-                subjects: selectedSubject ? [selectedSubject] : undefined,
-                status: ['active']
-              }}
-            />
-          </Box>
-
-          {/* Advanced Filter Builder */}
-          <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center' }}>
-            <AdvancedFilterBuilder
-              currentFilters={currentFilters}
-              onFiltersChange={(filters) => {
-                if (filters.subjects) setSelectedSubject(filters.subjects[0] || null);
-                if (filters.tags) setSelectedTags(filters.tags);
-                if (filters.facets) setFacetFilters(filters.facets);
-                if (filters.sort) setSortOptions(filters.sort);
-              }}
-            />
-            <Typography variant="body2" color="text.secondary">
-              Build complex filter queries with AND/OR logic and save presets
-            </Typography>
-          </Box>
-
-          {/* Sort Controls */}
-          <Box sx={{ mb: 3 }}>
-            <SortControls
-              sortOptions={sortOptions}
-              viewType={viewType}
-              resultsPerPage={resultsPerPage}
-              totalResults={searchResults.length}
-              onSortChange={handleSortChange}
-              onViewChange={handleViewChange}
-              onResultsPerPageChange={handleResultsPerPageChange}
-            />
-          </Box>
+              {/* Sort Controls */}
+              <Box sx={{ mb: 3 }}>
+                <SortControls
+                  sortOptions={sortOptions}
+                  viewType={viewType}
+                  resultsPerPage={resultsPerPage}
+                  totalResults={searchResults.length}
+                  onSortChange={handleSortChange}
+                  onViewChange={handleViewChange}
+                  onResultsPerPageChange={handleResultsPerPageChange}
+                />
+              </Box>
+            </>
+          )}
 
           {/* Results Display */}
           <Box>
-            {searchResults.length === 0 ? (
+            {wizardId ? (
+              <GameWizardResults 
+                wizardId={wizardId} 
+                onStartNewWizard={handleStartNewWizard}
+              />
+            ) : searchResults.length === 0 ? (
               <Box textAlign="center" py={8}>
                 <Typography variant="h6" color="text.secondary" gutterBottom>
                   No games found
@@ -449,10 +400,10 @@ function BrowseGamesContent() {
       </Box>
 
       {/* Mobile Filter FAB */}
-      {isMobile && (
+      {isMobile && !wizardId && (
         <Fab
           color="primary"
-          aria-label="open filters"
+          aria-label="filters"
           onClick={() => setMobileFiltersOpen(true)}
           sx={{
             position: 'fixed',
@@ -464,17 +415,19 @@ function BrowseGamesContent() {
           <FilterListIcon />
         </Fab>
       )}
+
+      {/* Game Wizard Dialog */}
+      <GameWizardDialog
+        open={wizardDialogOpen}
+        onClose={handleWizardClose}
+      />
     </Container>
   );
 }
 
 export default function BrowseGames() {
   return (
-    <Suspense fallback={
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Typography>Loading games...</Typography>
-      </Container>
-    }>
+    <Suspense fallback={<div>Loading...</div>}>
       <BrowseGamesContent />
     </Suspense>
   );

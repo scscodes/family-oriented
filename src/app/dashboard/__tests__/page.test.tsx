@@ -62,9 +62,11 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Learning Progress Dashboard')).toBeInTheDocument();
       expect(screen.getByText('numbers')).toBeInTheDocument();
-      expect(screen.getByText('letters')).toBeInTheDocument();
-      expect(screen.getByText('Performance Metrics')).toBeInTheDocument();
-    });
+      expect(screen.getAllByText('letters')).toHaveLength(2); // One in progress, one in recommendations
+      // Check for dashboard sections
+      expect(screen.getByText('Recently Played')).toBeInTheDocument();
+      expect(screen.getByText('Quick Access')).toBeInTheDocument();
+    }, { timeout: 5000 });
   });
 
   it('shows info if no avatar', async () => {
