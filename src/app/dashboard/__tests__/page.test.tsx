@@ -1,0 +1,98 @@
+jest.mock('@/utils/analyticsService');
+
+import { render, screen, waitFor } from '@testing-library/react';
+import DashboardPage from '../page';
+import { analyticsService } from '@/utils/analyticsService';
+import * as UserContext from '@/context/UserContext';
+import { UserProvider } from '@/context/UserContext';
+
+// Create proper mock avatar with all required properties
+const mockAvatar = { 
+  id: '00000000-0000-0000-0000-000000000003', 
+  name: 'Test Avatar',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  user_id: 'test-user',
+  org_id: null,
+  last_active: new Date().toISOString(),
+  encrypted_pii: {},
+  game_preferences: {},
+  theme_settings: {}
+};
+
+const mockProgress = [
+  { gameId: 'numbers' as const, skillLevel: 'beginner' as const, masteryScore: 80, lastPlayed: new Date(), learningObjectivesMet: [], prerequisiteCompletion: {}, avatarId: '00000000-0000-0000-0000-000000000003', totalSessions: 2, averagePerformance: 80, improvementTrend: 'improving' as const }
+];
+const mockRecommendations = [
+  { gameId: 'letters', reason: 'Try letters next!', priority: 8, estimatedDifficulty: 'beginner', learningObjectives: [], prerequisitesMet: true }
+];
+const mockMetrics = {
+  totalGamesPlayed: 2,
+  averageSessionDuration: 60,
+  overallCompletionRate: 1,
+  skillLevelDistribution: { beginner: 2 },
+  subjectPreferences: { Mathematics: 2 },
+  learningVelocity: 1,
+  engagementScore: 80
+};
+
+// Mock the analytics service methods
+const mockAnalyticsService = analyticsService as jest.Mocked<typeof analyticsService>;
+
+describe('DashboardPage', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockAnalyticsService.getAvatarProgress.mockResolvedValue(mockProgress);
+    mockAnalyticsService.getLearningPathRecommendations.mockResolvedValue(mockRecommendations);
+    mockAnalyticsService.getPerformanceMetrics.mockResolvedValue(mockMetrics);
+    jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ 
+      currentAvatar: mockAvatar,
+      avatars: [mockAvatar],
+      setCurrentAvatar: jest.fn()
+    });
+  });
+
+  it('renders dashboard data', async () => {
+    render(
+      <UserProvider>
+        <DashboardPage />
+      </UserProvider>
+    );
+    expect(screen.getByRole('progressbar')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Learning Progress Dashboard')).toBeInTheDocument();
+      expect(screen.getByText('numbers')).toBeInTheDocument();
+      expect(screen.getAllByText('letters')).toHaveLength(2); // One in progress, one in recommendations
+      // Check for dashboard sections
+      expect(screen.getByText('Recently Played')).toBeInTheDocument();
+      expect(screen.getByText('Quick Access')).toBeInTheDocument();
+    }, { timeout: 5000 });
+  });
+
+  it('shows info if no avatar', async () => {
+    jest.spyOn(UserContext, 'useAvatar').mockReturnValue({ 
+      currentAvatar: null,
+      avatars: [],
+      setCurrentAvatar: jest.fn()
+    });
+    render(
+      <UserProvider>
+        <DashboardPage />
+      </UserProvider>
+    );
+    expect(screen.getByText(/please select or create an avatar/i)).toBeInTheDocument();
+  });
+
+  it('shows error on analytics failure', async () => {
+    mockAnalyticsService.getAvatarProgress.mockRejectedValue(new Error('fail'));
+    render(
+      <UserProvider>
+        <DashboardPage />
+      </UserProvider>
+    );
+    await waitFor(() => {
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('fail');
+    });
+  });
+});
