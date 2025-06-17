@@ -359,3 +359,6 @@ This document is organized by **value delivery** and **risk mitigation**, ensuri
 - ✅ **Type Safety**: Full TypeScript integration with generated database types
 
 **Next Steps:** Focus on Phase 2 implementation to deliver immediate user value using the completed foundation. All major architectural decisions are complete and the database is production-ready.
+## Newly Identified Issues
+- [ ] Analytics session does not restart when using "Play Again" in GameBoard. Add logic to start a new session on restart.
+

@@ -11,6 +11,7 @@ import ResponsiveOptionGrid from "./ResponsiveOptionGrid";
 import { GAME_TIMINGS } from "@/utils/constants";
 import { useGameAnalytics } from '@/hooks/useGameAnalytics';
 import { useAvatar } from '@/context/UserContext';
+import { logger } from '@/utils/logger';
 
 // Define a generic attempt structure
 interface GenericAttempt {
@@ -141,6 +142,8 @@ export default function GameBoard({
     setIncorrectOptions([]);
     setIsGameComplete(false);
     setAttempts([]); // Clear attempts on restart
+    // Start a new analytics session when restarting the game
+    analytics.startSession().catch(err => logger.error('Failed to restart session:', err));
   };
 
   // Define how to render the content for a generic attempt
