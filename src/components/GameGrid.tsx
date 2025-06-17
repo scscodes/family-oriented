@@ -1,7 +1,6 @@
 'use client';
 
 import { Box, Card, CardContent, Typography, Chip, Avatar, Button, CardActions } from '@mui/material';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import SchoolIcon from '@mui/icons-material/School';
@@ -24,15 +23,8 @@ interface GameGridProps {
  * Shows game information in an organized, visual card format
  */
 export default function GameGrid({ games, resultsPerPage }: GameGridProps) {
-  const router = useRouter();
-
   // Limit games based on resultsPerPage (0 = show all)
   const displayedGames = resultsPerPage === 0 ? games : games.slice(0, resultsPerPage);
-
-  // Handle game navigation
-  const handleGameClick = (game: Game) => {
-    router.push(game.href);
-  };
 
   // Get skill level color
   const getSkillLevelColor = (level: string) => {
