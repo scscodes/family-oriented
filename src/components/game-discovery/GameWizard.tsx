@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Button, Card, CardContent, Typography, Stepper, Step, StepLabel, IconButton, Alert, CircularProgress } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { Box, Button, Typography, Stepper, Step, StepLabel, Alert, CircularProgress } from '@mui/material';
 import { gameWizard } from '@/utils/gameWizardService';
 import { useAvatar } from '@/hooks/useAvatar';
 import { logger } from '@/utils/logger';
@@ -12,6 +11,10 @@ interface GameWizardProps {
   onClose: () => void;
 }
 
+/**
+ * Game discovery wizard component that guides users through game selection
+ * Designed to work within a dialog container
+ */
 export function GameWizard({ onClose }: GameWizardProps) {
   const router = useRouter();
   const { avatar } = useAvatar();
@@ -139,134 +142,175 @@ export function GameWizard({ onClose }: GameWizardProps) {
   const currentStep = steps[activeStep];
 
   return (
-    <Card sx={{ maxWidth: 600, mx: 'auto', my: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 1 }}>
-        <IconButton onClick={onClose} size="small">
-          <CloseIcon />
-        </IconButton>
-      </Box>
-      
-      <CardContent>
-        <Typography variant="h5" gutterBottom align="center">
+    <Box sx={{ 
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      maxWidth: 600, 
+      mx: 'auto'
+    }}>
+      {/* Header */}
+      <Box sx={{ flexShrink: 0, mb: 3 }}>
+        <Typography variant="h5" gutterBottom align="center" sx={{ mb: 3 }}>
           Find the Perfect Games
         </Typography>
         
-        <Stepper activeStep={activeStep} sx={{ my: 4 }}>
+        <Stepper activeStep={activeStep} sx={{ mb: 2 }}>
           {steps.map((step) => (
             <Step key={step.id}>
               <StepLabel>{step.title}</StepLabel>
             </Step>
           ))}
         </Stepper>
+      </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            <Typography variant="body1" gutterBottom>
-              {error}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-              <Button 
-                size="small" 
-                variant="outlined" 
-                onClick={() => router.push('/games')}
-              >
-                Browse All Games
-              </Button>
-              <Button 
-                size="small" 
-                variant="text" 
-                onClick={() => {
-                  setError(null);
-                  setActiveStep(0);
-                  setSelections({});
-                }}
-              >
-                Start Over
-              </Button>
-            </Box>
-          </Alert>
-        )}
+      {/* Error display */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2, flexShrink: 0 }}>
+          <Typography variant="body1" gutterBottom>
+            {error}
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+            <Button 
+              size="small" 
+              variant="outlined" 
+              onClick={() => router.push('/games')}
+            >
+              Browse All Games
+            </Button>
+            <Button 
+              size="small" 
+              variant="text" 
+              onClick={() => {
+                setError(null);
+                setActiveStep(0);
+                setSelections({});
+              }}
+            >
+              Start Over
+            </Button>
+          </Box>
+        </Alert>
+      )}
 
-        <Box sx={{ mb: 4 }}>
+      {/* Main content area */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <Box sx={{ mb: 2, flexShrink: 0 }}>
           <Typography variant="h6" gutterBottom>
             {currentStep.title}
           </Typography>
           <Typography color="text.secondary" paragraph>
             {currentStep.description}
           </Typography>
+        </Box>
 
-          {/* Show selection summary on final step */}
-          {activeStep === steps.length - 1 && Object.keys(selections).length > 0 && (
-            <Box sx={{ mb: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-                Your Selections:
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                {selections.age ? (
-                  <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'primary.100', borderRadius: 1 }}>
-                    Ages: {Array.isArray(selections.age) ? `${selections.age[0]}-${selections.age[1]}` : String(selections.age)}
-                  </Typography>
-                ) : null}
-                {selections.interests ? (
-                  <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'secondary.100', borderRadius: 1 }}>
-                    Subject: {String(selections.interests)}
-                  </Typography>
-                ) : null}
-                {selections.time ? (
-                  <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'info.100', borderRadius: 1 }}>
-                    Time: {String(selections.time)}
-                  </Typography>
-                ) : null}
-                {selections.goals ? (
-                  <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'success.100', borderRadius: 1 }}>
-                    Level: {String(selections.goals)}
-                  </Typography>
-                ) : null}
-              </Box>
+        {/* Selection summary on final step */}
+        {activeStep === steps.length - 1 && Object.keys(selections).length > 0 && (
+          <Box sx={{ 
+            mb: 3, 
+            p: 2, 
+            bgcolor: 'grey.50', 
+            borderRadius: 1, 
+            border: 1, 
+            borderColor: 'divider',
+            flexShrink: 0
+          }}>
+            <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+              Your Selections:
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+              {selections.age ? (
+                <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'primary.100', borderRadius: 1 }}>
+                  Ages: {Array.isArray(selections.age) ? `${selections.age[0]}-${selections.age[1]}` : String(selections.age)}
+                </Typography>
+              ) : null}
+              {selections.interests ? (
+                <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'secondary.100', borderRadius: 1 }}>
+                  Subject: {String(selections.interests)}
+                </Typography>
+              ) : null}
+              {selections.time ? (
+                <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'info.100', borderRadius: 1 }}>
+                  Time: {String(selections.time)}
+                </Typography>
+              ) : null}
+              {selections.goals ? (
+                <Typography variant="body2" sx={{ px: 1.5, py: 0.5, bgcolor: 'success.100', borderRadius: 1 }}>
+                  Level: {String(selections.goals)}
+                </Typography>
+              ) : null}
             </Box>
-          )}
-
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 2 }}>
-            {currentStep.options.map((option) => (
-              <Button
-                key={option.id}
-                variant={selections[currentStep.type] === option.value ? 'contained' : 'outlined'}
-                onClick={() => handleSelection(currentStep.type, option.value)}
-                disabled={loading}
-                sx={{ 
-                  height: 100,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1
-                }}
-              >
-                <Typography variant="h4">{option.icon}</Typography>
-                <Typography variant="body2">{option.label}</Typography>
-              </Button>
-            ))}
           </Box>
-        </Box>
+        )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', position: 'relative' }}>
-          <Button
-            disabled={activeStep === 0 || loading}
-            onClick={handleBack}
-          >
-            Back
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleNext}
-            disabled={!selections[currentStep.type] || loading}
-          >
-            {loading ? (
-              <CircularProgress size={24} color="inherit" />
-            ) : (
-              activeStep === steps.length - 1 ? 'Find Games' : 'Next'
-            )}
-          </Button>
+        {/* Options grid - scrollable if needed */}
+        <Box sx={{ 
+          flex: 1,
+          display: 'grid', 
+          gridTemplateColumns: {
+            xs: 'repeat(2, 1fr)',
+            sm: 'repeat(3, 1fr)'
+          },
+          gap: 2,
+          alignContent: 'start',
+          overflow: 'auto',
+          mb: 2
+        }}>
+          {currentStep.options.map((option) => (
+            <Button
+              key={option.id}
+              variant={selections[currentStep.type] === option.value ? 'contained' : 'outlined'}
+              onClick={() => handleSelection(currentStep.type, option.value)}
+              disabled={loading}
+              sx={{ 
+                height: { xs: 80, sm: 100 },
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 1,
+                flexShrink: 0
+              }}
+            >
+              <Typography variant="h4" sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}>
+                {option.icon}
+              </Typography>
+              <Typography variant="body2" sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                {option.label}
+              </Typography>
+            </Button>
+          ))}
         </Box>
-      </CardContent>
-    </Card>
+      </Box>
+
+      {/* Navigation buttons */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        flexShrink: 0,
+        pt: 2,
+        borderTop: 1,
+        borderColor: 'divider'
+      }}>
+        <Button
+          disabled={activeStep === 0 || loading}
+          onClick={handleBack}
+          size="large"
+        >
+          Back
+        </Button>
+        <Button
+          variant="contained"
+          onClick={handleNext}
+          disabled={!selections[currentStep.type] || loading}
+          size="large"
+        >
+          {loading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            activeStep === steps.length - 1 ? 'Find Games' : 'Next'
+          )}
+        </Button>
+      </Box>
+    </Box>
   );
 } 

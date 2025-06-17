@@ -87,7 +87,6 @@ export default function GameGrid({ games, resultsPerPage }: GameGridProps) {
               height: '100%',
               display: 'flex',
               flexDirection: 'column',
-              cursor: 'pointer',
               transition: 'all 0.2s ease-in-out',
               '&:hover': {
                 transform: 'translateY(-4px)',
@@ -97,7 +96,6 @@ export default function GameGrid({ games, resultsPerPage }: GameGridProps) {
                 }
               }
             }}
-            onClick={() => handleGameClick(game)}
           >
             {/* Game Header */}
             <Box
@@ -288,6 +286,9 @@ export default function GameGrid({ games, resultsPerPage }: GameGridProps) {
                     variant="contained"
                     size="small"
                     startIcon={<PlayArrowIcon />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
                     sx={{ 
                       bgcolor: game.color,
                       '&:hover': { 
@@ -298,7 +299,9 @@ export default function GameGrid({ games, resultsPerPage }: GameGridProps) {
                   >
                     Play
                   </Button>
-                  <GameCollectionButton game={game} size="small" />
+                  <Box onClick={(e) => e.stopPropagation()}>
+                    <GameCollectionButton game={game} size="small" />
+                  </Box>
                 </CardActions>
               </Box>
             </CardContent>
