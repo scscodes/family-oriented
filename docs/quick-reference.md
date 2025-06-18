@@ -12,7 +12,9 @@ audience: ["AI Models", "Quick Reference"]
 - **Educational game platform**: React/TypeScript/Next.js
 - **11 games**, 4 subjects (Math, Language Arts, Visual Arts, Social Studies)
 - **Flat game registry** with enterprise discovery engine
+- **Analytics dashboard**: Fully functional with Supabase integration
 - **Key innovation**: Migrated from nested to flat with rich metadata
+- **Status**: Core platform complete, dashboard operational ✅
 
 ## Core System
 ```typescript
@@ -33,8 +35,10 @@ interface Game {
 ## Key Files
 - `src/utils/gameData.ts` - Core registry & discovery
 - `src/utils/gameUtils.ts` - Question generators
+- `src/utils/analyticsService.ts` - Analytics & learning progress
 - `src/components/GameMenu.tsx` - Subject navigation
 - `src/app/games/page.tsx` - Game browser
+- `src/app/dashboard/page.tsx` - Analytics dashboard
 
 ## Add New Game
 1. Add to `GAMES` array with metadata

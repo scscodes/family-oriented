@@ -1,24 +1,53 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useAvatar, useUser } from "@/context/UserContext";
+import React, { useEffect, useState, useCallback } from "react";
+import { useAvatar, useUser, useRoleGuard } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
 import { logger } from "@/utils/logger";
-import { Box, Typography, Paper, CircularProgress, Alert, List, ListItem, ListItemText, Button, FormControl, InputLabel, Select, MenuItem, Card, CardContent } from "@mui/material";
+import SubscriptionStatus from "@/components/SubscriptionStatus";
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  CircularProgress, 
+  Alert, 
+  List, 
+  ListItem, 
+  ListItemText, 
+  Button, 
+  FormControl, 
+  InputLabel, 
+  Select, 
+  MenuItem, 
+  Card, 
+  CardContent 
+} from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
-import DashboardCharts from '@/components/dashboard/DashboardCharts';
 import { PlayArrow, Star, History, Download, CompareArrows } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { useTheme } from '@mui/material/styles';
+import dynamic from 'next/dynamic';
+
+// Dynamically import DashboardCharts to avoid SSR issues with Chart.js
+const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCharts'), {
+  ssr: false,
+  loading: () => (
+    <Box sx={{ p: 2, textAlign: 'center' }}>
+      <CircularProgress />
+    </Box>
+  )
+});
 
 /**
  * User Dashboard page for learning progress, recommendations, and metrics.
  * Focuses on robust data flow and error handling.
+ * Uses role guard to prevent flashing of admin-only content.
  */
 export default function DashboardPage() {
   const { currentAvatar, setCurrentAvatar } = useAvatar();
-  const { avatars } = useUser();
+  const { avatars, canAccess, error: userError } = useUser();
+  const { hasRole, isReady } = useRoleGuard();
   const avatarId = currentAvatar?.id;
 
   const [progress, setProgress] = useState<LearningProgressData[] | null>(null);
@@ -29,7 +58,7 @@ export default function DashboardPage() {
     metrics: PerformanceMetrics;
   } | null>(null);
   const [comparisonLabel] = useState<string>('');
-  const [loading, setLoading] = useState(true);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const theme = useTheme();
@@ -48,7 +77,6 @@ export default function DashboardPage() {
       logger.info('Test data creation result:', result);
       
       if (result.success) {
-        // Reload dashboard data
         window.location.reload();
       }
     } catch (err) {
@@ -56,131 +84,110 @@ export default function DashboardPage() {
     }
   };
 
-  const generateComprehensiveData = async () => {
-    logger.info('Generating comprehensive mock data for all avatars...');
-    try {
-      const result = await analyticsDebugger.generateComprehensiveMockData();
-      logger.info('Comprehensive data generation result:', result);
-      
-      if (result.success) {
-        const message = [
-          '✅ Generated mock data!',
-          '',
-          'Summary:',
-          `- Avatars: ${result.summary?.avatarsProcessed}`,
-          `- Sessions: ${result.summary?.totalSessions}`,
-          `- Abandoned: ${result.summary?.abandonedSessions}`,
-          '',
-          'Reloading dashboard...'
-        ].filter(Boolean).join('\n');
-        
-        alert(message);
-        window.location.reload();
-      } else {
-        alert(`❌ Failed to generate data: ${result.error}`);
-      }
-    } catch (err) {
-      logger.error('Failed to generate comprehensive data:', err);
-      alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  const handleAvatarChange = (event: SelectChangeEvent) => {
+    const avatarId = event.target.value;
+    const selectedAvatar = avatars?.find(a => a.id === avatarId);
+    if (selectedAvatar) {
+      setCurrentAvatar(selectedAvatar);
     }
   };
 
-  const clearAllData = async () => {
-    if (!confirm('Are you sure you want to clear all analytics data? This cannot be undone.')) {
+  const loadAnalyticsData = useCallback(async () => {
+    if (!avatarId) {
+      setDashboardLoading(false);
       return;
     }
 
-    logger.info('Clearing all analytics data...');
+    setDashboardLoading(true);
+    setError(null);
+
     try {
-      const result = await analyticsDebugger.clearAllAnalyticsData();
-      if (result.success) {
-        alert('✅ All analytics data cleared successfully!\n\nReloading dashboard...');
-        window.location.reload();
-      } else {
-        alert(`❌ Failed to clear data: ${result.error}`);
-      }
+      logger.info('🔄 Loading analytics data for avatar:', avatarId);
+
+      const [progressData, recommendationsData, metricsData] = await Promise.all([
+        analyticsService.getAvatarProgress(avatarId),
+        analyticsService.getLearningPathRecommendations(avatarId),
+        analyticsService.getPerformanceMetrics(avatarId)
+      ]);
+
+      logger.debug('📊 Analytics data loaded:', { 
+        progress: progressData, 
+        recommendations: recommendationsData, 
+        metrics: metricsData 
+      });
+
+      setProgress(progressData);
+      setRecommendations(recommendationsData);
+      setMetrics(metricsData);
     } catch (err) {
-      logger.error('Failed to clear data:', err);
-      alert(`❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      logger.error('❌ Error loading analytics data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load analytics data');
+    } finally {
+      setDashboardLoading(false);
     }
-  };
+  }, [avatarId]);
 
-  const handleAvatarChange = useCallback((event: SelectChangeEvent<string>) => {
-    const selectedAvatar = avatars.find(a => a.id === event.target.value);
-    if (selectedAvatar && selectedAvatar.id !== currentAvatar?.id) {
-      logger.info('Switching avatar from', currentAvatar?.name, 'to', selectedAvatar.name);
-      setCurrentAvatar(selectedAvatar);
-    }
-  }, [avatars, currentAvatar, setCurrentAvatar]);
-
-  const handleComparisonChange = useCallback(async (value: string) => {
-    if (!currentAvatar) return;
-
-    // TODO: Implement historical data comparison once getHistoricalData is available
-    logger.info('Comparison feature not yet implemented:', value);
-    setError('Historical comparison feature coming soon');
-  }, [currentAvatar]);
-
-  // Load analytics data for the selected avatar
   useEffect(() => {
     const loadData = async () => {
-      if (!avatarId) return;
-      
-      setLoading(true);
+      if (!avatarId) {
+        setDashboardLoading(false);
+        return;
+      }
+
+      setDashboardLoading(true);
       setError(null);
-      
+
       try {
-        logger.info('=== DASHBOARD LOADING DATA ===');
-        logger.info('Selected avatar ID from state:', avatarId);
-        
-        // Load progress data
-        const progress = await analyticsService.getAvatarProgress(avatarId);
-        logger.info('Progress data:', progress);
-        setProgress(progress);
-        
-        // Load recommendations
-        const recommendations = await analyticsService.getLearningPathRecommendations(avatarId);
-        logger.info('Recommendations:', recommendations);
-        setRecommendations(recommendations);
-        
-        // Load performance metrics
-        const metrics = await analyticsService.getPerformanceMetrics(avatarId);
-        logger.info('Raw metrics data:', metrics);
-        
-        // Transform metrics for display (ensure all required properties are present)
-        const transformedMetrics: PerformanceMetrics = {
-          totalGamesPlayed: metrics.totalGamesPlayed,
-          averageSessionDuration: Math.round(metrics.averageSessionDuration / 60), // Convert to minutes
-          engagementScore: Math.round(metrics.engagementScore),
-          overallCompletionRate: metrics.overallCompletionRate,
-          skillLevelDistribution: metrics.skillLevelDistribution,
-          subjectPreferences: metrics.subjectPreferences,
-          learningVelocity: metrics.learningVelocity
-        };
-        logger.info('Transformed metrics:', transformedMetrics);
-        
-        setMetrics(transformedMetrics);
-        logger.info('=== END DASHBOARD LOADING ===');
+        logger.info('🔄 Loading analytics data for avatar:', avatarId);
+
+        const [progressData, recommendationsData, metricsData] = await Promise.all([
+          analyticsService.getAvatarProgress(avatarId),
+          analyticsService.getLearningPathRecommendations(avatarId),
+          analyticsService.getPerformanceMetrics(avatarId)
+        ]);
+
+        logger.debug('📊 Analytics data loaded:', { 
+          progress: progressData, 
+          recommendations: recommendationsData, 
+          metrics: metricsData 
+        });
+
+        setProgress(progressData);
+        setRecommendations(recommendationsData);
+        setMetrics(metricsData);
       } catch (err) {
-        logger.error('Error loading analytics data:', err);
+        logger.error('❌ Error loading analytics data:', err);
         setError(err instanceof Error ? err.message : 'Failed to load analytics data');
-        // Reset state on error
-        setProgress(null);
-        setRecommendations(null);
-        setMetrics(null);
       } finally {
-        setLoading(false);
+        setDashboardLoading(false);
       }
     };
 
     loadData();
   }, [avatarId]);
 
-  if (!avatarId) {
-    return <Alert severity="info">Please select or create an avatar to view your dashboard.</Alert>;
+  if (userError) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">
+          {userError} <br />
+          <Button variant="outlined" sx={{ mt: 1 }} onClick={() => window.location.reload()}>
+            Reload
+          </Button>
+        </Alert>
+      </Box>
+    );
   }
 
-  if (loading) {
+  if (!avatarId) {
+    return (
+      <Alert severity="info">
+        Please select or create an avatar to view your dashboard.
+      </Alert>
+    );
+  }
+
+  if (dashboardLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
         <CircularProgress />
@@ -197,9 +204,25 @@ export default function DashboardPage() {
   }
 
   return (
-    <Box maxWidth="lg" mx="auto" py={4}>
-      <Typography variant="h4" gutterBottom>Learning Progress Dashboard</Typography>
-      
+    <Box sx={{ maxWidth: 'lg', mx: 'auto', py: 4 }}>
+      <Typography variant="h4" gutterBottom>
+        Learning Progress Dashboard
+      </Typography>
+
+      {/* Subscription Status */}
+      <Box sx={{ mb: 3 }}>
+        <SubscriptionStatus />
+      </Box>
+
+      {/* User Management Dashboard Link (visible to account_owner or org_admin when ready) */}
+      {isReady && (hasRole('account_owner') || hasRole('org_admin')) && (
+        <Box sx={{ mb: 2 }}>
+          <Button variant="contained" color="secondary" href="/dashboard/user-management">
+            Manage Users & Roles
+          </Button>
+        </Box>
+      )}
+
       {/* Avatar Selection */}
       <Box sx={{ mb: 3 }}>
         <FormControl fullWidth>
@@ -231,261 +254,120 @@ export default function DashboardPage() {
       )}
 
       {/* Quick Access Section */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>Quick Access</Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* Recently Played */}
-          <Box sx={{ flex: 1 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>
-                  <History sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Recently Played
-                </Typography>
-                {progress && progress.length > 0 ? (
-                  <List dense>
-                    {progress.slice(0, 3).map((p) => (
-                      <ListItem key={`recent-${p.gameId}`}>
-                        <ListItemText
-                          primary={p.gameId}
-                          secondary={`Mastery: ${p.masteryScore.toFixed(1)}%`}
-                        />
-                        <Button size="small" startIcon={<PlayArrow />}>
-                          Play Again
-                        </Button>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No recent games played
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
-
-          {/* Recommended Next */}
-          <Box sx={{ flex: 1 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>
-                  <Star sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Recommended Next
-                </Typography>
-                {recommendations && recommendations.length > 0 ? (
-                  <List dense>
-                    {recommendations.slice(0, 3).map((rec, index) => (
-                      <ListItem key={`rec-${rec.gameId}-${index}`}>
-                        <ListItemText
-                          primary={rec.gameId}
-                          secondary={rec.reason}
-                        />
-                        <Button size="small" startIcon={<PlayArrow />}>
-                          Play
-                        </Button>
-                      </ListItem>
-                    ))}
-                  </List>
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No recommendations available
-                  </Typography>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h6" gutterBottom>Quick Actions</Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button 
+            variant="outlined" 
+            startIcon={<PlayArrow />}
+            onClick={() => window.location.href = '/games'}
+          >
+            Play Games
+          </Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<Download />}
+            onClick={createTestData}
+          >
+            Create Test Data
+          </Button>
+          <Button 
+            variant="outlined" 
+            startIcon={<History />}
+            onClick={runDiagnostic}
+          >
+            Run Diagnostic
+          </Button>
         </Box>
-      </Paper>
-
-      {/* Analytics Controls */}
-      <Paper 
-        sx={{ 
-          p: 2, 
-          mb: 3,
-          bgcolor: theme.palette.background.paper,
-          color: theme.palette.text.primary
-        }} 
-        elevation={2}
-      >
-        <Typography variant="h6" gutterBottom>Analytics Controls</Typography>
-        <Box sx={{ display: 'flex', gap: 2, flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* Export Controls */}
-          <Box sx={{ flex: 1 }}>
-            <Card sx={{ bgcolor: theme.palette.background.default }}>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>
-                  <Download sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Export Data
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {
-                      const data = {
-                        progress,
-                        metrics,
-                        comparisonData,
-                        timestamp: new Date().toISOString(),
-                        avatar: currentAvatar?.name
-                      };
-                      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `analytics-export-${format(new Date(), 'yyyy-MM-dd')}.json`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }}
-                  >
-                    Export JSON
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {
-                      const csv = [
-                        ['Game ID', 'Mastery Score', 'Skill Level', 'Last Played'],
-                        ...(progress || []).map(p => [
-                          p.gameId,
-                          p.masteryScore.toFixed(1),
-                          p.skillLevel,
-                          new Date(p.lastPlayed).toLocaleDateString()
-                        ])
-                      ].map(row => row.join(',')).join('\n');
-                      
-                      const blob = new Blob([csv], { type: 'text/csv' });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `progress-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
-                      URL.revokeObjectURL(url);
-                    }}
-                  >
-                    Export CSV
-                  </Button>
-                </Box>
-              </CardContent>
-            </Card>
-          </Box>
-
-          {/* Comparative Analytics */}
-          <Box sx={{ flex: 1 }}>
-            <Card sx={{ bgcolor: theme.palette.background.default }}>
-              <CardContent>
-                <Typography variant="subtitle1" gutterBottom>
-                  <CompareArrows sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Compare Progress
-                </Typography>
-                <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                  <InputLabel>Compare With</InputLabel>
-                  <Select
-                    value={comparisonLabel ? 'custom' : ''}
-                    label="Compare With"
-                    onChange={(e) => handleComparisonChange(e.target.value)}
-                  >
-                    <MenuItem value="last_week">Last Week</MenuItem>
-                    <MenuItem value="last_month">Last Month</MenuItem>
-                    <MenuItem value="last_quarter">Last Quarter</MenuItem>
-                  </Select>
-                </FormControl>
-                {comparisonData && (
-                  <Button
-                    variant="contained"
-                    size="small"
-                    fullWidth
-                    onClick={() => setComparisonData(null)}
-                  >
-                    Clear Comparison
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          </Box>
-        </Box>
-      </Paper>
+      </Box>
 
       {/* Analytics Charts */}
-      {progress && metrics && (
-        <Box sx={{ mb: 4 }}>
+      {metrics && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" gutterBottom>Analytics Overview</Typography>
           <DashboardCharts 
+            metrics={metrics} 
             progress={progress} 
-            metrics={metrics}
-            comparisonData={comparisonData || undefined}
+            comparisonData={comparisonData}
             comparisonLabel={comparisonLabel}
           />
         </Box>
       )}
 
-      {/* Recommendations */}
-      <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>Recommended Next Games</Typography>
-        {recommendations && recommendations.length > 0 ? (
+      {/* Learning Progress */}
+      {progress && progress.length > 0 && (
+        <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
+          <Typography variant="h6" gutterBottom>
+            <Star sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Learning Progress
+          </Typography>
           <List>
-            {recommendations.map((rec, index) => (
-              <ListItem key={`rec-${rec.gameId}-${index}`}>
+            {progress.map((item, index) => (
+              <ListItem key={index}>
                 <ListItemText
-                  primary={
-                    <Typography variant="subtitle1" color="primary">
-                      {rec.gameId}
-                    </Typography>
-                  }
-                  secondary={
-                    <>
-                      <Typography component="span" variant="body2" color="text.primary">
-                        {rec.reason}
-                      </Typography>
-                      <br />
-                      <Typography component="span" variant="body2">
-                        Priority: {rec.priority}/10
-                      </Typography>
-                      <br />
-                      <Typography component="span" variant="body2">
-                        Difficulty: {rec.estimatedDifficulty}
-                      </Typography>
-                      {rec.learningObjectives && rec.learningObjectives.length > 0 && (
-                        <>
-                          <br />
-                          <Typography component="span" variant="body2">
-                            Learning: {rec.learningObjectives.join(', ')}
-                          </Typography>
-                        </>
-                      )}
-                    </>
-                  }
+                  primary={`${item.subject}: Level ${item.currentLevel}`}
+                  secondary={`Mastery: ${Math.round(item.masteryScore * 100)}% | Last Activity: ${
+                    item.lastActivity ? format(new Date(item.lastActivity), 'MMM dd, yyyy') : 'Never'
+                  }`}
                 />
               </ListItem>
             ))}
           </List>
-        ) : (
-          <Typography>No recommendations available.</Typography>
-        )}
-      </Paper>
+        </Paper>
+      )}
 
-      {/* Debug Controls */}
-      <Paper sx={{ p: 2 }} elevation={2}>
-        <Typography variant="h6" gutterBottom>Debug Tools</Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button variant="outlined" size="small" onClick={runDiagnostic}>
-            Run Diagnostic
-          </Button>
-          <Button variant="outlined" size="small" onClick={createTestData}>
-            Quick Test Data
-          </Button>
-          <Button variant="contained" color="primary" size="small" onClick={generateComprehensiveData}>
-            Generate Full Mock Data
-          </Button>
-          <Button variant="outlined" color="error" size="small" onClick={clearAllData}>
-            Clear All Data
-          </Button>
-        </Box>
-      </Paper>
+      {/* Recommendations */}
+      {recommendations && recommendations.length > 0 && (
+        <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
+          <Typography variant="h6" gutterBottom>
+            <CompareArrows sx={{ mr: 1, verticalAlign: 'middle' }} />
+            Recommended Learning Path
+          </Typography>
+          <List>
+            {recommendations.map((rec, index) => (
+              <ListItem key={index}>
+                <ListItemText
+                  primary={rec.gameTitle}
+                  secondary={`${rec.reason} | Priority: ${rec.priority} | Est. Time: ${rec.estimatedTime} min`}
+                />
+              </ListItem>
+            ))}
+          </List>
+        </Paper>
+      )}
+
+      {/* Performance Metrics */}
+      {metrics && (
+        <Paper sx={{ p: 2 }} elevation={2}>
+          <Typography variant="h6" gutterBottom>Performance Metrics</Typography>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="subtitle2">Engagement Score</Typography>
+                <Typography variant="h4">{Math.round(metrics.engagementScore * 100)}%</Typography>
+              </CardContent>
+            </Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="subtitle2">Learning Velocity</Typography>
+                <Typography variant="h4">{metrics.learningVelocity.toFixed(1)}</Typography>
+              </CardContent>
+            </Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="subtitle2">Completion Rate</Typography>
+                <Typography variant="h4">{Math.round(metrics.completionRate * 100)}%</Typography>
+              </CardContent>
+            </Card>
+            <Card variant="outlined">
+              <CardContent>
+                <Typography variant="subtitle2">Avg Session Time</Typography>
+                <Typography variant="h4">{Math.round(metrics.averageSessionTime)} min</Typography>
+              </CardContent>
+            </Card>
+          </Box>
+        </Paper>
+      )}
     </Box>
   );
 } 

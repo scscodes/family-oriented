@@ -106,22 +106,6 @@ export default function GameContainer({
                 </Typography>
               </Paper>
             )}
-            <Link href="/settings">
-              <IconButton 
-                aria-label="settings"
-                title="Game Settings"
-                sx={{ 
-                  bgcolor: 'rgba(67, 97, 238, 0.1)',
-                  transition: 'transform 0.2s',
-                  '&:hover': { 
-                    bgcolor: 'rgba(67, 97, 238, 0.2)',
-                    transform: 'scale(1.05)'
-                  }
-                }}
-              >
-                <SettingsIcon />
-              </IconButton>
-            </Link>
           </Box>
         </Box>
       </Paper>

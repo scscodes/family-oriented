@@ -5,10 +5,67 @@ import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
 import { logger } from '@/utils/logger';
+import { useRouter } from 'next/navigation';
+import { Box } from '@mui/material';
 
 // Types
 type Avatar = Database['public']['Tables']['avatars']['Row'];
 type UserProfile = Database['public']['Tables']['users']['Row'];
+
+/**
+ * Extended user context type for roles and subscription tier
+ */
+interface Role {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+interface SubscriptionPlan {
+  id: string;
+  name: string;
+  tier: string;
+  avatar_limit: number;
+  features_included: any;
+  [key: string]: any;
+}
+
+interface OrgInfo {
+  id: string;
+  name: string;
+  subscriptionPlan: SubscriptionPlan | null;
+}
+
+/**
+ * Consolidated loading state for better UX
+ */
+interface LoadingState {
+  user: boolean;
+  roles: boolean;
+  avatars: boolean;
+  // Helper to check if everything is ready for role-based rendering
+  isReady: boolean;
+}
+
+/**
+ * Extended user context type for roles and subscription tier, with View As support
+ */
+interface ExtendedUserContextType extends UserContextType {
+  roles: Role[];
+  org: OrgInfo | null;
+  hasRole: (roleName: string) => boolean;
+  canAccess: (feature: string) => boolean;
+  getTierLimit: (feature: string) => number | undefined;
+  // View As state and methods
+  viewAsRole: string | null;
+  viewAsAvatar: Avatar | null;
+  isViewAs: boolean;
+  setViewAsRole: (role: string | null) => void;
+  setViewAsAvatar: (avatar: Avatar | null) => void;
+  resetViewAs: () => void;
+  // Enhanced loading state
+  loadingState: LoadingState;
+}
 
 interface UserContextType {
   user: User | null;
@@ -30,16 +87,46 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 /**
  * User provider that manages authentication state and avatar context
  * Integrates with Supabase for persistent user and avatar management
+ * 
+ * Enhanced with:
+ * - Consolidated loading states
+ * - Proper demo mode support
+ * - Elimination of flashing UI elements
  */
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [avatars, setAvatars] = useState<Avatar[]>([]);
   const [currentAvatar, setCurrentAvatar] = useState<Avatar | null>(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [roles, setRoles] = useState<Role[]>([]);
+  const [org, setOrg] = useState<OrgInfo | null>(null);
+  const router = useRouter();
+  const [demoMode, setDemoMode] = useState<boolean>(false);
+  
+  // View As state
+  const [viewAsRole, setViewAsRole] = useState<string | null>(null);
+  const [viewAsAvatar, setViewAsAvatar] = useState<Avatar | null>(null);
+
+  // Consolidated loading state
+  const [loadingState, setLoadingState] = useState<LoadingState>({
+    user: true,
+    roles: true,
+    avatars: true,
+    isReady: false
+  });
 
   const supabase = createClient();
+
+  // Helper to update loading state
+  const updateLoadingState = useCallback((updates: Partial<LoadingState>) => {
+    setLoadingState(prev => {
+      const newState = { ...prev, ...updates };
+      // Calculate if everything is ready for role-based rendering
+      newState.isReady = !newState.user && !newState.roles && !newState.avatars;
+      return newState;
+    });
+  }, []);
 
   // Load user profile from database
   const loadUserProfile = useCallback(async (userId: string) => {
@@ -65,6 +152,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Load avatars for the current user
   const loadAvatars = useCallback(async (userId: string) => {
     try {
+      updateLoadingState({ avatars: true });
       const { data, error } = await supabase
         .from('avatars')
         .select('*')
@@ -82,186 +170,292 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       logger.error('Error loading avatars:', err);
       setError('Failed to load avatars');
+      setAvatars([]);
+    } finally {
+      updateLoadingState({ avatars: false });
     }
-  }, [supabase]);
+  }, [supabase, updateLoadingState]);
 
-  // Load demo user for development/testing
-  const loadDemoUser = useCallback(async () => {
+  // Fetch roles and org info
+  const fetchRolesAndOrg = useCallback(async (userId: string) => {
     try {
-      const demoUserId = '00000000-0000-0000-0000-000000000001';
+      updateLoadingState({ roles: true });
       
-      // Create a mock User object for demo purposes
-      const demoUser = {
-        id: demoUserId,
-        email: 'demo@example.com',
-        aud: 'authenticated',
-        role: 'authenticated',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        app_metadata: {},
-        user_metadata: { first_name: 'Demo', last_name: 'User' },
-        email_confirmed_at: new Date().toISOString()
-      } as User; // Type assertion for demo user object
+      // Fetch user profile from public.users
+      const { data: userProfileData, error: userProfileError } = await supabase
+        .from('users')
+        .select('id, org_id')
+        .eq('id', userId)
+        .single();
+      if (userProfileError) throw userProfileError;
+      const orgId = userProfileData?.org_id;
       
-      setUser(demoUser);
-      
-      // Try to load demo user profile from database, fallback to in-memory if needed
-      try {
-        await loadUserProfile(demoUserId);
-        logger.debug('✅ Demo user profile loaded from database');
-      } catch (profileErr) {
-        logger.warn('⚠️ Could not load demo user profile from database, using fallback:', profileErr);
-        // Fallback to in-memory demo profile
-        const demoProfile: UserProfile = {
-          id: demoUserId,
-          email: 'demo@example.com',
-          first_name: 'Demo',
-          last_name: 'User',
-          phone: null,
-          timezone: 'UTC',
-          locale: 'en-US',
-          org_id: null,
-          account_type: 'personal',
-          last_login: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+      // Fetch org info and subscription plan
+      let orgInfo: OrgInfo | null = null;
+      if (orgId) {
+        const { data: orgData, error: orgError } = await supabase
+          .from('organizations')
+          .select('id, name, subscription_plan_id')
+          .eq('id', orgId)
+          .single();
+        if (orgError) throw orgError;
+        
+        let subscriptionPlan: SubscriptionPlan | null = null;
+        if (orgData?.subscription_plan_id) {
+          const { data: planData, error: planError } = await supabase
+            .from('subscription_plans')
+            .select('*')
+            .eq('id', orgData.subscription_plan_id)
+            .single();
+          if (planError) throw planError;
+          subscriptionPlan = planData;
+        }
+        
+        orgInfo = {
+          id: orgData.id,
+          name: orgData.name,
+          subscriptionPlan,
         };
-        setUserProfile(demoProfile);
-        logger.debug('✅ Using fallback demo user profile');
       }
+      setOrg(orgInfo);
       
-      // Try to load demo avatars from database, fallback to in-memory if needed
-      try {
-        await loadAvatars(demoUserId);
-        logger.debug('✅ Demo avatars loaded from database');
-      } catch (avatarErr) {
-        logger.warn('⚠️ Could not load demo avatars from database, using fallback:', avatarErr);
-        // Fallback to in-memory demo avatars
-        const demoAvatars: Avatar[] = [
-          {
-            id: '00000000-0000-0000-0000-000000000002',
-            user_id: demoUserId,
-            org_id: null,
-            name: 'My Child',
-            encrypted_pii: null,
-            theme_settings: {},
-            game_preferences: {},
-            last_active: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '00000000-0000-0000-0000-000000000012',
-            user_id: demoUserId,
-            org_id: null,
-            name: 'Quick Learner',
-            encrypted_pii: null,
-            theme_settings: {},
-            game_preferences: {},
-            last_active: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '00000000-0000-0000-0000-000000000013',
-            user_id: demoUserId,
-            org_id: null,
-            name: 'Struggling Student',
-            encrypted_pii: null,
-            theme_settings: {},
-            game_preferences: {},
-            last_active: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '00000000-0000-0000-0000-000000000014',
-            user_id: demoUserId,
-            org_id: null,
-            name: 'Consistent Player',
-            encrypted_pii: null,
-            theme_settings: {},
-            game_preferences: {},
-            last_active: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          },
-          {
-            id: '00000000-0000-0000-0000-000000000015',
-            user_id: demoUserId,
-            org_id: null,
-            name: 'Math Enthusiast',
-            encrypted_pii: null,
-            theme_settings: {},
-            game_preferences: {},
-            last_active: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }
-        ];
-        setAvatars(demoAvatars);
-        setCurrentAvatar(demoAvatars[0]);
-        logger.debug('✅ Using fallback demo avatars');
-      }
+      // Fetch user roles from user_policies -> permission_policies
+      const { data: userPolicies, error: userPoliciesError } = await supabase
+        .from('user_policies')
+        .select('policy_id, permission_policies(id, policy_name, description)')
+        .eq('user_id', userId);
+      if (userPoliciesError) throw userPoliciesError;
       
-      // Clear any previous errors since we successfully loaded demo data
-      setError(null);
+      const userRoles: Role[] = (userPolicies || []).map((up: any) => ({
+        id: up.permission_policies.id,
+        name: up.permission_policies.policy_name,
+        description: up.permission_policies.description,
+      }));
+      setRoles(userRoles);
+      
     } catch (err) {
-      logger.error('❌ Error loading demo user:', err);
-      setError(`Failed to load demo user: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      logger.error('Error fetching roles/org info:', err);
+      setOrg(null);
+      setRoles([]);
+      setError('Failed to load organization or roles.');
+    } finally {
+      updateLoadingState({ roles: false });
     }
-  }, [loadUserProfile, loadAvatars]);
+  }, [supabase, updateLoadingState]);
 
+  // Enhanced demo user/org/roles fallback
+  const loadDemoUserContext = useCallback(async () => {
+    try {
+      updateLoadingState({ user: true, roles: true, avatars: true });
+      setDemoMode(true);
+      
+      // Try to load demo user/org/roles from DB, fallback to hardcoded
+      try {
+        // Try to find a demo user in the users table
+        const { data: demoUsers } = await supabase
+          .from('users')
+          .select('*')
+          .ilike('email', '%demo%');
+        const demoUser = demoUsers && demoUsers.length > 0 ? demoUsers[0] : null;
+        
+        // Try to find a demo org
+        let demoOrg = null;
+        let demoPlan = null;
+        if (demoUser && demoUser.org_id) {
+          const { data: orgData } = await supabase
+            .from('organizations')
+            .select('*')
+            .eq('id', demoUser.org_id)
+            .single();
+          demoOrg = orgData;
+          if (orgData && orgData.subscription_plan_id) {
+            const { data: planData } = await supabase
+              .from('subscription_plans')
+              .select('*')
+              .eq('id', orgData.subscription_plan_id)
+              .single();
+            demoPlan = planData;
+          }
+        }
+        
+        // Try to find demo roles
+        let demoRoles = [];
+        if (demoUser) {
+          const { data: userPolicies } = await supabase
+            .from('user_policies')
+            .select('policy_id, permission_policies(id, policy_name, description)')
+            .eq('user_id', demoUser.id);
+          demoRoles = (userPolicies || []).map((up: any) => ({
+            id: up.permission_policies.id,
+            name: up.permission_policies.policy_name,
+            description: up.permission_policies.description,
+          }));
+        }
+        
+        // Set context state from database
+        if (demoUser) {
+          setUser(demoUser);
+          setUserProfile(demoUser);
+          setOrg(demoOrg ? { id: demoOrg.id, name: demoOrg.name, subscriptionPlan: demoPlan } : null);
+          setRoles(demoRoles.length > 0 ? demoRoles : [{ id: '1', name: 'account_owner' }]);
+          // Load demo avatars
+          await loadAvatars(demoUser.id);
+          return;
+        }
+      } catch (dbError) {
+        logger.warn('Database demo user not found, using hardcoded fallback');
+      }
+      
+      // Fallback to hardcoded demo context
+      const hardcodedDemoUser = { id: 'demo-user', email: 'demo@example.com' } as any;
+      setUser(hardcodedDemoUser);
+      setUserProfile({ id: 'demo-user', email: 'demo@example.com', org_id: 'demo-org' } as any);
+      setOrg({ 
+        id: 'demo-org', 
+        name: 'Demo Organization', 
+        subscriptionPlan: { 
+          id: 'demo-plan', 
+          name: 'Professional Plan', 
+          tier: 'professional', 
+          avatar_limit: 30, 
+          features_included: { analytics: true, user_management: true } 
+        } 
+      });
+      setRoles([
+        { id: '1', name: 'account_owner', description: 'Full administrative access' },
+        { id: '2', name: 'org_admin', description: 'Organization management' }
+      ]);
+      setAvatars([{ 
+        id: 'demo-avatar', 
+        user_id: 'demo-user', 
+        org_id: 'demo-org', 
+        name: 'Demo Child', 
+        encrypted_pii: null, 
+        theme_settings: {}, 
+        game_preferences: {}, 
+        last_active: null, 
+        created_at: null, 
+        updated_at: null 
+      }]);
+      setCurrentAvatar({ 
+        id: 'demo-avatar', 
+        user_id: 'demo-user', 
+        org_id: 'demo-org', 
+        name: 'Demo Child', 
+        encrypted_pii: null, 
+        theme_settings: {}, 
+        game_preferences: {}, 
+        last_active: null, 
+        created_at: null, 
+        updated_at: null 
+      });
+      
+    } catch (err) {
+      logger.error('Error in demo user context:', err);
+      setError('Failed to initialize demo mode');
+    } finally {
+      // Complete all loading states for demo mode
+      updateLoadingState({ user: false, roles: false, avatars: false });
+    }
+  }, [supabase, loadAvatars, updateLoadingState]);
+
+  // Main user loading effect
   useEffect(() => {
     const loadUser = async () => {
       try {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        updateLoadingState({ user: true });
+        setError(null);
         
+        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          // Real user authentication
           setUser(session.user);
+          updateLoadingState({ user: false });
           await loadUserProfile(session.user.id);
-          await loadAvatars(session.user.id);
+          
+          // Load roles and avatars in parallel
+          await Promise.all([
+            fetchRolesAndOrg(session.user.id),
+            loadAvatars(session.user.id)
+          ]);
+        } else if (process.env.NEXT_PUBLIC_USE_DEMO_USER === 'true') {
+          // Demo mode
+          await loadDemoUserContext();
         } else {
-          // Load demo user for continued development
-          await loadDemoUser();
+          setError('No user session found. Please log in.');
+          updateLoadingState({ user: false, roles: false, avatars: false });
         }
       } catch (err) {
         logger.error('Error loading user:', err);
-        setError('Failed to load user');
-      } finally {
-        setLoading(false);
+        setError('Failed to load user context.');
+        updateLoadingState({ user: false, roles: false, avatars: false });
       }
     };
-
+    
     loadUser();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
+        updateLoadingState({ user: false });
         await loadUserProfile(session.user.id);
-        await loadAvatars(session.user.id);
+        
+        // Load roles and avatars in parallel
+        await Promise.all([
+          fetchRolesAndOrg(session.user.id),
+          loadAvatars(session.user.id)
+        ]);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setUserProfile(null);
         setAvatars([]);
         setCurrentAvatar(null);
+        setRoles([]);
+        setOrg(null);
         // Load demo user for continued development
-        await loadDemoUser();
+        await loadDemoUserContext();
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadUserProfile, loadDemoUser, supabase.auth, loadAvatars]);
+  }, [loadUserProfile, loadDemoUserContext, supabase.auth, loadAvatars, fetchRolesAndOrg, updateLoadingState]);
 
-  // Create a new avatar
+  // Utility functions
+  const hasRole = useCallback((roleName: string) => {
+    // Only return true if we're ready and actually have the role
+    return loadingState.isReady && roles.some(r => r.name === roleName);
+  }, [roles, loadingState.isReady]);
+  
+  const canAccess = useCallback((feature: string) => {
+    // Only return true if we're ready and have access
+    if (!loadingState.isReady || !org?.subscriptionPlan) return false;
+    const features = org.subscriptionPlan.features_included || {};
+    return features[feature] === true;
+  }, [org, loadingState.isReady]);
+  
+  const getTierLimit = useCallback((feature: string) => {
+    return org?.subscriptionPlan?.[`${feature}_limit`];
+  }, [org]);
+
+  // Create a new avatar with subscription limit checking
   const createAvatar = async (name: string): Promise<Avatar | null> => {
     if (!user) {
       setError('Must be logged in to create avatar');
       return null;
+    }
+
+    // Check subscription limits before creating avatar
+    const currentAvatarsCount = avatars.length;
+    if (org?.subscriptionPlan) {
+      const avatarLimit = org.subscriptionPlan.avatar_limit || 5;
+      if (currentAvatarsCount >= avatarLimit) {
+        const tierName = org.subscriptionPlan.tier || 'current plan';
+        setError(`Avatar limit reached (${currentAvatarsCount}/${avatarLimit}). Upgrade your ${tierName} to create more avatars.`);
+        return null;
+      }
     }
 
     try {
@@ -270,6 +464,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .from('avatars')
         .insert({
           user_id: user.id,
+          org_id: org?.id || null,
           name: name.trim(),
           theme_settings: {},
           game_preferences: {}
@@ -281,6 +476,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
       
       // Refresh avatars list
       await loadAvatars(user.id);
+      
+      logger.info('Avatar created successfully:', {
+        avatarId: data.id,
+        avatarName: data.name,
+        currentCount: currentAvatarsCount + 1,
+        tier: org?.subscriptionPlan?.tier
+      });
       
       return data;
     } catch (err) {
@@ -308,21 +510,45 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const contextValue: UserContextType = {
+  // View As functionality
+  const isViewAs = viewAsRole !== null || viewAsAvatar !== null;
+  const resetViewAs = () => {
+    setViewAsRole(null);
+    setViewAsAvatar(null);
+  };
+
+  const contextValue: ExtendedUserContextType = {
     user,
     userProfile,
     avatars,
     currentAvatar,
-    loading,
+    loading: !loadingState.isReady, // Simplified loading state for backward compatibility
     error,
     setCurrentAvatar,
     createAvatar,
     refreshAvatars,
-    signOut
+    signOut,
+    roles,
+    org,
+    hasRole,
+    canAccess,
+    getTierLimit,
+    viewAsRole,
+    viewAsAvatar,
+    isViewAs,
+    setViewAsRole,
+    setViewAsAvatar,
+    resetViewAs,
+    loadingState, // New: detailed loading state
   };
 
   return (
     <UserContext.Provider value={contextValue}>
+      {demoMode && (
+        <Box sx={{ bgcolor: 'warning.main', color: 'black', p: 1, textAlign: 'center' }}>
+          <b>Demo Mode:</b> You are using a demo user context. Features may be simulated.
+        </Box>
+      )}
       {children}
     </UserContext.Provider>
   );
@@ -350,5 +576,25 @@ export function useAvatar() {
     currentAvatar,
     avatars,
     setCurrentAvatar
+  };
+}
+
+/**
+ * Hook for role-based rendering with loading safety
+ * Only returns true for roles when the user context is fully loaded
+ */
+export function useRoleGuard() {
+  const { hasRole, loadingState, roles } = useUser();
+  
+  const isReady = loadingState.isReady;
+  
+  const guardedHasRole = useCallback((roleName: string) => {
+    return isReady && hasRole(roleName);
+  }, [isReady, hasRole]);
+  
+  return {
+    hasRole: guardedHasRole,
+    isReady,
+    roles: isReady ? roles : []
   };
 } 
