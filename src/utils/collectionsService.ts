@@ -99,7 +99,7 @@ export class CollectionsService {
 
       if (fetchError) throw fetchError;
 
-      const currentGameIds = collection.game_ids || [];
+      const currentGameIds = (collection.game_ids || []) as string[];
       if (currentGameIds.includes(gameId)) {
         return true; // Already in collection
       }
@@ -136,7 +136,7 @@ export class CollectionsService {
 
       if (fetchError) throw fetchError;
 
-      const currentGameIds = collection.game_ids || [];
+      const currentGameIds = (collection.game_ids || []) as string[];
       const newGameIds = currentGameIds.filter(id => id !== gameId);
 
       const { error } = await this.supabase

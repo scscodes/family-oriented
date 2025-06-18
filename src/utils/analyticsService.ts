@@ -567,11 +567,14 @@ export class SupabaseAnalyticsService {
     }, {} as Record<string, { sessions: number; totalScore: number; completedSessions: number }>);
 
     const popularGames = Object.entries(gameStats)
-      .map(([gameId, stats]) => ({
-        gameId: gameId as GameType,
-        sessions: stats.sessions,
-        avgScore: stats.completedSessions > 0 ? stats.totalScore / stats.completedSessions : 0
-      }))
+      .map(([gameId, stats]) => {
+        const statData = stats as { sessions: number; totalScore: number; completedSessions: number };
+        return {
+          gameId: gameId as GameType,
+          sessions: statData.sessions,
+          avgScore: statData.completedSessions > 0 ? statData.totalScore / statData.completedSessions : 0
+        };
+      })
       .sort((a, b) => b.sessions - a.sessions);
 
     // Transform raw session data to GameSessionData format

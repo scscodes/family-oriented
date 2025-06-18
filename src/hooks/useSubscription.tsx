@@ -50,9 +50,13 @@ interface UseSubscriptionReturn {
 export function useSubscription(): UseSubscriptionReturn {
   const { org, avatars, loadingState } = useUser();
   
+  // Debug logging
+  console.log('useSubscription Debug - Raw org data:', org);
+  console.log('useSubscription Debug - Loading state:', loadingState);
+  
   const subscriptionPlan = org?.subscriptionPlan || null;
   const tier = subscriptionPlan?.tier || null;
-  const isLoaded = !loadingState.user && !loadingState.roles;
+  const isLoaded = loadingState.isReady;
 
   // Current usage calculations
   const currentUsage = useMemo(() => ({

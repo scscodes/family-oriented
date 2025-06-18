@@ -7,6 +7,12 @@ import type { Database } from '@/lib/supabase/database.types';
 import { logger } from '@/utils/logger';
 import { useRouter } from 'next/navigation';
 import { Box } from '@mui/material';
+import { 
+  getDemoConfig, 
+  createDemoSubscriptionPlan, 
+  createDemoAvatars, 
+  createDemoRoles 
+} from '@/utils/demoConfig';
 
 // Types
 type Avatar = Database['public']['Tables']['avatars']['Row'];
@@ -26,7 +32,9 @@ interface SubscriptionPlan {
   name: string;
   tier: string;
   avatar_limit: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   features_included: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -123,7 +131,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setLoadingState(prev => {
       const newState = { ...prev, ...updates };
       // Calculate if everything is ready for role-based rendering
-      newState.isReady = !newState.user && !newState.roles && !newState.avatars;
+      // Only user and roles are required for isReady - avatars can still be loading
+      newState.isReady = !newState.user && !newState.roles;
+      
+      // Debug logging for loading state changes
+      console.log('UserContext: Loading state updated:', newState);
+      
       return newState;
     });
   }, []);
@@ -152,6 +165,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Load avatars for the current user
   const loadAvatars = useCallback(async (userId: string) => {
     try {
+      console.log('UserContext: Loading avatars for user:', userId);
       updateLoadingState({ avatars: true });
       const { data, error } = await supabase
         .from('avatars')
@@ -161,6 +175,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
       
+      console.log('UserContext: Avatars loaded successfully:', data?.length || 0);
       setAvatars(data || []);
       
       // Set first avatar as current if none selected and we have avatars
@@ -169,9 +184,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       logger.error('Error loading avatars:', err);
+      console.log('UserContext: Avatar loading failed:', err);
       setError('Failed to load avatars');
       setAvatars([]);
     } finally {
+      console.log('UserContext: Avatar loading completed');
       updateLoadingState({ avatars: false });
     }
   }, [supabase, updateLoadingState]);
@@ -279,7 +296,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
         
         // Try to find demo roles
-        let demoRoles = [];
+        let demoRoles: Role[] = [];
         if (demoUser) {
           const { data: userPolicies } = await supabase
             .from('user_policies')
@@ -296,65 +313,84 @@ export function UserProvider({ children }: { children: ReactNode }) {
         if (demoUser) {
           setUser(demoUser);
           setUserProfile(demoUser);
-          setOrg(demoOrg ? { id: demoOrg.id, name: demoOrg.name, subscriptionPlan: demoPlan } : null);
-          setRoles(demoRoles.length > 0 ? demoRoles : [{ id: '1', name: 'account_owner' }]);
+          
+          // Always ensure demo org with subscription plan exists
+          const ensuredDemoOrg = demoOrg && demoPlan ? 
+            { id: demoOrg.id, name: demoOrg.name, subscriptionPlan: demoPlan } :
+            (() => {
+              // Use configurable demo organization for database users too
+              const demoConfig = getDemoConfig();
+              const subscriptionPlan = createDemoSubscriptionPlan(demoConfig);
+              return {
+                id: `${demoUser.id}-org`, 
+                name: demoConfig.orgName, 
+                subscriptionPlan 
+              };
+            })();
+          
+          console.log('Demo org being set for database user:', ensuredDemoOrg);
+          setOrg(ensuredDemoOrg);
+          setRoles(demoRoles.length > 0 ? demoRoles : [
+            { id: '1', name: 'account_owner', description: 'Full administrative access' },
+            { id: '2', name: 'org_admin', description: 'Organization management' }
+          ]);
           // Load demo avatars
           await loadAvatars(demoUser.id);
           return;
         }
       } catch (dbError) {
-        logger.warn('Database demo user not found, using hardcoded fallback');
+        logger.warn('Database demo user not found, using hardcoded fallback:', dbError);
+        console.log('Demo mode fallback triggered:', dbError);
       }
       
-      // Fallback to hardcoded demo context
-      const hardcodedDemoUser = { id: 'demo-user', email: 'demo@example.com' } as any;
-      setUser(hardcodedDemoUser);
-      setUserProfile({ id: 'demo-user', email: 'demo@example.com', org_id: 'demo-org' } as any);
-      setOrg({ 
-        id: 'demo-org', 
-        name: 'Demo Organization', 
-        subscriptionPlan: { 
-          id: 'demo-plan', 
-          name: 'Professional Plan', 
-          tier: 'professional', 
-          avatar_limit: 30, 
-          features_included: { analytics: true, user_management: true } 
-        } 
-      });
-      setRoles([
-        { id: '1', name: 'account_owner', description: 'Full administrative access' },
-        { id: '2', name: 'org_admin', description: 'Organization management' }
-      ]);
-      setAvatars([{ 
-        id: 'demo-avatar', 
-        user_id: 'demo-user', 
-        org_id: 'demo-org', 
-        name: 'Demo Child', 
-        encrypted_pii: null, 
-        theme_settings: {}, 
-        game_preferences: {}, 
-        last_active: null, 
-        created_at: null, 
-        updated_at: null 
-      }]);
-      setCurrentAvatar({ 
-        id: 'demo-avatar', 
-        user_id: 'demo-user', 
-        org_id: 'demo-org', 
-        name: 'Demo Child', 
-        encrypted_pii: null, 
-        theme_settings: {}, 
-        game_preferences: {}, 
-        last_active: null, 
-        created_at: null, 
-        updated_at: null 
-      });
+      // Fallback to configurable demo context
+      console.log('UserContext: Creating demo user from configuration');
+      
+      // Get demo configuration (can be controlled via environment variables or localStorage)
+      const demoConfig = getDemoConfig();
+      console.log('Demo configuration loaded:', demoConfig);
+      
+      // Create demo user
+      const demoUser = { id: demoConfig.id, email: demoConfig.email, name: demoConfig.name } as any;
+      setUser(demoUser);
+      setUserProfile({ 
+        id: demoConfig.id, 
+        email: demoConfig.email, 
+        name: demoConfig.name,
+        org_id: `${demoConfig.id}-org` 
+      } as any);
+      
+      // Create demo organization with appropriate subscription plan
+      const subscriptionPlan = createDemoSubscriptionPlan(demoConfig);
+      const demoOrg = { 
+        id: `${demoConfig.id}-org`, 
+        name: demoConfig.orgName, 
+        subscriptionPlan 
+      };
+      
+      logger.info(`Setting demo org for ${demoConfig.tier} tier:`, demoOrg);
+      setOrg(demoOrg);
+      console.log('Demo org set:', demoOrg);
+      
+      // Create demo roles based on configuration
+      const demoRoles = createDemoRoles(demoConfig);
+      setRoles(demoRoles);
+      console.log('Demo roles set:', demoRoles);
+      
+      // Create demo avatars based on configuration
+      const demoAvatars = createDemoAvatars(demoConfig);
+      setAvatars(demoAvatars);
+      if (demoAvatars.length > 0) {
+        setCurrentAvatar(demoAvatars[0]);
+      }
+      console.log(`Demo avatars created: ${demoAvatars.length}`);
       
     } catch (err) {
       logger.error('Error in demo user context:', err);
       setError('Failed to initialize demo mode');
     } finally {
       // Complete all loading states for demo mode
+      console.log('Demo mode initialization complete, updating loading states');
       updateLoadingState({ user: false, roles: false, avatars: false });
     }
   }, [supabase, loadAvatars, updateLoadingState]);
@@ -378,12 +414,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
             fetchRolesAndOrg(session.user.id),
             loadAvatars(session.user.id)
           ]);
-        } else if (process.env.NEXT_PUBLIC_USE_DEMO_USER === 'true') {
-          // Demo mode
-          await loadDemoUserContext();
         } else {
-          setError('No user session found. Please log in.');
-          updateLoadingState({ user: false, roles: false, avatars: false });
+          // No session - load demo mode for development
+          logger.info('No user session found, loading demo mode');
+          console.log('UserContext: Starting demo mode load');
+          await loadDemoUserContext();
+          console.log('UserContext: Demo mode load completed');
         }
       } catch (err) {
         logger.error('Error loading user:', err);
@@ -558,12 +594,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
  * Hook to access user context
  * Provides user authentication state and avatar management
  */
-export function useUser() {
+export function useUser(): ExtendedUserContextType {
   const context = useContext(UserContext);
   if (context === undefined) {
     throw new Error('useUser must be used within a UserProvider');
   }
-  return context;
+  return context as ExtendedUserContextType;
 }
 
 /**
@@ -571,11 +607,12 @@ export function useUser() {
  * Convenience hook for components that only need avatar information
  */
 export function useAvatar() {
-  const { currentAvatar, avatars, setCurrentAvatar } = useUser();
+  const { currentAvatar, avatars, setCurrentAvatar, createAvatar } = useUser();
   return {
     currentAvatar,
     avatars,
-    setCurrentAvatar
+    setCurrentAvatar,
+    createAvatar
   };
 }
 

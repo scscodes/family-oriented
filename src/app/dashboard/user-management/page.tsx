@@ -1,9 +1,11 @@
+"use client";
+
 import { useEffect, useState } from 'react';
 import { useUser, useAvatar, useRoleGuard } from '@/context/UserContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Box, Typography, Paper, Button, List, ListItem, ListItemText, Chip, CircularProgress, Alert } from '@mui/material';
 import ViewAs from '@/components/ViewAs';
-import SubscriptionStatus from '@/components/SubscriptionStatus';
+
 
 /**
  * User Management Dashboard
@@ -14,11 +16,16 @@ import SubscriptionStatus from '@/components/SubscriptionStatus';
  * - Uses role guard to prevent flashing and ensure secure access
  */
 export default function UserManagementDashboard() {
-  const { user, org } = useUser();
+  const { org } = useUser();
   const { avatars, createAvatar } = useAvatar();
   const { hasRole, isReady } = useRoleGuard();
-  const { canAccessFeature, hasFeature, canCreateAvatar, formatFeatureMessage } = useSubscription();
-  const [users, setUsers] = useState<any[]>([]);
+  const { canAccessFeature, canCreateAvatar, formatFeatureMessage } = useSubscription();
+  const [users, setUsers] = useState<Array<{
+    id: string;
+    email: string;
+    first_name?: string;
+    last_name?: string;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +47,7 @@ export default function UserManagementDashboard() {
           .eq('org_id', org.id);
         if (error) throw error;
         setUsers(data || []);
-      } catch (err) {
+      } catch {
         setError('Failed to load users');
       } finally {
         setLoading(false);
@@ -69,11 +76,6 @@ export default function UserManagementDashboard() {
   return (
     <Box maxWidth="md" mx="auto" py={4}>
       <Typography variant="h4" gutterBottom>User Management</Typography>
-      
-      {/* Subscription Status */}
-      <Box sx={{ mb: 3 }}>
-        <SubscriptionStatus compact />
-      </Box>
 
       {/* Feature gate check */}
       {!userManagementAccess.allowed && (

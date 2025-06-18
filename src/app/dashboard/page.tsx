@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import { useAvatar, useUser, useRoleGuard } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
@@ -26,8 +26,8 @@ import {
 import type { SelectChangeEvent } from "@mui/material/Select";
 import { PlayArrow, Star, History, Download, CompareArrows } from '@mui/icons-material';
 import { format } from 'date-fns';
-import { useTheme } from '@mui/material/styles';
 import dynamic from 'next/dynamic';
+import DashboardDebugPanel from '@/components/dashboard/DashboardDebugPanel';
 
 // Dynamically import DashboardCharts to avoid SSR issues with Chart.js
 const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCharts'), {
@@ -46,22 +46,20 @@ const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCh
  */
 export default function DashboardPage() {
   const { currentAvatar, setCurrentAvatar } = useAvatar();
-  const { avatars, canAccess, error: userError } = useUser();
+  const { avatars, error: userError } = useUser();
   const { hasRole, isReady } = useRoleGuard();
   const avatarId = currentAvatar?.id;
 
   const [progress, setProgress] = useState<LearningProgressData[] | null>(null);
   const [recommendations, setRecommendations] = useState<LearningPathRecommendation[] | null>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [comparisonData, setComparisonData] = useState<{
+  const [comparisonData] = useState<{
     progress: LearningProgressData[];
     metrics: PerformanceMetrics;
   } | null>(null);
   const [comparisonLabel] = useState<string>('');
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const theme = useTheme();
 
   const runDiagnostic = async () => {
     if (!avatarId) return;
@@ -92,40 +90,7 @@ export default function DashboardPage() {
     }
   };
 
-  const loadAnalyticsData = useCallback(async () => {
-    if (!avatarId) {
-      setDashboardLoading(false);
-      return;
-    }
 
-    setDashboardLoading(true);
-    setError(null);
-
-    try {
-      logger.info('🔄 Loading analytics data for avatar:', avatarId);
-
-      const [progressData, recommendationsData, metricsData] = await Promise.all([
-        analyticsService.getAvatarProgress(avatarId),
-        analyticsService.getLearningPathRecommendations(avatarId),
-        analyticsService.getPerformanceMetrics(avatarId)
-      ]);
-
-      logger.debug('📊 Analytics data loaded:', { 
-        progress: progressData, 
-        recommendations: recommendationsData, 
-        metrics: metricsData 
-      });
-
-      setProgress(progressData);
-      setRecommendations(recommendationsData);
-      setMetrics(metricsData);
-    } catch (err) {
-      logger.error('❌ Error loading analytics data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load analytics data');
-    } finally {
-      setDashboardLoading(false);
-    }
-  }, [avatarId]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -205,6 +170,9 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ maxWidth: 'lg', mx: 'auto', py: 4 }}>
+      {/* Debug Panel - Only appears in development */}
+      <DashboardDebugPanel />
+      
       <Typography variant="h4" gutterBottom>
         Learning Progress Dashboard
       </Typography>
@@ -282,13 +250,13 @@ export default function DashboardPage() {
       </Box>
 
       {/* Analytics Charts */}
-      {metrics && (
+      {metrics && progress && (
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" gutterBottom>Analytics Overview</Typography>
           <DashboardCharts 
             metrics={metrics} 
             progress={progress} 
-            comparisonData={comparisonData}
+            comparisonData={comparisonData || undefined}
             comparisonLabel={comparisonLabel}
           />
         </Box>
@@ -305,9 +273,9 @@ export default function DashboardPage() {
             {progress.map((item, index) => (
               <ListItem key={index}>
                 <ListItemText
-                  primary={`${item.subject}: Level ${item.currentLevel}`}
-                  secondary={`Mastery: ${Math.round(item.masteryScore * 100)}% | Last Activity: ${
-                    item.lastActivity ? format(new Date(item.lastActivity), 'MMM dd, yyyy') : 'Never'
+                  primary={`${item.gameId}: ${item.skillLevel}`}
+                  secondary={`Mastery: ${Math.round(item.masteryScore * 100)}% | Last Played: ${
+                    item.lastPlayed ? format(new Date(item.lastPlayed), 'MMM dd, yyyy') : 'Never'
                   }`}
                 />
               </ListItem>
@@ -327,8 +295,8 @@ export default function DashboardPage() {
             {recommendations.map((rec, index) => (
               <ListItem key={index}>
                 <ListItemText
-                  primary={rec.gameTitle}
-                  secondary={`${rec.reason} | Priority: ${rec.priority} | Est. Time: ${rec.estimatedTime} min`}
+                  primary={rec.gameId}
+                  secondary={`${rec.reason} | Priority: ${rec.priority} | Difficulty: ${rec.estimatedDifficulty}`}
                 />
               </ListItem>
             ))}
@@ -356,13 +324,13 @@ export default function DashboardPage() {
             <Card variant="outlined">
               <CardContent>
                 <Typography variant="subtitle2">Completion Rate</Typography>
-                <Typography variant="h4">{Math.round(metrics.completionRate * 100)}%</Typography>
+                <Typography variant="h4">{Math.round(metrics.overallCompletionRate * 100)}%</Typography>
               </CardContent>
             </Card>
             <Card variant="outlined">
               <CardContent>
                 <Typography variant="subtitle2">Avg Session Time</Typography>
-                <Typography variant="h4">{Math.round(metrics.averageSessionTime)} min</Typography>
+                <Typography variant="h4">{Math.round(metrics.averageSessionDuration)} min</Typography>
               </CardContent>
             </Card>
           </Box>

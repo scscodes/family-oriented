@@ -95,6 +95,14 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
     canCreateAvatar 
   } = useSubscription();
 
+  // Debug logging
+  console.log('SubscriptionStatus Debug:', {
+    subscriptionPlan,
+    tier,
+    isLoaded,
+    currentUsage
+  });
+
   if (!isLoaded) {
     return (
       <Card>
@@ -110,7 +118,15 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
   if (!subscriptionPlan) {
     return (
       <Alert severity="warning" action={
-        <Button color="inherit" size="small" startIcon={<Upgrade />}>
+        <Button 
+          color="inherit" 
+          size="small" 
+          startIcon={<Upgrade />}
+          onClick={() => {
+            // For demo purposes, provide helpful message
+            alert('Demo Mode: This would normally redirect to a subscription signup page. Current demo uses Professional plan features.');
+          }}
+        >
           Get Started
         </Button>
       }>
@@ -150,9 +166,9 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
   return (
     <Card>
       <CardContent>
-        <Grid container spacing={3}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
           {/* Plan Information */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: 1 }}>
             <Stack spacing={2}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Business color="primary" />
@@ -185,10 +201,10 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
                 {/* Add more usage bars here as needed */}
               </Box>
             </Stack>
-          </Grid>
+          </Box>
 
           {/* Features & Actions */}
-          <Grid item xs={12} md={6}>
+          <Box sx={{ flex: 1 }}>
             <Stack spacing={2}>
               <Typography variant="subtitle2">
                 Available Features
@@ -241,8 +257,8 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
                 </Button>
               </Box>
             </Stack>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );
@@ -258,7 +274,7 @@ export function SubscriptionBadge() {
   return (
     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
       <Chip 
-        label={tier?.charAt(0).toUpperCase() + tier?.slice(1) || 'Free'} 
+        label={tier ? tier.charAt(0).toUpperCase() + tier.slice(1) : 'Free'} 
         color="primary" 
         size="small"
       />

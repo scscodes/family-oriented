@@ -4,7 +4,7 @@
  */
 
 import { logger } from './logger';
-import type { SubscriptionPlan, Avatar } from '@/lib/supabase/database.types';
+import type { SubscriptionPlan } from '@/lib/supabase/database.types';
 
 // Subscription tier definitions
 export type SubscriptionTier = 'personal' | 'professional' | 'enterprise';
