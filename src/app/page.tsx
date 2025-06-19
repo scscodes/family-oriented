@@ -7,17 +7,15 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
-  IconButton
+  CardContent
 } from '@mui/material';
-import SettingsIcon from '@mui/icons-material/Settings';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { SUBJECTS, gameDiscovery } from "@/utils/gameData";
-import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
+
 import ThemeSelector from "@/shared/components/forms/ThemeSelector";
 import { useState } from 'react';
 import { GameWizardDialog } from '@/features/games/discovery/GameWizardDialog';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useUser } from '@/context/UserContext';
-import { Box, FormControl, InputLabel, Select, MenuItem, Button, Typography, Alert } from '@mui/material';
+import { Box, FormControl, InputLabel, Select, MenuItem, Button, Typography, Alert, SelectChangeEvent } from '@mui/material';
 
 /**
  * ViewAs component
@@ -18,8 +18,7 @@ export default function ViewAs({ onViewChange }: { onViewChange?: () => void }) 
     isViewAs,
     viewAsRole,
     viewAsAvatar,
-    avatars,
-    currentAvatar
+    avatars
   } = useUser();
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [selectedAvatar, setSelectedAvatar] = useState<string>('');
@@ -29,11 +28,11 @@ export default function ViewAs({ onViewChange }: { onViewChange?: () => void }) 
     return null;
   }
 
-  const handleRoleChange = (event: any) => {
+  const handleRoleChange = (event: SelectChangeEvent<string>) => {
     setSelectedRole(event.target.value);
   };
 
-  const handleAvatarChange = (event: any) => {
+  const handleAvatarChange = (event: SelectChangeEvent<string>) => {
     setSelectedAvatar(event.target.value);
   };
 

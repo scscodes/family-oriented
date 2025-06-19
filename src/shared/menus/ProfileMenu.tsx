@@ -13,7 +13,7 @@ import { useRouter } from 'next/navigation';
  * Uses role guard to prevent flashing of restricted menu items
  */
 export default function ProfileMenu() {
-  const { user, userProfile, org, signOut, isViewAs, resetViewAs } = useUser();
+  const { userProfile, org, signOut, isViewAs, resetViewAs } = useUser();
   const { currentAvatar } = useAvatar();
   const { hasRole, isReady } = useRoleGuard();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

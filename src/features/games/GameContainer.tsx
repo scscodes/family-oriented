@@ -4,7 +4,6 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { IconButton, Box, Typography, Paper } from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
-import SettingsIcon from '@mui/icons-material/Settings';
 import GameMenu from "./components/GameMenu";
 
 interface GameContainerProps {
