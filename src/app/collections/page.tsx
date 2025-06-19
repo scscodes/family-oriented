@@ -8,7 +8,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
-import ThemeSelector from '@/components/ThemeSelector';
+import ThemeSelector from '@/shared/components/forms/ThemeSelector';
 import { useRouter } from 'next/navigation';
 import { useAvatar } from '@/hooks/useAvatar';
 import { collectionsService, GameCollection } from '@/utils/collectionsService';

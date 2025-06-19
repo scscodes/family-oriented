@@ -40,6 +40,14 @@ interface Game {
 - `src/app/games/page.tsx` - Game browser
 - `src/app/dashboard/page.tsx` - Analytics dashboard
 
+## Quick Setup
+```bash
+# .env.local file
+NEXT_PUBLIC_SUPABASE_URL=https://abc123.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-key
+NEXT_PUBLIC_DEMO_SCENARIO=professional  # For demo mode
+```
+
 ## Add New Game
 1. Add to `GAMES` array with metadata
 2. Create generator in `gameUtils.ts`

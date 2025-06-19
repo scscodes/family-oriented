@@ -1,23 +1,23 @@
 /**
- * Styled Components Index
- * Centralized exports for all styled components
+ * Shared Components Index
+ * Centralized exports for all shared components
  */
 
 export { StyledCard, StyledGameCard, StyledFeatureCard, StyledCardContent } from './cards/StyledCard';
-export { StyledChoiceCard, StyledChoiceCardAction } from './cards/ChoiceCard';
+export { StyledChoiceCard, StyledChoiceCardAction } from './cards/ChoiceCard_styled';
 export { 
   PageContainer, 
   GameLayout, 
   HeaderSection, 
   ContentSection, 
   FooterSection 
-} from './layout/PageContainer';
+} from '../layout/PageContainer';
 export { 
   ResponsiveGrid, 
   OptionGrid, 
   FeatureGrid, 
   SubjectGrid 
-} from './layout/ResponsiveGrid';
+} from '../layout/ResponsiveGrid';
 export { 
   StyledButton, 
   StyledIconButton, 

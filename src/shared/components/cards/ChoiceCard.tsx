@@ -2,7 +2,7 @@
 
 import { ReactNode, useMemo } from "react";
 import { CardContent, Typography, useTheme } from '@mui/material';
-import { StyledChoiceCard, StyledChoiceCardAction } from '@/components/styled';
+import { StyledChoiceCard, StyledChoiceCardAction } from '@/shared/components';
 import { GameType } from '@/utils/gameUtils';
 import { UI_CONSTANTS } from '@/utils/constants';
 import {

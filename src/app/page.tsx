@@ -18,11 +18,11 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { SUBJECTS, gameDiscovery } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
-import ThemeSelector from "@/components/ThemeSelector";
+import ThemeSelector from "@/shared/components/forms/ThemeSelector";
 import { useState } from 'react';
-import { GameWizardDialog } from '@/components/game-discovery/GameWizardDialog';
+import { GameWizardDialog } from '@/features/games/discovery/GameWizardDialog';
 import SearchIcon from '@mui/icons-material/Search';
-import ProfileMenu from '@/components/ProfileMenu';
+import ProfileMenu from '@/shared/menus/ProfileMenu';
 
 /**
  * Mix two hex colors with a given ratio

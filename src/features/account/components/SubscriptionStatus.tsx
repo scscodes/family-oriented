@@ -13,20 +13,17 @@ import {
   Chip,
   Button,
   Alert,
-  Grid,
   Stack
 } from '@mui/material';
 import { 
   Upgrade, 
-  AccountCircle, 
   Analytics, 
-  Palette, 
-  Collections,
   Business,
   Warning
 } from '@mui/icons-material';
 import { useSubscription } from '@/hooks/useSubscription';
 import { TIER_CONFIGURATIONS, type SubscriptionTier } from '@/utils/subscriptionService';
+import TierTransitionButton from '@/features/subscription/components/TierTransitionButton';
 
 interface SubscriptionStatusProps {
   showUpgradePrompt?: boolean;
@@ -245,16 +242,24 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
                   variant="outlined" 
                   size="small"
                   startIcon={<Analytics />}
+                  href="/settings"
                 >
                   View Usage
                 </Button>
-                <Button 
-                  variant="contained" 
-                  size="small"
-                  startIcon={<Upgrade />}
-                >
-                  Manage Plan
-                </Button>
+                {tier && tier !== 'enterprise' && (
+                  <TierTransitionButton 
+                    targetTier="professional"
+                    variant="contained"
+                    size="small"
+                  />
+                )}
+                {tier === 'personal' && (
+                  <TierTransitionButton 
+                    targetTier="enterprise"
+                    variant="outlined"
+                    size="small"
+                  />
+                )}
               </Box>
             </Stack>
           </Box>
@@ -268,7 +273,7 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
  * Quick subscription info for header/navbar
  */
 export function SubscriptionBadge() {
-  const { tier, currentUsage, canCreateAvatar } = useSubscription();
+  const { tier, canCreateAvatar } = useSubscription();
   const avatarResult = canCreateAvatar();
 
   return (

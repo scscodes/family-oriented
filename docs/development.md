@@ -95,6 +95,30 @@ src/
 - [ ] Game discovery functionality
 - [ ] Documentation updates
 
+## 🔧 Environment Configuration
+
+### Required Environment Variables
+Create `.env.local` file in project root:
+
+```bash
+# Core Supabase Configuration (REQUIRED)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Optional: Development Features
+NEXT_PUBLIC_LOG_LEVEL=info
+NEXT_PUBLIC_DEMO_SCENARIO=professional
+NEXT_PUBLIC_DEBUG_MODE=true
+```
+
+### Demo Mode for Development
+Set `NEXT_PUBLIC_DEMO_SCENARIO` to test without Supabase:
+- `personal`: 5 avatars, basic features
+- `professional`: 30 avatars, advanced analytics
+- `enterprise`: unlimited features
+
+📋 **Complete Guide**: [environment-setup.md](./environment-setup.md)
+
 ## 🔧 Key Integration Points (For AI)
 
 ### Game Discovery Usage

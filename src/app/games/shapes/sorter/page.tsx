@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Typography, Paper, Button } from "@mui/material";
 import { shapeStyles } from "../styles";
 import { Circle, Square, ChangeHistory, Star } from "@mui/icons-material";
-import ResponsiveOptionGrid from "@/components/ResponsiveOptionGrid";
+import ResponsiveOptionGrid from "@/shared/components/layout/ResponsiveOptionGrid";
 
 const SHAPES = [
   { name: "circle", icon: <Circle sx={{ fontSize: 60 }} /> },

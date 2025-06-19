@@ -3,7 +3,7 @@
  * Provides subscription feature gating and usage limit checking
  */
 
-import React, { useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useUser } from '@/context/UserContext';
 import { 
   SubscriptionService, 
@@ -12,6 +12,7 @@ import {
   type FeatureGateResult,
   type UsageData
 } from '@/utils/subscriptionService';
+
 import { logger } from '@/utils/logger';
 
 /**
@@ -104,7 +105,7 @@ export function useSubscription(): UseSubscriptionReturn {
     return result;
   }, [subscriptionPlan, currentUsage, isLoaded, tier]);
 
-  const canCreateCollection = useCallback((avatarId?: string): FeatureGateResult => {
+  const canCreateCollection = useCallback((): FeatureGateResult => {
     // For now, we'll use a simplified check
     // In the future, we could fetch per-avatar collection counts
     const estimatedCollectionsCount = 5; // This would be fetched from database
@@ -132,7 +133,7 @@ export function useSubscription(): UseSubscriptionReturn {
     result: FeatureGateResult, 
     feature?: string
   ): string => {
-    return SubscriptionService.formatFeatureGateMessage(result, feature);
+    return SubscriptionService.formatFeatureGateMessage(result);
   }, []);
 
   return {

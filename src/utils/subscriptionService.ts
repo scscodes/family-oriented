@@ -37,10 +37,12 @@ export const TIER_CONFIGURATIONS: Record<SubscriptionTier, {
   limits: Record<UsageLimit, number>;
   displayName: string;
   description: string;
+  basePrice: number;
 }> = {
   personal: {
     displayName: 'Personal Plan',
     description: 'Perfect for families with up to 5 children',
+    basePrice: 9.99,
     features: {
       analytics: true,
       user_management: false,
@@ -63,6 +65,7 @@ export const TIER_CONFIGURATIONS: Record<SubscriptionTier, {
   professional: {
     displayName: 'Professional Plan',
     description: 'For educators and small organizations with up to 30 children',
+    basePrice: 19.99,
     features: {
       analytics: true,
       user_management: true,
@@ -85,6 +88,7 @@ export const TIER_CONFIGURATIONS: Record<SubscriptionTier, {
   enterprise: {
     displayName: 'Enterprise Plan',
     description: 'For large organizations with unlimited children and full customization',
+    basePrice: 49.99,
     features: {
       analytics: true,
       user_management: true,
@@ -200,7 +204,7 @@ export class SubscriptionService {
     }
 
     // Get limit from database plan or fallback to defaults
-    const limitKey = `${limitType}_limit`;
+    const limitKey = limitType === 'avatars' ? 'avatar_limit' : `${limitType}_limit`;
     const limit = subscriptionPlan[limitKey] ?? tierConfig.limits[limitType];
 
     if (currentUsage < limit) {
@@ -230,7 +234,7 @@ export class SubscriptionService {
     subscriptionPlan: SubscriptionPlan | null,
     currentAvatarsCount: number
   ): FeatureGateResult {
-    return this.checkUsageLimit(subscriptionPlan, 'avatars', currentAvatarsCount + 1);
+    return this.checkUsageLimit(subscriptionPlan, 'avatars', currentAvatarsCount);
   }
 
   /**
@@ -272,7 +276,7 @@ export class SubscriptionService {
     subscriptionPlan: SubscriptionPlan | null,
     usageData: UsageData
   ): Record<UsageLimit, FeatureGateResult> {
-    const summary: Record<UsageLimit, FeatureGateResult> = {} as any;
+    const summary: Record<UsageLimit, FeatureGateResult> = {} as Record<UsageLimit, FeatureGateResult>;
 
     for (const limitType of Object.keys(TIER_CONFIGURATIONS.personal.limits) as UsageLimit[]) {
       const currentUsage = this.getCurrentUsageValue(usageData, limitType);
@@ -339,7 +343,7 @@ export class SubscriptionService {
   /**
    * Format feature gate result for UI display
    */
-  static formatFeatureGateMessage(result: FeatureGateResult, feature?: string): string {
+  static formatFeatureGateMessage(result: FeatureGateResult): string {
     if (result.allowed) {
       return 'Feature available';
     }
@@ -360,13 +364,26 @@ export class SubscriptionService {
     description: string;
     features: string[];
     limits: string[];
+    price: number;
   }> {
-    const comparison: Record<SubscriptionTier, any> = {} as any;
+    const comparison: Record<SubscriptionTier, {
+      displayName: string;
+      description: string;
+      features: string[];
+      limits: string[];
+      price: number;
+    }> = {} as Record<SubscriptionTier, {
+      displayName: string;
+      description: string;
+      features: string[];
+      limits: string[];
+      price: number;
+    }>;
 
     for (const [tier, config] of Object.entries(TIER_CONFIGURATIONS)) {
       const enabledFeatures = Object.entries(config.features)
-        .filter(([_, enabled]) => enabled)
-        .map(([feature]) => feature);
+        .filter(([, enabled]) => enabled)
+        .map(([featureName]) => featureName);
 
       const limitsDisplay = Object.entries(config.limits)
         .map(([limit, value]) => `${limit}: ${value === 10000 ? 'Unlimited' : value}`);
@@ -374,12 +391,250 @@ export class SubscriptionService {
       comparison[tier as SubscriptionTier] = {
         displayName: config.displayName,
         description: config.description,
+        price: config.basePrice,
         features: enabledFeatures,
         limits: limitsDisplay
       };
     }
 
     return comparison;
+  }
+
+  /**
+   * Analyze tier transition impact
+   */
+  static analyzeTierTransition(
+    currentTier: SubscriptionTier,
+    targetTier: SubscriptionTier,
+    currentUsage: UsageData
+  ): {
+    isUpgrade: boolean;
+    isDowngrade: boolean;
+    featureChanges: {
+      gained: SubscriptionFeature[];
+      lost: SubscriptionFeature[];
+    };
+    usageImpact: {
+      overLimitItems: Array<{
+        type: UsageLimit;
+        current: number;
+        newLimit: number;
+        impact: string;
+      }>;
+    };
+    costImpact: {
+      currentCost: number;
+      newCost: number;
+      monthlyDifference: number;
+      prorationAmount: number;
+      prorationDescription: string;
+    };
+    warnings: string[];
+    canTransition: boolean;
+  } {
+    const currentConfig = TIER_CONFIGURATIONS[currentTier];
+    const targetConfig = TIER_CONFIGURATIONS[targetTier];
+    
+    // Safety check for invalid tiers
+    if (!currentConfig || !targetConfig) {
+      return {
+        isUpgrade: false,
+        isDowngrade: false,
+        featureChanges: { gained: [], lost: [] },
+        usageImpact: { overLimitItems: [] },
+        costImpact: {
+          currentCost: 0,
+          newCost: 0,
+          monthlyDifference: 0,
+          prorationAmount: 0,
+          prorationDescription: 'Invalid tier configuration'
+        },
+        warnings: ['Invalid tier configuration'],
+        canTransition: false
+      };
+    }
+    
+    const tierOrder = { personal: 1, professional: 2, enterprise: 3 };
+    
+    const isUpgrade = tierOrder[targetTier] > tierOrder[currentTier];
+    const isDowngrade = tierOrder[targetTier] < tierOrder[currentTier];
+
+    // Analyze feature changes
+    const gainedFeatures: SubscriptionFeature[] = [];
+    const lostFeatures: SubscriptionFeature[] = [];
+
+    Object.entries(targetConfig.features).forEach(([featureName, enabled]) => {
+      const currentlyEnabled = currentConfig.features[featureName as SubscriptionFeature];
+      if (enabled && !currentlyEnabled) {
+        gainedFeatures.push(featureName as SubscriptionFeature);
+      } else if (!enabled && currentlyEnabled) {
+        lostFeatures.push(featureName as SubscriptionFeature);
+      }
+    });
+
+    // Analyze usage impact
+    const overLimitItems: Array<{
+      type: UsageLimit;
+      current: number;
+      newLimit: number;
+      impact: string;
+    }> = [];
+    const warnings = [];
+
+    Object.entries(targetConfig.limits).forEach(([limitType, newLimit]) => {
+      const currentUsageValue = this.getCurrentUsageValue(currentUsage, limitType as UsageLimit);
+      
+      if (currentUsageValue > newLimit) {
+        const impact = this.getUsageLimitImpactMessage(limitType as UsageLimit, currentUsageValue, newLimit);
+        overLimitItems.push({
+          type: limitType as UsageLimit,
+          current: currentUsageValue,
+          newLimit,
+          impact
+        });
+        warnings.push(`${limitType}: ${impact}`);
+      }
+    });
+
+    // Add feature-specific warnings
+    if (lostFeatures.length > 0) {
+      warnings.push(`You will lose access to: ${lostFeatures.join(', ')}`);
+    }
+
+    if (currentTier === 'enterprise' && targetTier !== 'enterprise') {
+      warnings.push('You will lose custom branding and advanced enterprise features');
+    }
+
+    // Calculate cost impact
+    const currentCost = currentConfig.basePrice || 0;
+    const newCost = targetConfig.basePrice || 0;
+    const monthlyDifference = newCost - currentCost;
+    const proration = this.calculateProration(currentCost, newCost);
+
+    const canTransition = overLimitItems.length === 0 || isUpgrade;
+
+    return {
+      isUpgrade,
+      isDowngrade,
+      featureChanges: {
+        gained: gainedFeatures,
+        lost: lostFeatures
+      },
+      usageImpact: {
+        overLimitItems
+      },
+      costImpact: {
+        currentCost,
+        newCost,
+        monthlyDifference,
+        prorationAmount: proration.prorationAmount,
+        prorationDescription: proration.description
+      },
+      warnings,
+      canTransition
+    };
+  }
+
+  /**
+   * Get available tier transitions
+   */
+  static getAvailableTransitions(currentTier: SubscriptionTier): {
+    upgrades: SubscriptionTier[];
+    downgrades: SubscriptionTier[];
+  } {
+    const allTiers: SubscriptionTier[] = ['personal', 'professional', 'enterprise'];
+    const tierOrder = { personal: 1, professional: 2, enterprise: 3 };
+    const currentOrder = tierOrder[currentTier];
+
+    return {
+      upgrades: allTiers.filter(tier => tierOrder[tier] > currentOrder),
+      downgrades: allTiers.filter(tier => tierOrder[tier] < currentOrder)
+    };
+  }
+
+  /**
+   * Calculate proration amount for tier change
+   */
+  static calculateProration(
+    currentMonthlyPrice: number,
+    newMonthlyPrice: number,
+    daysPassed: number = new Date().getDate(),
+    daysInMonth: number = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()
+  ): {
+    prorationAmount: number;
+    description: string;
+  } {
+    const remainingDays = daysInMonth - daysPassed;
+    const dailyDifference = (newMonthlyPrice - currentMonthlyPrice) / daysInMonth;
+    const prorationAmount = Math.round(dailyDifference * remainingDays * 100) / 100;
+
+    const description = prorationAmount > 0 
+      ? `You'll be charged $${Math.abs(prorationAmount).toFixed(2)} for the remaining ${remainingDays} days of this billing cycle.`
+      : prorationAmount < 0
+      ? `You'll receive a credit of $${Math.abs(prorationAmount).toFixed(2)} for the remaining ${remainingDays} days.`
+      : 'No proration required.';
+
+    return {
+      prorationAmount,
+      description
+    };
+  }
+
+  /**
+   * Helper: Get usage limit impact message
+   */
+  private static getUsageLimitImpactMessage(
+    limitType: UsageLimit,
+    currentUsage: number,
+    newLimit: number
+  ): string {
+    const excess = currentUsage - newLimit;
+    
+    switch (limitType) {
+      case 'avatars':
+        return `${excess} avatar(s) will need to be removed or archived`;
+      case 'collections_per_avatar':
+        return `Some collections may need to be removed or consolidated`;
+      case 'sessions_per_month':
+        return `Monthly session limit will be reduced from ${currentUsage} to ${newLimit}`;
+      case 'data_retention_months':
+        return `Data retention will be reduced from ${currentUsage} to ${newLimit} months`;
+      default:
+        return `Usage will be limited to ${newLimit} (currently ${currentUsage})`;
+    }
+  }
+
+  /**
+   * Validate if a tier transition is safe
+   */
+  static validateTierTransition(
+    currentTier: SubscriptionTier,
+    targetTier: SubscriptionTier,
+    currentUsage: UsageData
+  ): {
+    valid: boolean;
+    reasons: string[];
+  } {
+    if (currentTier === targetTier) {
+      return {
+        valid: false,
+        reasons: ['Cannot transition to the same tier']
+      };
+    }
+
+    const analysis = this.analyzeTierTransition(currentTier, targetTier, currentUsage);
+    
+    if (!analysis.canTransition) {
+      return {
+        valid: false,
+        reasons: analysis.warnings
+      };
+    }
+
+    return {
+      valid: true,
+      reasons: []
+    };
   }
 }
 

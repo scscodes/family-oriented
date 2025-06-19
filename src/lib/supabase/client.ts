@@ -1,6 +1,5 @@
-import { createBrowserClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
-import { logger } from '@/utils/logger'
 
 /**
  * Client-side Supabase client for use in React components, context, and hooks
@@ -10,7 +9,7 @@ import { logger } from '@/utils/logger'
  * - NEXT_PUBLIC_SUPABASE_ANON_KEY: Your Supabase anon/public key
  */
 export function createClient() {
-  return createBrowserClient(
+  return createSupabaseClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );

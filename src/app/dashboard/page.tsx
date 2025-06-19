@@ -5,7 +5,7 @@ import { useAvatar, useUser, useRoleGuard } from "@/context/UserContext";
 import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
 import { analyticsDebugger } from "@/utils/analyticsDebug";
 import { logger } from "@/utils/logger";
-import SubscriptionStatus from "@/components/SubscriptionStatus";
+import SubscriptionStatus from "@/features/account/components/SubscriptionStatus";
 import { 
   Box, 
   Typography, 
@@ -27,10 +27,10 @@ import type { SelectChangeEvent } from "@mui/material/Select";
 import { PlayArrow, Star, History, Download, CompareArrows } from '@mui/icons-material';
 import { format } from 'date-fns';
 import dynamic from 'next/dynamic';
-import DashboardDebugPanel from '@/components/dashboard/DashboardDebugPanel';
+import DashboardDebugPanel from '@/features/analytics/components/DashboardDebugPanel';
 
 // Dynamically import DashboardCharts to avoid SSR issues with Chart.js
-const DashboardCharts = dynamic(() => import('@/components/dashboard/DashboardCharts'), {
+const DashboardCharts = dynamic(() => import('@/features/analytics/components/DashboardCharts'), {
   ssr: false,
   loading: () => (
     <Box sx={{ p: 2, textAlign: 'center' }}>

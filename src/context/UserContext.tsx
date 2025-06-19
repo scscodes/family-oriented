@@ -311,7 +311,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
         
         // Set context state from database
         if (demoUser) {
-          setUser(demoUser);
+          // Convert database user to Supabase User format
+          const supabaseUser = {
+            ...demoUser,
+            app_metadata: {},
+            user_metadata: {},
+            aud: 'authenticated'
+          } as any;
+          setUser(supabaseUser);
           setUserProfile(demoUser);
           
           // Always ensure demo org with subscription plan exists

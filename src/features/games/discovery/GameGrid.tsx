@@ -9,7 +9,7 @@ import TouchAppIcon from '@mui/icons-material/TouchApp';
 import GroupIcon from '@mui/icons-material/Group';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import { GameCollectionButton } from './game-discovery/GameCollectionButton';
+import { GameCollectionButton } from './GameCollectionButton';
 
 import { Game, SUBJECTS } from '@/utils/gameData';
 

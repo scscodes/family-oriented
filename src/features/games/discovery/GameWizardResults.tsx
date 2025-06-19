@@ -20,7 +20,7 @@ import {
 } from '@mui/icons-material';
 import { Game, gameDiscovery } from '@/utils/gameData';
 import { gameWizard } from '@/utils/gameWizardService';
-import GameGrid from '@/components/GameGrid';
+import GameGrid from './GameGrid';
 import { logger } from '@/utils/logger';
 
 interface GameWizardResultsProps {

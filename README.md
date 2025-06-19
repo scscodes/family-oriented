@@ -14,15 +14,20 @@ npm run build   # Production build
 ```
 
 ### Environment Setup
-For full functionality (analytics, user data), you'll need Supabase environment variables:
+Create `.env.local` file in project root:
 
 ```bash
-# Create .env.local file with:
+# Required for full functionality
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+
+# Optional: Development features
+NEXT_PUBLIC_LOG_LEVEL=info
+NEXT_PUBLIC_DEMO_SCENARIO=professional
+NEXT_PUBLIC_DEBUG_MODE=true
 ```
 
-📋 **For detailed setup instructions**: See [docs/environment-setup.md](docs/environment-setup.md)
+📋 **Complete Setup Guide**: See [docs/environment-setup.md](docs/environment-setup.md) for full configuration options, demo modes, and troubleshooting.
 
 ## 🎮 Current Games (11 Total)
 - **Mathematics (3)**: Numbers, Addition, Subtraction
@@ -52,15 +57,14 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
 ## 📚 Documentation
 
-**📖 [Optimized Documentation](docs/)** - AI-efficient guides for development and implementation
+**📖 [Complete Documentation Hub](docs/README.md)** - Comprehensive setup and development guides
 
-### 🎯 Quick Access by Use Case
-- **[Development Guide](docs/development.md)** - Complete development reference (80% of daily needs)
+### 🎯 Essential Guides
+- **[Environment Setup](docs/environment-setup.md)** - Complete `.env.local` configuration guide
+- **[Development Guide](docs/development.md)** - Complete development reference  
 - **[Quick Reference](docs/quick-reference.md)** - Ultra-compact AI context (30-second overview)
-- **[Technical Reference](docs/technical-reference.md)** - Deep architecture, game discovery engine, AI patterns
-- **[Game Features](docs/game-features.md)** - All game specifications and educational content
-- **[Project Roadmap](docs/project-roadmap.md)** - Strategic priorities and feature pipeline
-- **[Implementation Tasks](docs/tasks.md)** - Detailed specs for enterprise features and database schemas
+- **[Technical Reference](docs/technical-reference.md)** - Deep architecture and advanced patterns
+- **[Tasks & Roadmap](docs/tasks.md)** - Project planning and implementation specs
 
 ## 🛠️ Adding New Games
 

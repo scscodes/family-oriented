@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import GameContainer from "./GameContainer";
-import ChoiceCard from "./ChoiceCard";
+import GameContainer from "../GameContainer";
+import ChoiceCard from "@/shared/components/cards/ChoiceCard";
 import { GameQuestion, GameType } from "@/utils/gameUtils";
 import { Box, Typography, Button } from '@mui/material';
 import QuestionDisplay from "./QuestionDisplay";
 import ResponsiveAttemptDisplay from "./ResponsiveAttemptDisplay";
-import ResponsiveOptionGrid from "./ResponsiveOptionGrid";
+import ResponsiveOptionGrid from "@/shared/components/layout/ResponsiveOptionGrid";
 import { GAME_TIMINGS } from "@/utils/constants";
 import { useGameAnalytics } from '@/hooks/useGameAnalytics';
 import { useAvatar } from '@/context/UserContext';

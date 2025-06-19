@@ -4,7 +4,7 @@ import React from 'react';
 import { Box, Typography, Container, Paper } from '@mui/material';
 import { continents } from './data';
 import { InteractiveMap } from '../components/InteractiveMap';
-import GameContainer from '@/components/GameContainer';
+import GameContainer from '@/features/games/GameContainer';
 
 /**
  * Continents display page component

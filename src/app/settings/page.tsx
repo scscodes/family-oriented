@@ -183,6 +183,8 @@ export default function SettingsPage() {
             <Tab label="Numbers" id="settings-tab-1" />
             <Tab label="Words" id="settings-tab-2" />
             <Tab label="Math" id="settings-tab-3" />
+            <Tab label="Account" id="settings-tab-4" />
+            <Tab label="Billing" id="settings-tab-5" />
           </Tabs>
         </Box>
 
@@ -386,6 +388,44 @@ export default function SettingsPage() {
                 label="Show Visual Aids for Math Problems"
               />
             </FormControl>
+          </Box>
+        </TabPanel>
+
+        {/* Account Settings */}
+        <TabPanel value={tabValue} index={4}>
+          <Box>
+            <Typography variant="h6" gutterBottom>Account Management</Typography>
+            <Divider sx={{ mb: 3 }} />
+            
+            {/* Account Management Component will be loaded here */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Manage your account settings, organization details, and user permissions.
+            </Typography>
+            
+            {/* Dynamic import to avoid loading issues */}
+            <Box sx={{ mt: 2 }}>
+              {/* Note: In real implementation, import AccountManagement component */}
+              <Typography variant="body1">Account management features coming soon...</Typography>
+            </Box>
+          </Box>
+        </TabPanel>
+
+        {/* Billing Settings */}
+        <TabPanel value={tabValue} index={5}>
+          <Box>
+            <Typography variant="h6" gutterBottom>Billing & Subscription</Typography>
+            <Divider sx={{ mb: 3 }} />
+            
+            {/* Billing Management Component will be loaded here */}
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Manage your subscription, view billing history, and update payment methods.
+            </Typography>
+            
+            {/* Dynamic import to avoid loading issues */}
+            <Box sx={{ mt: 2 }}>
+              {/* Note: In real implementation, import BillingManagement component */}
+              <Typography variant="body1">Billing management features coming soon...</Typography>
+            </Box>
           </Box>
         </TabPanel>
       </Paper>

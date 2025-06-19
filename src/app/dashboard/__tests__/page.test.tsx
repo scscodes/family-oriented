@@ -1,5 +1,5 @@
 jest.mock('@/utils/analyticsService');
-jest.mock('@/components/dashboard/DashboardCharts', () => {
+jest.mock('@/features/analytics/components/DashboardCharts', () => {
   return function MockDashboardCharts() {
     return <div data-testid="dashboard-charts">Mock Charts</div>;
   };

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUser, useAvatar, useRoleGuard } from '@/context/UserContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Box, Typography, Paper, Button, List, ListItem, ListItemText, Chip, CircularProgress, Alert } from '@mui/material';
-import ViewAs from '@/components/ViewAs';
+import ViewAs from '@/features/account/components/ViewAs';
 
 
 /**
@@ -23,8 +23,8 @@ export default function UserManagementDashboard() {
   const [users, setUsers] = useState<Array<{
     id: string;
     email: string;
-    first_name?: string;
-    last_name?: string;
+    first_name: string | null;
+    last_name: string | null;
   }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

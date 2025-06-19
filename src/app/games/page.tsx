@@ -18,18 +18,18 @@ import HomeIcon from '@mui/icons-material/Home';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import BookmarkIcon from '@mui/icons-material/Bookmark';
 import { logger } from "@/utils/logger";
-import AutocompleteSearchBar from "@/components/AutocompleteSearchBar";
-import FacetedSidebar from "@/components/FacetedSidebar";
-import SortControls from "@/components/SortControls";
-import GameGrid from "@/components/GameGrid";
-import AccordionCategory from "@/components/AccordionCategory";
-import ActiveFiltersDisplay from "@/components/ActiveFiltersDisplay";
+import AutocompleteSearchBar from "@/shared/components/forms/AutocompleteSearchBar";
+import FacetedSidebar from "@/features/games/discovery/FacetedSidebar";
+import SortControls from "@/features/games/discovery/SortControls";
+import GameGrid from "@/features/games/discovery/GameGrid";
+import AccordionCategory from "@/features/games/discovery/AccordionCategory";
+import ActiveFiltersDisplay from "@/features/games/discovery/ActiveFiltersDisplay";
 import { SUBJECTS, gameDiscovery, Game, EnhancedGameFilter, SortOptions, ViewPreferences } from "@/utils/gameData";
 import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
-import ThemeSelector from "@/components/ThemeSelector";
+import ThemeSelector from "@/shared/components/forms/ThemeSelector";
 
-import { GameWizardResults } from '@/components/game-discovery/GameWizardResults';
-import { GameWizardDialog } from '@/components/game-discovery/GameWizardDialog';
+import { GameWizardResults } from '@/features/games/discovery/GameWizardResults';
+import { GameWizardDialog } from '@/features/games/discovery/GameWizardDialog';
 
 /**
  * Browse all available games with search and filtering capabilities
