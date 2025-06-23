@@ -141,6 +141,25 @@ export function useTierTransition(): UseTierTransitionReturn {
     }
   }, [org, supabase, currentUsage.avatarsCount]);
 
+  // Utility functions - moved outside useCallback to avoid dependency issues
+  const getTierDisplayName = (tier: SubscriptionTier): string => {
+    const tierNames = {
+      personal: 'Personal Plan',
+      professional: 'Professional Plan',
+      enterprise: 'Enterprise Plan'
+    };
+    return tierNames[tier];
+  };
+
+  const getTierPrice = (tier: SubscriptionTier): number => {
+    const prices = {
+      personal: 9.99,
+      professional: 199.99,
+      enterprise: 1499.99
+    };
+    return prices[tier];
+  };
+
   // Analyze transition impact
   const analyzeTransition = useCallback(async (targetTier: SubscriptionTier): Promise<TierTransitionAnalysis> => {
     if (!currentTier || !subscriptionPlan) {
@@ -270,25 +289,6 @@ export function useTierTransition(): UseTierTransitionReturn {
       setIsLoading(false);
     }
   }, [org, currentTier, supabase, getCurrentUsageData]);
-
-  // Utility functions
-  const getTierDisplayName = useCallback((tier: SubscriptionTier): string => {
-    const tierNames = {
-      personal: 'Personal Plan',
-      professional: 'Professional Plan',
-      enterprise: 'Enterprise Plan'
-    };
-    return tierNames[tier];
-  }, []);
-
-  const getTierPrice = useCallback((tier: SubscriptionTier): number => {
-    const prices = {
-      personal: 9.99,
-      professional: 199.99,
-      enterprise: 1499.99
-    };
-    return prices[tier];
-  }, []);
 
   const validateTransition = useCallback((targetTier: SubscriptionTier): { valid: boolean; reasons: string[] } => {
     if (!currentTier) {

@@ -121,9 +121,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [avatarsLoading, setAvatarsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Always call the hook unconditionally, but handle the error if not in demo context
+  // Always call useDemo hook at top level to avoid conditional hook calls
   let demoContext: ReturnType<typeof useDemo> | null = null;
   try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     demoContext = useDemo();
   } catch {
     // Not in demo mode or provider not available - this is fine

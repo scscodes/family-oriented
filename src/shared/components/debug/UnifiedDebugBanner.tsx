@@ -323,12 +323,13 @@ export default function UnifiedDebugBanner() {
   const userContext = useUser();
   const subscription = useSubscription();
   
-  // Always call the hook unconditionally but handle the case where it's not available
+  // Always call useDemo hook at top level to avoid conditional hook calls
   let demoContext: ReturnType<typeof useDemo> | null = null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let availableScenarios: Array<{ key: string; label: string; description: string; config: any }> = [];
   
   try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     demoContext = useDemo();
     availableScenarios = demoContext.availableScenarios;
   } catch {

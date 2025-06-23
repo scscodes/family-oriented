@@ -155,7 +155,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ tier, isRecommended, isCurrentPlan 
         {/* Limits */}
         <Box sx={{ mb: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-            What's Included
+            What&apos;s Included
           </Typography>
           <Grid container spacing={2}>
             <Grid item xs={6}>
