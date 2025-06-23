@@ -15,15 +15,17 @@ import {
   Switch, 
   FormControlLabel, 
   Button,
-  IconButton,
   Tab,
   Tabs,
-  Divider
+  Divider,
+  Card,
+  CardContent,
+  Stack
 } from '@mui/material';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SaveIcon from '@mui/icons-material/Save';
-import RestoreIcon from '@mui/icons-material/Restore';
-import Link from 'next/link';
+import { FeatureGate, SubscriptionBadge, FeatureAvailabilityChip } from '@/shared/components';
+import SubscriptionStatus from '@/features/account/components/SubscriptionStatus';
+import ThemeSelector from '@/shared/components/forms/ThemeSelector';
+import { Download } from '@mui/icons-material';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -51,32 +53,19 @@ export default function SettingsPage() {
   const { settings, updateSettings, resetSettings } = useSettings();
   const [localSettings, setLocalSettings] = useState<GlobalSettings>(settings);
   const [tabValue, setTabValue] = useState(0);
-  const [isSaved, setIsSaved] = useState(true);
 
   // Update local settings when global settings change
   useEffect(() => {
     setLocalSettings(settings);
   }, [settings]);
 
-  // Track changes between local and global settings
-  useEffect(() => {
-    setIsSaved(JSON.stringify(localSettings) === JSON.stringify(settings));
-  }, [localSettings, settings]);
+
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
 
-  const handleSave = () => {
-    updateSettings(localSettings);
-    setIsSaved(true);
-  };
 
-  const handleReset = () => {
-    resetSettings();
-    setLocalSettings(settings);
-    setIsSaved(true);
-  };
 
   const handleLocalChange = (
     path: string,
@@ -122,48 +111,144 @@ export default function SettingsPage() {
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={4}>
-        <Box display="flex" alignItems="center">
-          <Link href="/">
-            <IconButton
-              aria-label="back to home"
-              sx={{ 
-                mr: 2,
-                bgcolor: 'rgba(67, 97, 238, 0.1)',
-                transition: 'transform 0.2s',
-                '&:hover': { 
-                  bgcolor: 'rgba(67, 97, 238, 0.2)',
-                  transform: 'scale(1.05)'
-                }
-              }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          </Link>
-          <Typography variant="h4" component="h1" fontWeight={600}>
-            Game Settings
+      {/* Page Header with Subscription Info */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h4" component="h1">
+            Settings
           </Typography>
+          <SubscriptionBadge variant="basic" />
         </Box>
-        <Box display="flex" gap={2}>
-          <Button 
-            variant="contained" 
-            color="primary" 
-            startIcon={<SaveIcon />}
-            onClick={handleSave}
-            disabled={isSaved}
-          >
-            Save Settings
-          </Button>
-          <Button 
-            variant="outlined" 
-            color="secondary" 
-            startIcon={<RestoreIcon />}
-            onClick={handleReset}
-          >
-            Reset to Default
-          </Button>
-        </Box>
+        <Typography variant="body1" color="text.secondary">
+          Customize your learning experience and manage your account
+        </Typography>
       </Box>
+
+      {/* Subscription Status Section */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Subscription & Account
+          </Typography>
+          <SubscriptionStatus />
+        </CardContent>
+      </Card>
+
+      {/* Settings Sections with Feature Gating */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+        gap: 3,
+        mb: 3
+      }}>
+        {/* Theme Settings */}
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Theme & Appearance
+              </Typography>
+              <FeatureAvailabilityChip feature="premium_themes" showLabel={false} />
+            </Box>
+            
+            <FeatureGate 
+              feature="premium_themes" 
+              mode="disable"
+              fallback={
+                <Box>
+                  <ThemeSelector />
+                  <Typography variant="caption" color="text.secondary">
+                    Basic themes available
+                  </Typography>
+                </Box>
+              }
+            >
+              <ThemeSelector />
+              <Typography variant="caption" color="success.main">
+                Premium themes unlocked!
+              </Typography>
+            </FeatureGate>
+          </CardContent>
+        </Card>
+
+        {/* Advanced Settings */}
+        <Card>
+          <CardContent>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6">
+                Advanced Settings
+              </Typography>
+              <FeatureAvailabilityChip feature="bulk_operations" showLabel={false} />
+            </Box>
+            
+            <FeatureGate 
+              feature="bulk_operations" 
+              mode="overlay"
+            >
+              <Stack spacing={2}>
+                <FormControlLabel
+                  control={<Switch />}
+                  label="Bulk operations"
+                />
+                <FormControlLabel
+                  control={<Switch />}
+                  label="Advanced scheduling"
+                />
+                <FormControlLabel
+                  control={<Switch />}
+                  label="Custom analytics"
+                />
+              </Stack>
+            </FeatureGate>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Data Export - Full Width */}
+      <Card sx={{ mb: 3 }}>
+        <CardContent>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Data Export
+            </Typography>
+            <FeatureAvailabilityChip feature="export_data" />
+          </Box>
+          
+          <FeatureGate 
+            feature="export_data" 
+            mode="alert"
+            compact={true}
+          >
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button variant="outlined" startIcon={<Download />}>
+                Export Learning Data
+              </Button>
+              <Button variant="outlined" startIcon={<Download />}>
+                Export Progress Reports
+              </Button>
+            </Box>
+          </FeatureGate>
+        </CardContent>
+      </Card>
+
+      {/* Custom Branding (Enterprise Only) */}
+      <FeatureGate 
+        feature="custom_branding" 
+        mode="hide"
+        fallback={null}
+      >
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Custom Branding
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Customize the platform with your organization&apos;s branding
+            </Typography>
+            {/* Custom branding controls would go here */}
+          </CardContent>
+        </Card>
+      </FeatureGate>
 
       <Paper elevation={2} sx={{ borderRadius: 2, overflow: 'hidden' }}>
         <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>

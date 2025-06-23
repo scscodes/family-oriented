@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Menu, MenuItem, IconButton, Avatar, Divider, ListItemIcon, ListItemText, Typography, Box } from '@mui/material';
+import { Menu, MenuItem, IconButton, Avatar, Divider, ListItemIcon, ListItemText, Typography, Box, CircularProgress } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import GroupIcon from '@mui/icons-material/Group';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -13,9 +13,10 @@ import { useRouter } from 'next/navigation';
  * Uses role guard to prevent flashing of restricted menu items
  */
 export default function ProfileMenu() {
-  const { userProfile, org, signOut, isViewAs, resetViewAs } = useUser();
+  const { loadingState, userProfile, org, signOut, isViewAs, resetViewAs } = useUser();
   const { currentAvatar } = useAvatar();
   const { hasRole, isReady } = useRoleGuard();
+  
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const router = useRouter();
@@ -29,6 +30,17 @@ export default function ProfileMenu() {
     handleClose();
     router.push(path);
   };
+
+  // Early return if contexts are not ready to prevent infinite renders
+  if (!loadingState.isReady) {
+    return (
+      <IconButton size="small" sx={{ ml: 1 }} disabled>
+        <Avatar sx={{ width: 36, height: 36 }}>
+          <CircularProgress size={20} />
+        </Avatar>
+      </IconButton>
+    );
+  }
 
   return (
     <>

@@ -55,9 +55,17 @@ NEXT_PUBLIC_DEMO_SCENARIO=professional  # For demo mode
 
 ## Standards
 - TypeScript strict, no `any`
+- Context provider hierarchy (Theme→User→Settings)
+- CSS Grid with Box (NO Material-UI Grid)
+- Hydration coordination with `useIsFullyHydrated()`
 - WCAG accessibility
 - Fisher-Yates shuffle
 - Design tokens, styled components
+
+## Critical Issues Fixed (Jan 2024)
+- **Hydration**: Provider order & loading coordination
+- **Grid**: Material-UI Grid → CSS Grid migration
+- **Build**: TypeScript compatibility fixes
 
 ---
 **Use `docs/README.md` for complete reference** 

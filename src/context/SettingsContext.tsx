@@ -61,8 +61,14 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 // Provider component
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  // Initialize state with default settings or from localStorage
-  const [settings, setSettings] = useState<GlobalSettings>(() => {
+  // Initialize state with default settings - always start with defaults to prevent hydration mismatch
+  const [settings, setSettings] = useState<GlobalSettings>(defaultSettings);
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Load settings from localStorage after hydration
+  useEffect(() => {
+    setIsHydrated(true);
+    
     if (typeof window !== 'undefined') {
       try {
         const savedSettings = localStorage.getItem('globalGameSettings');
@@ -70,7 +76,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           const parsedSettings = JSON.parse(savedSettings);
           
           // Ensure all required properties exist by merging with defaults
-          return {
+          const mergedSettings = {
             ...defaultSettings,
             ...parsedSettings,
             // Ensure nested objects are properly merged
@@ -87,25 +93,26 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
               ...(parsedSettings.mathRange || {})
             }
           };
+          
+          setSettings(mergedSettings);
         }
       } catch (error) {
         logger.error('Error loading settings from localStorage:', error);
-        // If there's an error, return defaults
+        // If there's an error, keep defaults
       }
     }
-    return defaultSettings;
-  });
+  }, []);
 
-  // Save settings to localStorage when they change
+  // Save settings to localStorage when they change (only after hydration)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isHydrated && typeof window !== 'undefined') {
       try {
         localStorage.setItem('globalGameSettings', JSON.stringify(settings));
       } catch (error) {
         logger.error('Error saving settings to localStorage:', error);
       }
     }
-  }, [settings]);
+  }, [settings, isHydrated]);
 
   // Update specific settings
   const updateSettings = (newSettings: Partial<GlobalSettings>) => {

@@ -37,7 +37,8 @@ Complete documentation for the enterprise-scale educational game platform with f
 ### Specialized Documentation
 | Document | Purpose | Audience | Use Case |
 |----------|---------|----------|----------|
-| **[Technical Reference](./technical-reference.md)** | Deep architecture & patterns | Senior developers, architects | Major changes |
+| **[Technical Reference](./technical-reference.md)** | Deep architecture & context management | Senior developers, architects | Major changes |
+| **[Troubleshooting Guide](./troubleshooting-guide.md)** | Context & build issue solutions | All developers | Bug fixes |
 | **[Tasks & Roadmap](./tasks.md)** | Project planning & specifications | Project managers, architects | Planning |
 | **[Subscription Analysis](./subscription-tier-analysis.md)** | Business tier implementation | Product, business | Feature planning |
 
@@ -115,6 +116,8 @@ src/
 
 ### Quality Standards
 - **TypeScript**: Strict mode, explicit types, zero `any`
+- **Context Management**: Follow provider hierarchy, hydration coordination
+- **Layout Components**: Use CSS Grid with Box (no Material-UI Grid)
 - **Accessibility**: WCAG 2.1 AA compliance
 - **Testing**: Jest with React Testing Library
 - **Code Style**: ESLint with Next.js config

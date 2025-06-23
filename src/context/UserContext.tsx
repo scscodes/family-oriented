@@ -1,12 +1,12 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
 import { logger } from '@/utils/logger';
 import { useRouter } from 'next/navigation';
-import { Box } from '@mui/material';
+
 import { 
   getDemoConfig, 
   createDemoSubscriptionPlan, 
@@ -45,7 +45,7 @@ interface OrgInfo {
 }
 
 /**
- * Consolidated loading state for better UX
+ * Consolidated loading state for better UX - using primitives for stability
  */
 interface LoadingState {
   user: boolean;
@@ -90,16 +90,16 @@ interface UserContextType {
   signOut: () => Promise<void>;
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+const UserContext = createContext<ExtendedUserContextType | undefined>(undefined);
 
 /**
  * User provider that manages authentication state and avatar context
  * Integrates with Supabase for persistent user and avatar management
  * 
  * Enhanced with:
- * - Consolidated loading states
+ * - Stable loading states to prevent infinite re-renders
  * - Proper demo mode support
- * - Elimination of flashing UI elements
+ * - Elimination of circular dependencies
  */
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -116,30 +116,24 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [viewAsRole, setViewAsRole] = useState<string | null>(null);
   const [viewAsAvatar, setViewAsAvatar] = useState<Avatar | null>(null);
 
-  // Consolidated loading state
-  const [loadingState, setLoadingState] = useState<LoadingState>({
-    user: true,
-    roles: true,
-    avatars: true,
-    isReady: false
-  });
+  // Use individual boolean states instead of object to prevent re-render loops
+  const [userLoading, setUserLoading] = useState<boolean>(true);
+  const [rolesLoading, setRolesLoading] = useState<boolean>(true);
+  const [avatarsLoading, setAvatarsLoading] = useState<boolean>(true);
+  const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Create stable loading state object using individual primitives
+  const loadingState = useMemo<LoadingState>(() => ({
+    user: userLoading,
+    roles: rolesLoading,
+    avatars: avatarsLoading,
+    isReady: isInitialized && !userLoading && !rolesLoading
+  }), [userLoading, rolesLoading, avatarsLoading, isInitialized]);
 
   const supabase = createClient();
-
-  // Helper to update loading state
-  const updateLoadingState = useCallback((updates: Partial<LoadingState>) => {
-    setLoadingState(prev => {
-      const newState = { ...prev, ...updates };
-      // Calculate if everything is ready for role-based rendering
-      // Only user and roles are required for isReady - avatars can still be loading
-      newState.isReady = !newState.user && !newState.roles;
-      
-      // Debug logging for loading state changes
-      console.log('UserContext: Loading state updated:', newState);
-      
-      return newState;
-    });
-  }, []);
+  
+  // Use ref to track initialization to prevent multiple calls
+  const initializationRef = useRef<boolean>(false);
 
   // Load user profile from database
   const loadUserProfile = useCallback(async (userId: string) => {
@@ -166,7 +160,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const loadAvatars = useCallback(async (userId: string) => {
     try {
       console.log('UserContext: Loading avatars for user:', userId);
-      updateLoadingState({ avatars: true });
+      setAvatarsLoading(true);
       const { data, error } = await supabase
         .from('avatars')
         .select('*')
@@ -189,14 +183,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setAvatars([]);
     } finally {
       console.log('UserContext: Avatar loading completed');
-      updateLoadingState({ avatars: false });
+      setAvatarsLoading(false);
     }
-  }, [supabase, updateLoadingState]);
+  }, [supabase]);
 
   // Fetch roles and org info
   const fetchRolesAndOrg = useCallback(async (userId: string) => {
     try {
-      updateLoadingState({ roles: true });
+      setRolesLoading(true);
       
       // Fetch user profile from public.users
       const { data: userProfileData, error: userProfileError } = await supabase
@@ -256,14 +250,16 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setRoles([]);
       setError('Failed to load organization or roles.');
     } finally {
-      updateLoadingState({ roles: false });
+      setRolesLoading(false);
     }
-  }, [supabase, updateLoadingState]);
+  }, [supabase]);
 
   // Enhanced demo user/org/roles fallback
   const loadDemoUserContext = useCallback(async () => {
     try {
-      updateLoadingState({ user: true, roles: true, avatars: true });
+      setUserLoading(true);
+      setRolesLoading(true);
+      setAvatarsLoading(true);
       setDemoMode(true);
       
       // Try to load demo user/org/roles from DB, fallback to hardcoded
@@ -398,22 +394,28 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } finally {
       // Complete all loading states for demo mode
       console.log('Demo mode initialization complete, updating loading states');
-      updateLoadingState({ user: false, roles: false, avatars: false });
+      setUserLoading(false);
+      setRolesLoading(false);
+      setAvatarsLoading(false);
+      setIsInitialized(true);
     }
-  }, [supabase, loadAvatars, updateLoadingState]);
+  }, [supabase, loadAvatars]);
 
-  // Main user loading effect
+  // Main initialization effect - runs only once
   useEffect(() => {
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
     const loadUser = async () => {
       try {
-        updateLoadingState({ user: true });
+        setUserLoading(true);
         setError(null);
         
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           // Real user authentication
           setUser(session.user);
-          updateLoadingState({ user: false });
+          setUserLoading(false);
           await loadUserProfile(session.user.id);
           
           // Load roles and avatars in parallel
@@ -421,6 +423,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             fetchRolesAndOrg(session.user.id),
             loadAvatars(session.user.id)
           ]);
+          setIsInitialized(true);
         } else {
           // No session - load demo mode for development
           logger.info('No user session found, loading demo mode');
@@ -431,7 +434,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         logger.error('Error loading user:', err);
         setError('Failed to load user context.');
-        updateLoadingState({ user: false, roles: false, avatars: false });
+        setUserLoading(false);
+        setRolesLoading(false);
+        setAvatarsLoading(false);
+        setIsInitialized(true);
       }
     };
     
@@ -441,7 +447,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
-        updateLoadingState({ user: false });
+        setUserLoading(false);
         await loadUserProfile(session.user.id);
         
         // Load roles and avatars in parallel
@@ -449,6 +455,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           fetchRolesAndOrg(session.user.id),
           loadAvatars(session.user.id)
         ]);
+        setIsInitialized(true);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setUserProfile(null);
@@ -464,7 +471,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [loadUserProfile, loadDemoUserContext, supabase.auth, loadAvatars, fetchRolesAndOrg, updateLoadingState]);
+  }, [supabase.auth, loadUserProfile, loadDemoUserContext, fetchRolesAndOrg, loadAvatars]);
 
   // Utility functions
   const hasRole = useCallback((roleName: string) => {
@@ -587,58 +594,72 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   return (
     <UserContext.Provider value={contextValue}>
-      {demoMode && (
-        <Box sx={{ bgcolor: 'warning.main', color: 'black', p: 1, textAlign: 'center' }}>
-          <b>Demo Mode:</b> You are using a demo user context. Features may be simulated.
-        </Box>
-      )}
       {children}
     </UserContext.Provider>
   );
 }
 
-/**
- * Hook to access user context
- * Provides user authentication state and avatar management
- */
 export function useUser(): ExtendedUserContextType {
   const context = useContext(UserContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useUser must be used within a UserProvider');
   }
-  return context as ExtendedUserContextType;
+  return context;
 }
 
-/**
- * Hook specifically for avatar context
- * Convenience hook for components that only need avatar information
- */
 export function useAvatar() {
-  const { currentAvatar, avatars, setCurrentAvatar, createAvatar } = useUser();
+  const { currentAvatar, setCurrentAvatar, avatars, createAvatar } = useUser();
+  
+  const switchAvatar = useCallback((avatarId: string) => {
+    const avatar = avatars.find(a => a.id === avatarId);
+    if (avatar) {
+      setCurrentAvatar(avatar);
+    }
+  }, [avatars, setCurrentAvatar]);
+
   return {
     currentAvatar,
-    avatars,
     setCurrentAvatar,
+    avatars,
+    switchAvatar,
     createAvatar
   };
 }
 
-/**
- * Hook for role-based rendering with loading safety
- * Only returns true for roles when the user context is fully loaded
- */
 export function useRoleGuard() {
-  const { hasRole, loadingState, roles } = useUser();
+  const { hasRole, canAccess, roles, loadingState } = useUser();
   
-  const isReady = loadingState.isReady;
-  
+  // Backward compatible hasRole function 
   const guardedHasRole = useCallback((roleName: string) => {
-    return isReady && hasRole(roleName);
-  }, [isReady, hasRole]);
+    return loadingState.isReady && hasRole(roleName);
+  }, [hasRole, loadingState.isReady]);
   
+  const requireRole = useCallback((requiredRole: string) => {
+    if (!loadingState.isReady) return { allowed: false, reason: 'Loading...' };
+    const allowed = hasRole(requiredRole);
+    return {
+      allowed,
+      reason: allowed ? undefined : `Requires ${requiredRole} role`
+    };
+  }, [hasRole, loadingState.isReady]);
+  
+  const requireFeature = useCallback((feature: string) => {
+    if (!loadingState.isReady) return { allowed: false, reason: 'Loading...' };
+    const allowed = canAccess(feature);
+    return {
+      allowed,
+      reason: allowed ? undefined : `Feature ${feature} not available in current plan`
+    };
+  }, [canAccess, loadingState.isReady]);
+
   return {
+    // Backward compatible interface
     hasRole: guardedHasRole,
-    isReady,
-    roles: isReady ? roles : []
+    isReady: loadingState.isReady,
+    roles: loadingState.isReady ? roles : [],
+    
+    // New enhanced interface
+    requireRole,
+    requireFeature
   };
 } 

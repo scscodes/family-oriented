@@ -1,6 +1,12 @@
 /**
  * Subscription Service - Tier-based Feature Gating and Usage Limits
  * Provides centralized subscription tier enforcement across the application
+ * 
+ * Enhanced with:
+ * - Comprehensive feature gating for all app features
+ * - Smart upgrade recommendations
+ * - Demo mode support with proper tier simulation
+ * - Real-time usage tracking and enforcement
  */
 
 import { logger } from './logger';
@@ -135,12 +141,15 @@ export class SubscriptionService {
   
   /**
    * Check if a feature is available for the given subscription plan
+   * Enhanced with better error handling and logging
    */
   static canAccessFeature(
     subscriptionPlan: SubscriptionPlan | null, 
     feature: SubscriptionFeature
   ): FeatureGateResult {
+    // Handle no subscription plan (demo mode or logged out)
     if (!subscriptionPlan) {
+      logger.warn('Feature access check without subscription plan:', feature);
       return {
         allowed: false,
         reason: 'No active subscription plan',
@@ -151,28 +160,36 @@ export class SubscriptionService {
     const tier = subscriptionPlan.tier as SubscriptionTier;
     const tierConfig = TIER_CONFIGURATIONS[tier];
     
+    // Validate tier configuration
     if (!tierConfig) {
-      logger.error('Unknown subscription tier:', tier);
+      logger.error('Unknown subscription tier during feature check:', { tier, feature });
       return {
         allowed: false,
-        reason: 'Invalid subscription tier'
+        reason: 'Invalid subscription tier configuration'
       };
     }
 
-    // Check feature inclusion from database or fallback to defaults
+    // Check feature inclusion from database plan or fallback to tier defaults
     const featuresIncluded = subscriptionPlan.features_included || {};
     const hasFeature = featuresIncluded[feature] ?? tierConfig.features[feature];
 
     if (hasFeature) {
+      logger.debug('Feature access granted:', { tier, feature });
       return { allowed: true };
     }
 
     // Determine minimum tier required for this feature
     const upgradeRequired = this.getMinimumTierForFeature(feature);
+    
+    logger.info('Feature access denied - upgrade required:', { 
+      currentTier: tier, 
+      feature, 
+      upgradeRequired 
+    });
 
     return {
       allowed: false,
-      reason: `Feature '${feature}' requires ${TIER_CONFIGURATIONS[upgradeRequired].displayName}`,
+      reason: `${feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} requires ${TIER_CONFIGURATIONS[upgradeRequired].displayName}`,
       upgradeRequired
     };
   }
@@ -635,6 +652,177 @@ export class SubscriptionService {
       valid: true,
       reasons: []
     };
+  }
+
+  /**
+   * Enhanced feature enforcement for specific app features
+   */
+  static canAccessDashboard(subscriptionPlan: SubscriptionPlan | null): FeatureGateResult {
+    return this.canAccessFeature(subscriptionPlan, 'analytics');
+  }
+
+  static canAccessUserManagement(subscriptionPlan: SubscriptionPlan | null): FeatureGateResult {
+    return this.canAccessFeature(subscriptionPlan, 'user_management');
+  }
+
+  static canAccessPremiumThemes(subscriptionPlan: SubscriptionPlan | null): FeatureGateResult {
+    return this.canAccessFeature(subscriptionPlan, 'premium_themes');
+  }
+
+  static canAccessAdvancedReporting(subscriptionPlan: SubscriptionPlan | null): FeatureGateResult {
+    return this.canAccessFeature(subscriptionPlan, 'advanced_reporting');
+  }
+
+  static canExportData(subscriptionPlan: SubscriptionPlan | null): FeatureGateResult {
+    return this.canAccessFeature(subscriptionPlan, 'export_data');
+  }
+
+  /**
+   * Bulk operations for feature checking (for UI components)
+   */
+  static checkMultipleFeatures(
+    subscriptionPlan: SubscriptionPlan | null,
+    features: SubscriptionFeature[]
+  ): Record<SubscriptionFeature, FeatureGateResult> {
+    const results: Record<string, FeatureGateResult> = {};
+    
+    features.forEach(feature => {
+      results[feature] = this.canAccessFeature(subscriptionPlan, feature);
+    });
+    
+    return results as Record<SubscriptionFeature, FeatureGateResult>;
+  }
+
+  /**
+   * Get features that are locked for the current tier (for upgrade prompts)
+   */
+  static getLockedFeatures(subscriptionPlan: SubscriptionPlan | null): SubscriptionFeature[] {
+    if (!subscriptionPlan) {
+      return Object.keys(TIER_CONFIGURATIONS.personal.features) as SubscriptionFeature[];
+    }
+
+    const tier = subscriptionPlan.tier as SubscriptionTier;
+    const tierConfig = TIER_CONFIGURATIONS[tier];
+    const featuresIncluded = subscriptionPlan.features_included || {};
+    
+    const lockedFeatures: SubscriptionFeature[] = [];
+    
+    // Check all possible features
+    const allFeatures = new Set<SubscriptionFeature>();
+    Object.values(TIER_CONFIGURATIONS).forEach(config => {
+      Object.keys(config.features).forEach(feature => {
+        allFeatures.add(feature as SubscriptionFeature);
+      });
+    });
+    
+    allFeatures.forEach(feature => {
+      const hasFeature = featuresIncluded[feature] ?? tierConfig?.features[feature] ?? false;
+      if (!hasFeature) {
+        lockedFeatures.push(feature);
+      }
+    });
+    
+    return lockedFeatures;
+  }
+
+  /**
+   * Smart upgrade recommendations based on usage patterns
+   */
+  static getSmartUpgradeRecommendation(
+    subscriptionPlan: SubscriptionPlan | null,
+    usageData: UsageData,
+    lockedFeaturesAccessed: SubscriptionFeature[] = []
+  ): {
+    recommended: boolean;
+    targetTier: SubscriptionTier;
+    reasons: string[];
+    benefits: string[];
+    urgency: 'low' | 'medium' | 'high';
+  } {
+    if (!subscriptionPlan) {
+      return {
+        recommended: true,
+        targetTier: 'personal',
+        reasons: ['No active subscription'],
+        benefits: ['Access to analytics', 'Create up to 5 children', 'Save collections'],
+        urgency: 'high'
+      };
+    }
+
+    const tier = subscriptionPlan.tier as SubscriptionTier;
+    const reasons: string[] = [];
+    const benefits: string[] = [];
+    let urgency: 'low' | 'medium' | 'high' = 'low';
+    let targetTier: SubscriptionTier = tier;
+
+    // Check usage against limits
+    const usageSummary = this.getUsageSummary(subscriptionPlan, usageData);
+    
+    Object.entries(usageSummary).forEach(([limitType, result]) => {
+      if (!result.allowed) {
+        reasons.push(`${limitType} limit exceeded`);
+        urgency = 'high';
+        targetTier = result.upgradeRequired || 'professional';
+      } else if (result.currentUsage && result.limit && (result.currentUsage / result.limit) > 0.8) {
+        reasons.push(`Approaching ${limitType} limit`);
+        urgency = urgency === 'low' ? 'medium' : urgency;
+      }
+    });
+
+    // Check feature access patterns
+    if (lockedFeaturesAccessed.length > 0) {
+      reasons.push(`Attempted to access ${lockedFeaturesAccessed.length} premium feature(s)`);
+      urgency = urgency === 'low' ? 'medium' : urgency;
+      
+      // Find minimum tier needed for these features
+      lockedFeaturesAccessed.forEach(feature => {
+        const requiredTier = this.getMinimumTierForFeature(feature);
+        if (this.getTierPriority(requiredTier) > this.getTierPriority(targetTier)) {
+          targetTier = requiredTier;
+        }
+      });
+    }
+
+    // Generate benefits list
+    if (targetTier !== tier) {
+      const targetConfig = TIER_CONFIGURATIONS[targetTier];
+      const currentConfig = TIER_CONFIGURATIONS[tier];
+      
+      // Highlight new features
+      Object.entries(targetConfig.features).forEach(([feature, enabled]) => {
+        if (enabled && !currentConfig.features[feature as SubscriptionFeature]) {
+          benefits.push(feature.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+        }
+      });
+      
+      // Highlight limit increases
+      Object.entries(targetConfig.limits).forEach(([limitType, newLimit]) => {
+        const currentLimit = currentConfig.limits[limitType as UsageLimit];
+        if (newLimit > currentLimit) {
+          if (newLimit >= 10000) {
+            benefits.push(`Unlimited ${limitType.replace(/_/g, ' ')}`);
+          } else {
+            benefits.push(`${newLimit} ${limitType.replace(/_/g, ' ')} (was ${currentLimit})`);
+          }
+        }
+      });
+    }
+
+    return {
+      recommended: targetTier !== tier,
+      targetTier,
+      reasons,
+      benefits,
+      urgency
+    };
+  }
+
+  /**
+   * Helper: Get tier priority for comparison
+   */
+  private static getTierPriority(tier: SubscriptionTier): number {
+    const priorities = { personal: 1, professional: 2, enterprise: 3 };
+    return priorities[tier];
   }
 }
 

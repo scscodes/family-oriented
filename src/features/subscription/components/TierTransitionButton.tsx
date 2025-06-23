@@ -3,6 +3,8 @@
  * Simple button that triggers tier transitions with validation
  */
 
+'use client';
+
 import React, { useState } from 'react';
 import {
   Button,

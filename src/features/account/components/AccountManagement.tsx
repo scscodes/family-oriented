@@ -402,7 +402,7 @@ export default function AccountManagement() {
                 <strong>Name:</strong> {org?.name || 'N/A'}
               </Typography>
               <Typography variant="body1" gutterBottom>
-                <strong>Plan:</strong> {subscriptionPlan?.name || 'N/A'}
+                <strong>Plan:</strong> {subscriptionPlan?.tier || 'N/A'}
               </Typography>
               <Typography variant="body1" gutterBottom>
                 <strong>Tier:</strong> {tier?.toUpperCase() || 'N/A'}

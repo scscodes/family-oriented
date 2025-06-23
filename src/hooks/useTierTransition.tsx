@@ -4,6 +4,8 @@
  * Handles analysis, validation, and execution of tier changes
  */
 
+'use client';
+
 import { useState, useCallback, useMemo } from 'react';
 import { useUser } from '@/context/UserContext';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -155,7 +157,7 @@ export function useTierTransition(): UseTierTransitionReturn {
       const analysis = SubscriptionService.analyzeTierTransition(currentTier, targetTier, usageData);
       
       // Get cost information
-      const currentCost = parseFloat(subscriptionPlan.base_price.toString());
+      const currentCost = getTierPrice(subscriptionPlan.tier as SubscriptionTier);
       const newCost = getTierPrice(targetTier);
       const monthlyDifference = newCost - currentCost;
       

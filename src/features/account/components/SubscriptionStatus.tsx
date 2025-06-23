@@ -3,7 +3,7 @@
  * Displays current subscription tier, usage, and upgrade options
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Box,
   Card,
@@ -82,7 +82,7 @@ const FeatureChip: React.FC<{
 /**
  * Main subscription status component
  */
-export default function SubscriptionStatus({ showUpgradePrompt = true, compact = false }: SubscriptionStatusProps) {
+const SubscriptionStatus = React.memo(({ showUpgradePrompt = true, compact = false }: SubscriptionStatusProps) => {
   const { 
     subscriptionPlan, 
     tier, 
@@ -92,13 +92,20 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
     canCreateAvatar 
   } = useSubscription();
 
-  // Debug logging
-  console.log('SubscriptionStatus Debug:', {
-    subscriptionPlan,
-    tier,
-    isLoaded,
-    currentUsage
-  });
+  // Memoize computed values to prevent unnecessary re-renders
+  const computedValues = useMemo(() => {
+    const tierConfig = TIER_CONFIGURATIONS[tier as SubscriptionTier];
+    const availableFeatures = getAvailableFeatures();
+    const avatarCreationResult = canCreateAvatar();
+    const avatarLimit = subscriptionPlan?.avatar_limit || tierConfig?.limits.avatars || 5;
+    
+    return {
+      tierConfig,
+      availableFeatures,
+      avatarCreationResult,
+      avatarLimit
+    };
+  }, [tier, subscriptionPlan, getAvailableFeatures, canCreateAvatar]);
 
   if (!isLoaded) {
     return (
@@ -132,10 +139,7 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
     );
   }
 
-  const tierConfig = TIER_CONFIGURATIONS[tier as SubscriptionTier];
-  const availableFeatures = getAvailableFeatures();
-  const avatarCreationResult = canCreateAvatar();
-  const avatarLimit = subscriptionPlan.avatar_limit || tierConfig?.limits.avatars || 5;
+  const { tierConfig, availableFeatures, avatarCreationResult, avatarLimit } = computedValues;
 
   if (compact) {
     return (
@@ -267,7 +271,7 @@ export default function SubscriptionStatus({ showUpgradePrompt = true, compact =
       </CardContent>
     </Card>
   );
-}
+});
 
 /**
  * Quick subscription info for header/navbar
@@ -293,4 +297,6 @@ export function SubscriptionBadge() {
       )}
     </Box>
   );
-} 
+}
+
+export default SubscriptionStatus; 

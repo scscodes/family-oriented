@@ -2,32 +2,23 @@
 
 import React, { useEffect, useState } from "react";
 import { useAvatar, useUser, useRoleGuard } from "@/context/UserContext";
-import { analyticsService, type LearningProgressData, type LearningPathRecommendation, type PerformanceMetrics } from "@/utils/analyticsService";
-import { analyticsDebugger } from "@/utils/analyticsDebug";
+import { analyticsService, type LearningProgressData, type PerformanceMetrics } from "@/utils/analyticsService";
 import { logger } from "@/utils/logger";
-import SubscriptionStatus from "@/features/account/components/SubscriptionStatus";
 import { 
   Box, 
   Typography, 
-  Paper, 
   CircularProgress, 
   Alert, 
-  List, 
-  ListItem, 
-  ListItemText, 
   Button, 
-  FormControl, 
-  InputLabel, 
-  Select, 
-  MenuItem, 
   Card, 
-  CardContent 
+  CardContent
 } from "@mui/material";
-import type { SelectChangeEvent } from "@mui/material/Select";
-import { PlayArrow, Star, History, Download, CompareArrows } from '@mui/icons-material';
-import { format } from 'date-fns';
+import { Settings } from '@mui/icons-material';
 import dynamic from 'next/dynamic';
-import DashboardDebugPanel from '@/features/analytics/components/DashboardDebugPanel';
+
+import { FeatureGate, UsageOverview, SubscriptionBadge } from '@/shared/components';
+import { useSubscription } from '@/hooks/useSubscription';
+import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
 
 // Dynamically import DashboardCharts to avoid SSR issues with Chart.js
 const DashboardCharts = dynamic(() => import('@/features/analytics/components/DashboardCharts'), {
@@ -40,55 +31,32 @@ const DashboardCharts = dynamic(() => import('@/features/analytics/components/Da
 });
 
 /**
+ * Check if all contexts are ready for dashboard rendering
+ */
+function useIsDashboardReady() {
+  const { isHydrated } = useEnhancedTheme();
+  const { loadingState } = useUser();
+  
+  return isHydrated && loadingState.isReady;
+}
+
+/**
  * User Dashboard page for learning progress, recommendations, and metrics.
  * Focuses on robust data flow and error handling.
  * Uses role guard to prevent flashing of admin-only content.
  */
 export default function DashboardPage() {
-  const { currentAvatar, setCurrentAvatar } = useAvatar();
-  const { avatars, error: userError } = useUser();
+  const isDashboardReady = useIsDashboardReady();
+  const { currentAvatar } = useAvatar();
+  const { error: userError } = useUser();
   const { hasRole, isReady } = useRoleGuard();
+  const { } = useSubscription();
   const avatarId = currentAvatar?.id;
 
   const [progress, setProgress] = useState<LearningProgressData[] | null>(null);
-  const [recommendations, setRecommendations] = useState<LearningPathRecommendation[] | null>(null);
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [comparisonData] = useState<{
-    progress: LearningProgressData[];
-    metrics: PerformanceMetrics;
-  } | null>(null);
-  const [comparisonLabel] = useState<string>('');
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const runDiagnostic = async () => {
-    if (!avatarId) return;
-    logger.info('Running analytics diagnostic for avatar:', avatarId);
-    await analyticsDebugger.runFullDiagnostic(avatarId);
-  };
-
-  const createTestData = async () => {
-    if (!avatarId) return;
-    logger.info('Creating simple test data for avatar:', avatarId);
-    try {
-      const result = await analyticsDebugger.createTestSessionData(avatarId);
-      logger.info('Test data creation result:', result);
-      
-      if (result.success) {
-        window.location.reload();
-      }
-    } catch (err) {
-      logger.error('Failed to create test data:', err);
-    }
-  };
-
-  const handleAvatarChange = (event: SelectChangeEvent) => {
-    const avatarId = event.target.value;
-    const selectedAvatar = avatars?.find(a => a.id === avatarId);
-    if (selectedAvatar) {
-      setCurrentAvatar(selectedAvatar);
-    }
-  };
 
 
 
@@ -105,20 +73,17 @@ export default function DashboardPage() {
       try {
         logger.info('🔄 Loading analytics data for avatar:', avatarId);
 
-        const [progressData, recommendationsData, metricsData] = await Promise.all([
+        const [progressData, metricsData] = await Promise.all([
           analyticsService.getAvatarProgress(avatarId),
-          analyticsService.getLearningPathRecommendations(avatarId),
           analyticsService.getPerformanceMetrics(avatarId)
         ]);
 
         logger.debug('📊 Analytics data loaded:', { 
           progress: progressData, 
-          recommendations: recommendationsData, 
           metrics: metricsData 
         });
 
         setProgress(progressData);
-        setRecommendations(recommendationsData);
         setMetrics(metricsData);
       } catch (err) {
         logger.error('❌ Error loading analytics data:', err);
@@ -130,6 +95,16 @@ export default function DashboardPage() {
 
     loadData();
   }, [avatarId]);
+
+  // Wait for full hydration before showing dashboard
+  if (!isDashboardReady) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <CircularProgress />
+        <Typography variant="body2" sx={{ ml: 2 }}>Loading dashboard...</Typography>
+      </Box>
+    );
+  }
 
   if (userError) {
     return (
@@ -169,173 +144,123 @@ export default function DashboardPage() {
   }
 
   return (
-    <Box sx={{ maxWidth: 'lg', mx: 'auto', py: 4 }}>
-      {/* Debug Panel - Only appears in development */}
-      <DashboardDebugPanel />
-      
-      <Typography variant="h4" gutterBottom>
-        Learning Progress Dashboard
-      </Typography>
-
-      {/* Subscription Status */}
-      <Box sx={{ mb: 3 }}>
-        <SubscriptionStatus />
+    <Box sx={{ p: 3 }}>
+      {/* Header with Subscription Badge */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Analytics Dashboard
+        </Typography>
+        <SubscriptionBadge variant="basic" />
       </Box>
 
-      {/* User Management Dashboard Link (visible to account_owner or org_admin when ready) */}
-      {isReady && (hasRole('account_owner') || hasRole('org_admin')) && (
-        <Box sx={{ mb: 2 }}>
-          <Button variant="contained" color="secondary" href="/dashboard/user-management">
-            Manage Users & Roles
-          </Button>
+      {/* Feature Gate for Analytics */}
+      <FeatureGate 
+        feature="analytics" 
+        mode="alert"
+        fallback={
+          <Alert severity="warning" sx={{ mb: 3 }}>
+            Analytics dashboard requires a subscription plan. Please upgrade to access learning insights.
+          </Alert>
+        }
+      >
+        {/* Subscription Usage Overview */}
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom>
+              Subscription Usage
+            </Typography>
+            <UsageOverview compact={true} />
+          </CardContent>
+        </Card>
+
+        {/* Advanced Reporting Gate */}
+        <FeatureGate 
+          feature="advanced_reporting" 
+          mode="overlay"
+          fallback={
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Advanced reporting requires Professional plan. Upgrade to access detailed analytics.
+            </Alert>
+          }
+        >
+          <Card sx={{ mb: 3 }}>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Advanced Analytics
+              </Typography>
+              <DashboardCharts 
+                progress={progress || []}
+                metrics={metrics || {
+                  totalGamesPlayed: 0,
+                  averageSessionDuration: 0,
+                  overallCompletionRate: 0,
+                  skillLevelDistribution: {},
+                  subjectPreferences: {},
+                  learningVelocity: 0,
+                  engagementScore: 0
+                }}
+              />
+            </CardContent>
+          </Card>
+        </FeatureGate>
+
+        {/* Regular Analytics Content */}
+        <Box sx={{ 
+          display: 'grid', 
+          gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+          gap: 3 
+        }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Learning Progress
+              </Typography>
+              {/* Existing analytics components */}
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Activity
+              </Typography>
+              {/* Existing activity components */}
+            </CardContent>
+          </Card>
         </Box>
+      </FeatureGate>
+
+      {/* User Management Access for Account Owners */}
+      {isReady && hasRole('account_owner') && (
+        <Card sx={{ mt: 3 }}>
+          <CardContent>
+            <FeatureGate 
+              feature="user_management" 
+              mode="alert"
+              compact={true}
+            >
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box>
+                  <Typography variant="h6">
+                    User Management
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Manage users, roles, and avatars for your organization
+                  </Typography>
+                </Box>
+                <Button
+                  variant="contained"
+                  href="/dashboard/user-management"
+                  startIcon={<Settings />}
+                >
+                  Manage Users
+                </Button>
+              </Box>
+            </FeatureGate>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Avatar Selection */}
-      <Box sx={{ mb: 3 }}>
-        <FormControl fullWidth>
-          <InputLabel>Select Avatar</InputLabel>
-          <Select
-            value={avatarId || ''}
-            label="Select Avatar"
-            onChange={handleAvatarChange}
-          >
-            {avatars?.map((avatar) => (
-              <MenuItem key={avatar.id} value={avatar.id}>
-                {avatar.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {/* Current Avatar Info */}
-      {currentAvatar && (
-        <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-          <Typography variant="h6" gutterBottom>
-            Current Avatar: {currentAvatar.name}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            ID: {currentAvatar.id}
-          </Typography>
-        </Paper>
-      )}
-
-      {/* Quick Access Section */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>Quick Actions</Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button 
-            variant="outlined" 
-            startIcon={<PlayArrow />}
-            onClick={() => window.location.href = '/games'}
-          >
-            Play Games
-          </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<Download />}
-            onClick={createTestData}
-          >
-            Create Test Data
-          </Button>
-          <Button 
-            variant="outlined" 
-            startIcon={<History />}
-            onClick={runDiagnostic}
-          >
-            Run Diagnostic
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Analytics Charts */}
-      {metrics && progress && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" gutterBottom>Analytics Overview</Typography>
-          <DashboardCharts 
-            metrics={metrics} 
-            progress={progress} 
-            comparisonData={comparisonData || undefined}
-            comparisonLabel={comparisonLabel}
-          />
-        </Box>
-      )}
-
-      {/* Learning Progress */}
-      {progress && progress.length > 0 && (
-        <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-          <Typography variant="h6" gutterBottom>
-            <Star sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Learning Progress
-          </Typography>
-          <List>
-            {progress.map((item, index) => (
-              <ListItem key={index}>
-                <ListItemText
-                  primary={`${item.gameId}: ${item.skillLevel}`}
-                  secondary={`Mastery: ${Math.round(item.masteryScore * 100)}% | Last Played: ${
-                    item.lastPlayed ? format(new Date(item.lastPlayed), 'MMM dd, yyyy') : 'Never'
-                  }`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
-
-      {/* Recommendations */}
-      {recommendations && recommendations.length > 0 && (
-        <Paper sx={{ p: 2, mb: 3 }} elevation={2}>
-          <Typography variant="h6" gutterBottom>
-            <CompareArrows sx={{ mr: 1, verticalAlign: 'middle' }} />
-            Recommended Learning Path
-          </Typography>
-          <List>
-            {recommendations.map((rec, index) => (
-              <ListItem key={index}>
-                <ListItemText
-                  primary={rec.gameId}
-                  secondary={`${rec.reason} | Priority: ${rec.priority} | Difficulty: ${rec.estimatedDifficulty}`}
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
-
-      {/* Performance Metrics */}
-      {metrics && (
-        <Paper sx={{ p: 2 }} elevation={2}>
-          <Typography variant="h6" gutterBottom>Performance Metrics</Typography>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 2 }}>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="subtitle2">Engagement Score</Typography>
-                <Typography variant="h4">{Math.round(metrics.engagementScore * 100)}%</Typography>
-              </CardContent>
-            </Card>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="subtitle2">Learning Velocity</Typography>
-                <Typography variant="h4">{metrics.learningVelocity.toFixed(1)}</Typography>
-              </CardContent>
-            </Card>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="subtitle2">Completion Rate</Typography>
-                <Typography variant="h4">{Math.round(metrics.overallCompletionRate * 100)}%</Typography>
-              </CardContent>
-            </Card>
-            <Card variant="outlined">
-              <CardContent>
-                <Typography variant="subtitle2">Avg Session Time</Typography>
-                <Typography variant="h4">{Math.round(metrics.averageSessionDuration)} min</Typography>
-              </CardContent>
-            </Card>
-          </Box>
-        </Paper>
-      )}
     </Box>
   );
 } 

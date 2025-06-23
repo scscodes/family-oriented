@@ -1,10 +1,10 @@
 ---
 title: "Technical Reference - Deep Implementation"
 description: "Consolidated technical reference for advanced development topics"
-version: "2.0.0"
-last_updated: "2024-01-15"
+version: "2.1.0"
+last_updated: "2024-01-16"
 category: "Technical Reference"
-tags: ["Architecture", "Game Discovery", "AI Integration", "Deep Technical"]
+tags: ["Architecture", "Context Management", "Hydration", "Grid Compatibility", "Game Discovery", "AI Integration", "Deep Technical"]
 complexity: "Advanced"
 audience: ["Senior Developers", "System Architects", "AI Engineers"]
 ---
@@ -13,6 +13,8 @@ audience: ["Senior Developers", "System Architects", "AI Engineers"]
 
 ## 🎯 When to Use This Document
 - **System architecture** and major structural changes
+- **Context management** and hydration troubleshooting
+- **Material-UI compatibility** and layout issues
 - **Game discovery engine** implementation and extensions
 - **AI/ML integration** patterns and recommendation systems
 - **Performance optimization** and scalability planning
@@ -44,10 +46,258 @@ src/
 │   ├── AccordionCategory.tsx    # Subject accordion with metadata
 │   └── styled/                  # Design token styled components
 ├── app/games/page.tsx           # Advanced game browser
-├── context/SettingsContext.tsx  # Global game configuration
+├── context/                     # 🔧 Enhanced context management
+│   ├── SettingsContext.tsx     # Global game configuration
+│   ├── UserContext.tsx         # User state with hydration coordination
+│   └── ThemeContext.tsx        # Theme provider with SSR compatibility
 ├── hooks/useGame.ts             # Game orchestration
 └── theme/                       # Theme system with design tokens
 ```
+
+---
+
+## 🔄 Context Management Architecture (Critical)
+
+### Provider Hierarchy & Hydration Coordination
+
+**IMPORTANT**: The provider order is critical for proper hydration and prevents circular dependencies.
+
+```tsx
+// Root Layout Provider Chain (MUST follow this order)
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <EnhancedThemeProvider>      {/* 1. Theme first - no dependencies */}
+          <UserProvider>             {/* 2. User context - needs theme */}
+            <SettingsProvider>       {/* 3. Settings last - may need user */}
+              {children}
+            </SettingsProvider>
+          </UserProvider>
+        </EnhancedThemeProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### Hydration Coordination Pattern
+
+**Problem**: Multiple contexts initializing independently can cause hydration mismatches and race conditions.
+
+**Solution**: Consolidated hydration checking with proper loading states.
+
+```tsx
+// Consolidated hydration check hook
+function useIsFullyHydrated() {
+  const { isHydrated: themeHydrated } = useEnhancedTheme();
+  const { loadingState } = useUser();
+  
+  return themeHydrated && loadingState.isReady;
+}
+
+// Safe component rendering pattern
+function ComponentWithContextDependencies() {
+  const isFullyHydrated = useIsFullyHydrated();
+  
+  // Show loading skeleton until all contexts are ready
+  if (!isFullyHydrated) {
+    return <LoadingSkeleton />;
+  }
+  
+  // Render actual component only when contexts are stable
+  return <ActualComponent />;
+}
+```
+
+### Context Best Practices
+
+#### 1. **Prevent Infinite Re-renders**
+```tsx
+// ❌ BAD: Creates new object every render
+const contextValue = {
+  user,
+  settings: { theme: currentTheme, gameSettings }
+};
+
+// ✅ GOOD: Memoized with stable dependencies
+const contextValue = useMemo(() => ({
+  user,
+  settings
+}), [user, settings]);
+```
+
+#### 2. **Proper Loading State Management**
+```tsx
+// ✅ GOOD: Detailed loading states
+interface LoadingState {
+  user: boolean;
+  roles: boolean;
+  avatars: boolean;
+  isReady: boolean; // Computed from all states
+}
+
+const [isInitialized, setIsInitialized] = useState(false);
+
+// Set initialized flag when all async operations complete
+useEffect(() => {
+  if (!userLoading && !rolesLoading && !avatarsLoading) {
+    setIsInitialized(true);
+  }
+}, [userLoading, rolesLoading, avatarsLoading]);
+```
+
+#### 3. **Safe Server-Side Rendering**
+```tsx
+// Always check for browser-only APIs
+const initializeFromStorage = () => {
+  if (typeof window === 'undefined') return defaultSettings;
+  
+  try {
+    const stored = localStorage.getItem('gameSettings');
+    return stored ? JSON.parse(stored) : defaultSettings;
+  } catch {
+    return defaultSettings;
+  }
+};
+```
+
+### Context Type Safety
+
+```tsx
+// Enhanced context interface with proper typing
+interface ExtendedUserContextType extends UserContextType {
+  roles: Role[];
+  org: OrgInfo | null;
+  hasRole: (roleName: string) => boolean;
+  canAccess: (feature: string) => boolean;
+  getTierLimit: (feature: string) => number | undefined;
+  loadingState: LoadingState; // Enhanced loading state
+}
+
+// Type-safe context creation
+const UserContext = createContext<ExtendedUserContextType | undefined>(undefined);
+```
+
+---
+
+## 🎨 Material-UI Grid Compatibility (Critical)
+
+### **Grid Component Issues Discovered**
+
+During production builds, Material-UI's Grid component with `item` and `container` props causes TypeScript compilation errors in Next.js 15.2.4+.
+
+**Error Pattern**:
+```typescript
+// ❌ FAILS: TypeScript compilation error
+<Grid container spacing={3}>
+  <Grid item xs={12} md={6}>
+    <Card>Content</Card>
+  </Grid>
+</Grid>
+```
+
+**Error Message**: 
+```
+Property 'item' does not exist on type 'IntrinsicAttributes & GridBaseProps'
+```
+
+### **Grid Migration Solutions**
+
+#### **Solution 1: CSS Grid with Box (Recommended)**
+```tsx
+// ✅ RECOMMENDED: Replace Grid with CSS Grid
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { 
+    xs: '1fr', 
+    sm: 'repeat(2, 1fr)', 
+    md: 'repeat(3, 1fr)' 
+  }, 
+  gap: 3 
+}}>
+  <Card>Content 1</Card>
+  <Card>Content 2</Card>
+  <Card>Content 3</Card>
+</Box>
+```
+
+#### **Solution 2: Flexbox Alternative**
+```tsx
+// ✅ ALTERNATIVE: Flexbox for simpler layouts
+<Box sx={{ 
+  display: 'flex', 
+  flexWrap: 'wrap',
+  gap: 2,
+  '& > *': { 
+    flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 30%' }
+  }
+}}>
+  <Card>Content 1</Card>
+  <Card>Content 2</Card>
+</Box>
+```
+
+### **Grid Migration Patterns by Use Case**
+
+#### **Cards Layout**
+```tsx
+// Collections, dashboard cards, feature grids
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { 
+    xs: '1fr', 
+    sm: 'repeat(2, 1fr)', 
+    md: 'repeat(3, 1fr)' 
+  }, 
+  gap: 3 
+}}>
+  {items.map(item => (
+    <Card key={item.id}>
+      {/* Card content */}
+    </Card>
+  ))}
+</Box>
+```
+
+#### **Two-Column Layout**
+```tsx
+// Settings panels, dashboard sections
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+  gap: 3 
+}}>
+  <Card>Left Panel</Card>
+  <Card>Right Panel</Card>
+</Box>
+```
+
+#### **Cost Information Layout**
+```tsx
+// Plan comparison, billing info
+<Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+    <Typography>Current: $10/month</Typography>
+    <Typography>New: $20/month</Typography>
+  </Box>
+  <Typography color="error.main">
+    Monthly difference: +$10
+  </Typography>
+</Box>
+```
+
+### **Migration Checklist**
+
+When encountering Grid issues:
+- [ ] Replace `<Grid container>` with `<Box sx={{ display: 'grid' }}>`
+- [ ] Convert `spacing` prop to `gap` in sx
+- [ ] Replace `<Grid item xs={} md={}>` with direct children
+- [ ] Use `gridTemplateColumns` with responsive breakpoints
+- [ ] Test responsive behavior across breakpoints
+- [ ] Verify spacing and alignment match original design
+
+---
 
 ## 🔍 Game Discovery Engine (Advanced)
 

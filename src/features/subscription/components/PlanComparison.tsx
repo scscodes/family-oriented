@@ -190,35 +190,31 @@ const TransitionDialog: React.FC<TransitionDialogProps> = ({
             <Typography variant="h6" gutterBottom>
               Cost Impact
             </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
                 <Typography variant="body2" color="text.secondary">
                   Current: ${analysis.costImpact.currentCost}/month
                 </Typography>
-              </Grid>
-              <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
                   New: ${analysis.costImpact.newCost}/month
                 </Typography>
-              </Grid>
-              <Grid item xs={12}>
-                <Typography 
-                  variant="body1" 
-                  color={analysis.costImpact.monthlyDifference > 0 ? 'error.main' : 'success.main'}
-                  fontWeight="medium"
-                >
-                  Monthly difference: {analysis.costImpact.monthlyDifference > 0 ? '+' : ''}
-                  ${analysis.costImpact.monthlyDifference.toFixed(2)}
-                </Typography>
-              </Grid>
+              </Box>
+              
+              <Typography 
+                variant="body1" 
+                color={analysis.costImpact.monthlyDifference > 0 ? 'error.main' : 'success.main'}
+                fontWeight="medium"
+              >
+                Monthly difference: {analysis.costImpact.monthlyDifference > 0 ? '+' : ''}
+                ${analysis.costImpact.monthlyDifference.toFixed(2)}
+              </Typography>
+              
               {analysis.costImpact.prorationAmount !== 0 && (
-                <Grid item xs={12}>
-                  <Alert severity="info" sx={{ mt: 1 }}>
-                    {analysis.costImpact.prorationDescription}
-                  </Alert>
-                </Grid>
+                <Alert severity="info">
+                  {analysis.costImpact.prorationDescription}
+                </Alert>
               )}
-            </Grid>
+            </Box>
           </CardContent>
         </Card>
 
@@ -402,19 +398,22 @@ export default function PlanComparison() {
         </Alert>
       )}
 
-      <Grid container spacing={3}>
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
+        gap: 3 
+      }}>
         {allTiers.map((tier, index) => (
-          <Grid item xs={12} md={4} key={tier}>
-            <PlanCard
-              tier={tier}
-              isCurrentPlan={tier === currentTier}
-              onSelectPlan={handleSelectPlan}
-              disabled={isLoading}
-              recommended={index === 1} // Professional plan is recommended
-            />
-          </Grid>
+          <PlanCard
+            key={tier}
+            tier={tier}
+            isCurrentPlan={tier === currentTier}
+            onSelectPlan={handleSelectPlan}
+            disabled={isLoading}
+            recommended={index === 1} // Professional plan is recommended
+          />
         ))}
-      </Grid>
+      </Box>
 
       {currentTier && (
         <Box sx={{ mt: 3 }}>

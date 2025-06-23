@@ -112,7 +112,7 @@ export const TEST_TIMEOUTS = {
 } as const;
 
 // Global test utilities
-global.testUtils = {
+(global as any).testUtils = {
   waitForStableState: async (callback: () => boolean, timeout = TEST_TIMEOUTS.MEDIUM) => {
     const startTime = Date.now();
     while (!callback() && Date.now() - startTime < timeout) {

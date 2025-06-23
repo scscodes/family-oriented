@@ -7,7 +7,8 @@ import {
   Box,
   Button,
   Card,
-  CardContent
+  CardContent,
+  Skeleton
 } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SchoolIcon from '@mui/icons-material/School';
@@ -17,10 +18,78 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import { SUBJECTS, gameDiscovery } from "@/utils/gameData";
 
 import ThemeSelector from "@/shared/components/forms/ThemeSelector";
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { GameWizardDialog } from '@/features/games/discovery/GameWizardDialog';
 import SearchIcon from '@mui/icons-material/Search';
 import ProfileMenu from '@/shared/menus/ProfileMenu';
+import { SubscriptionBadge } from '@/shared/components';
+import { useUser } from '@/context/UserContext';
+import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+
+
+
+/**
+ * Consolidated hydration check that waits for all contexts to be ready
+ */
+function useIsFullyHydrated() {
+  const { isHydrated: themeHydrated } = useEnhancedTheme();
+  const { loadingState } = useUser();
+  
+  return themeHydrated && loadingState.isReady;
+}
+
+/**
+ * Safe navigation component that waits for contexts to be ready
+ */
+function NavigationBar() {
+  const isFullyHydrated = useIsFullyHydrated();
+  
+  // Show loading state if contexts aren't ready
+  if (!isFullyHydrated) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        p: 2,
+        borderBottom: 1,
+        borderColor: 'divider'
+      }}>
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
+          Family Learning Platform
+        </Typography>
+        
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Skeleton variant="rectangular" width={80} height={32} />
+          <Skeleton variant="rectangular" width={60} height={32} />
+          <Skeleton variant="circular" width={36} height={36} />
+        </Box>
+      </Box>
+    );
+  }
+  
+  // Render full navigation once contexts are ready
+  return (
+    <Box sx={{ 
+      display: 'flex', 
+      justifyContent: 'space-between', 
+      alignItems: 'center', 
+      p: 2,
+      borderBottom: 1,
+      borderColor: 'divider'
+    }}>
+      <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
+        Family Learning Platform
+      </Typography>
+      
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <SubscriptionBadge variant="compact" />
+        <ThemeSelector />
+        <ProfileMenu />
+      </Box>
+    </Box>
+  );
+}
 
 /**
  * Mix two hex colors with a given ratio
@@ -55,47 +124,81 @@ const mixColors = (color1: string, color2: string, ratio: number): string => {
  * Modern marketing homepage designed to drive conversion and engagement
  */
 export default function Home() {
-  // Removed useEnhancedTheme; using only stable default themeConfig
-
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { themeConfig } = useEnhancedTheme();
+  const isFullyHydrated = useIsFullyHydrated();
   
-  // Use a stable default theme for both SSR and client
-  const themeConfig = { primary: '#9381ff', secondary: '#4361ee', accent: '#00d9ff' };
-
-  // Generate heading colors from current theme
-  const headingColors = {
+  // Generate heading colors from current theme - memoized and theme-aware
+  const headingColors = useMemo(() => ({
     h1: themeConfig.primary,
     h2: mixColors(themeConfig.primary, themeConfig.secondary, 0.1),
     h3: mixColors(themeConfig.primary, themeConfig.secondary, 0.2),
     h4: mixColors(themeConfig.primary, themeConfig.secondary, 0.3),
     h5: mixColors(themeConfig.primary, themeConfig.secondary, 0.4),
     h6: mixColors(themeConfig.primary, themeConfig.secondary, 0.5)
-  };
+  }), [themeConfig.primary, themeConfig.secondary]);
 
-  // Subject configuration for current theme
-  const subjects = {
+  // Subject configuration for current theme - memoized
+  const subjects = useMemo(() => ({
     'Language Arts': { color: headingColors.h5, icon: '📚' },
     'Mathematics': { color: headingColors.h5, icon: '🔢' },
     'Social Studies': { color: headingColors.h5, icon: '🌍' },
     'Visual Arts': { color: headingColors.h5, icon: '🎨' }
-  };
+  }), [headingColors.h5]);
 
-  // Get featured games using the discovery engine
-  const featuredGames = gameDiscovery.getFeaturedGames().slice(0, 3).map(game => ({
-    title: game.title,
-    description: game.description,
-    href: game.href,
-    emoji: game.emoji,
-    color: headingColors.h5
-  }));
+  // Get featured games using the discovery engine - memoized
+  const featuredGames = useMemo(() => 
+    gameDiscovery.getFeaturedGames().slice(0, 3).map(game => ({
+      title: game.title,
+      description: game.description,
+      href: game.href,
+      emoji: game.emoji,
+      color: headingColors.h5
+    })), [headingColors.h5]
+  );
+
+  // Show loading skeleton until fully hydrated to prevent mismatch
+  if (!isFullyHydrated) {
+    return (
+      <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          p: 2,
+          borderBottom: 1,
+          borderColor: 'divider'
+        }}>
+          <Typography variant="h5" component="h1" sx={{ fontWeight: 'bold' }}>
+            Family Learning Platform
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Skeleton variant="rectangular" width={80} height={32} />
+            <Skeleton variant="circular" width={36} height={36} />
+            <Skeleton variant="circular" width={36} height={36} />
+          </Box>
+        </Box>
+        <Box sx={{ p: 8 }}>
+          <Skeleton variant="text" width="60%" height={80} />
+          <Skeleton variant="text" width="40%" height={40} sx={{ mb: 4 }} />
+          <Box sx={{ display: 'flex', gap: 2, mb: 6 }}>
+            <Skeleton variant="rectangular" width={150} height={50} />
+            <Skeleton variant="rectangular" width={180} height={50} />
+          </Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2 }}>
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} variant="rectangular" height={140} />
+            ))}
+          </Box>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
-    <>
-      {/* Profile and Theme Icons */}
-      <Box sx={{ position: 'fixed', top: 16, right: 16, zIndex: 1000, display: 'flex', gap: 1 }}>
-        <ThemeSelector />
-        <ProfileMenu />
-      </Box>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      {/* Safe Navigation */}
+      <NavigationBar />
 
       {/* Hero Section */}
       <Box sx={{
@@ -254,10 +357,10 @@ export default function Home() {
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                                          '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: `0 12px 32px ${headingColors.h6}40`
-                      }
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: `0 12px 32px ${headingColors.h6}40`
+                    }
                   }}
                 >
                   <CardContent sx={{ p: 0, '&:last-child': { pb: 0 } }}>
@@ -479,6 +582,7 @@ export default function Home() {
           </Button>
         </Container>
       </Box>
-    </>
+
+    </Box>
   );
 }

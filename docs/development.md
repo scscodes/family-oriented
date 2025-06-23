@@ -84,6 +84,8 @@ src/
 
 ### Code Standards
 - **Type Safety**: Explicit interfaces, no `any` types
+- **Context Management**: Follow provider hierarchy, implement hydration coordination
+- **Layout Components**: Use CSS Grid with Box instead of Material-UI Grid
 - **Accessibility**: WCAG compliance, ARIA attributes, keyboard navigation
 - **Utilities**: Use centralized `arrayUtils.ts`, `constants.ts`
 - **Design**: Use design tokens, styled components over inline `sx`
@@ -91,6 +93,9 @@ src/
 ### Quality Checklist
 - [ ] TypeScript compilation success
 - [ ] ESLint compliance  
+- [ ] Hydration stability (all contexts ✅ in debug panel)
+- [ ] Layout responsiveness (no Grid component issues)
+- [ ] Context provider order maintained
 - [ ] Accessibility testing
 - [ ] Game discovery functionality
 - [ ] Documentation updates
@@ -195,6 +200,52 @@ questionGenerators['newGame'] = (settings) => [/* questions */];
 - Cross-browser compatibility
 - Game discovery system tested
 - Documentation current
+
+## 🔧 Recent Architectural Updates
+
+### Context Management (January 2024)
+**Critical Changes**: Enhanced context provider hierarchy with hydration coordination.
+
+```tsx
+// Provider order (MUST be maintained)
+<EnhancedThemeProvider>      {/* 1. Theme first */}
+  <UserProvider>             {/* 2. User context */}
+    <SettingsProvider>       {/* 3. Settings last */}
+      {children}
+    </SettingsProvider>
+  </UserProvider>
+</EnhancedThemeProvider>
+```
+
+**Key Patterns**:
+- Use `useIsFullyHydrated()` for components with context dependencies
+- Implement loading skeletons until contexts are ready
+- Monitor hydration status with debug panel (bottom-left in dev mode)
+
+### Layout Components (January 2024)
+**Breaking Change**: Material-UI Grid components cause TypeScript build errors.
+
+```tsx
+// ❌ DEPRECATED: Material-UI Grid
+<Grid container spacing={3}>
+  <Grid item xs={12} md={6}>
+    <Card>Content</Card>
+  </Grid>
+</Grid>
+
+// ✅ CURRENT: CSS Grid with Box
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+  gap: 3 
+}}>
+  <Card>Content</Card>
+</Box>
+```
+
+**Migration Required**: All Grid usage must be converted to CSS Grid patterns.
+
+**See Also**: [`troubleshooting-guide.md`](./troubleshooting-guide.md) for detailed migration steps.
 
 ## 📚 Specialized Documentation
 

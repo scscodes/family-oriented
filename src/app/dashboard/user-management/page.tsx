@@ -80,7 +80,7 @@ export default function UserManagementDashboard() {
       {/* Feature gate check */}
       {!userManagementAccess.allowed && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          {formatFeatureMessage(userManagementAccess, 'User Management')}
+          {formatFeatureMessage(userManagementAccess)}
         </Alert>
       )}
       
