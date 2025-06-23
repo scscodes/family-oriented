@@ -51,15 +51,15 @@ const FeatureGate = React.memo(({
     return canAccessFeature(feature);
   }, [canAccessFeature, feature]);
   
-  // If access is granted, render children normally
-  if (accessResult.allowed) {
-    return <>{children}</>;
-  }
-
   // Memoize formatted message
   const formattedMessage = useMemo(() => {
     return formatFeatureMessage(accessResult);
   }, [formatFeatureMessage, accessResult]);
+  
+  // If access is granted, render children normally
+  if (accessResult.allowed) {
+    return <>{children}</>;
+  }
 
   // Handle different display modes for denied access
   switch (mode) {
@@ -193,6 +193,8 @@ const FeatureGate = React.memo(({
       );
   }
 });
+
+FeatureGate.displayName = 'FeatureGate';
 
 export default FeatureGate;
 

@@ -273,6 +273,8 @@ const SubscriptionStatus = React.memo(({ showUpgradePrompt = true, compact = fal
   );
 });
 
+SubscriptionStatus.displayName = 'SubscriptionStatus';
+
 /**
  * Quick subscription info for header/navbar
  */

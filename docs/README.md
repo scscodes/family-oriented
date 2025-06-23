@@ -14,14 +14,13 @@ Complete documentation for the enterprise-scale educational game platform with f
 ## 🚀 Quick Start Documentation
 
 ### New Developers
-1. **[Quick Reference](./quick-reference.md)** - 30-second overview for AI context
-2. **[Environment Setup](./environment-setup.md)** - Complete .env.local configuration guide
-3. **[Development Guide](./development.md)** - Development guidelines and standards
+1. **[AGENTS](./AGENTS.md)** - Comprehensive AI/agent reference with all critical patterns
+2. **[Setup Guide](./setup.md)** - Complete environment setup and troubleshooting
 
 ### Setup Checklist
 - [ ] Clone repository: `git clone <repo-url>`
 - [ ] Install dependencies: `npm install`
-- [ ] Configure environment: Copy and update `.env.local` ([guide](./environment-setup.md))
+- [ ] Configure environment: Copy and update `.env.local` ([guide](./setup.md))
 - [ ] Start development: `npm run dev`
 - [ ] Access application: http://localhost:3000
 
@@ -30,15 +29,12 @@ Complete documentation for the enterprise-scale educational game platform with f
 ### Essential Guides (Start Here)
 | Document | Purpose | Audience | Time to Read |
 |----------|---------|----------|--------------|
-| **[Quick Reference](./quick-reference.md)** | AI context & essentials | AI Models, Quick lookup | 1 min |
-| **[Environment Setup](./environment-setup.md)** | Complete .env.local guide | All developers | 5 min |
-| **[Development Guide](./development.md)** | Complete development reference | Developers | 15 min |
+| **[AGENTS](./AGENTS.md)** | AI/Coding assistant optimized reference | AI Models, Coding assistants | 3 min |
+| **[Setup Guide](./setup.md)** | Complete setup & troubleshooting | All developers | 10 min |
 
 ### Specialized Documentation
 | Document | Purpose | Audience | Use Case |
 |----------|---------|----------|----------|
-| **[Technical Reference](./technical-reference.md)** | Deep architecture & context management | Senior developers, architects | Major changes |
-| **[Troubleshooting Guide](./troubleshooting-guide.md)** | Context & build issue solutions | All developers | Bug fixes |
 | **[Tasks & Roadmap](./tasks.md)** | Project planning & specifications | Project managers, architects | Planning |
 | **[Subscription Analysis](./subscription-tier-analysis.md)** | Business tier implementation | Product, business | Feature planning |
 
@@ -66,7 +62,7 @@ NEXT_PUBLIC_DEMO_SCENARIO=professional
 NEXT_PUBLIC_DEBUG_MODE=true
 ```
 
-**Complete Guide**: [Environment Setup](./environment-setup.md)
+**Complete Guide**: [Setup Guide](./setup.md)
 
 ## 🎮 Platform Overview
 
@@ -156,7 +152,7 @@ When `NEXT_PUBLIC_DEBUG_MODE=true`:
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-**Complete Deployment Guide**: [Environment Setup - Deployment](./environment-setup.md#deployment-configuration)
+**Complete Deployment Guide**: [Setup Guide - Deployment](./setup.md#deployment)
 
 ## 📚 External Resources
 
@@ -187,4 +183,6 @@ When `NEXT_PUBLIC_DEBUG_MODE=true`:
 
 ---
 
-**🚀 Ready to Start?** Begin with [Environment Setup](./environment-setup.md) for complete configuration guidance. 
+**🚀 Ready to Start?** Begin with [Setup Guide](./setup.md) for complete configuration guidance.
+
+**🤖 For AI/Agents:** Use [AGENTS.md](./AGENTS.md) as your primary reference for all development tasks. 

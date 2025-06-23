@@ -6,12 +6,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../SettingsContext';
 
-// Test timeout constants
-const TEST_TIMEOUTS = {
-  FAST: 1000,
-  MEDIUM: 3000
-} as const;
-
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <SettingsProvider>{children}</SettingsProvider>
 );

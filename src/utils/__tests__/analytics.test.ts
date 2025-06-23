@@ -133,4 +133,5 @@ describe('Analytics Service - Enhanced Validation', () => {
     expect(typeof analytics.completionRate).toBe('number');
     expect(Array.isArray(analytics.popularGames)).toBe(true);
   });
-}); 
+  });
+});

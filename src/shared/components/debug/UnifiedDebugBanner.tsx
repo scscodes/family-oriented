@@ -22,7 +22,8 @@ import {
   Alert,
   Divider,
   Tooltip,
-  FormControl
+  FormControl,
+  SelectChangeEvent
 } from '@mui/material';
 import {
   BugReport,
@@ -69,15 +70,27 @@ function DebugPopupContent({
   hasIssues 
 }: {
   onClose: () => void;
-  userContext: any;
-  subscription: any;
-  loadingState: any;
+  userContext: {
+    org: { name: string; subscriptionPlan?: { name?: string; tier?: string; avatar_limit?: number } | null } | null;
+    avatars?: unknown[];
+  };
+  subscription: {
+    hasFeature: (feature: string) => boolean;
+    subscriptionPlan?: { avatar_limit?: number };
+    tier?: string;
+  };
+  loadingState: {
+    user: boolean;
+    roles: boolean;
+    avatars: boolean;
+    isReady: boolean;
+  };
   hasIssues: boolean;
 }) {
   const availableScenarios = getAvailableScenarios();
   const [selectedScenario, setSelectedScenario] = useState('');
 
-  const handleScenarioChange = (event: any) => {
+  const handleScenarioChange = (event: SelectChangeEvent<string>) => {
     const scenarioKey = event.target.value as string;
     setSelectedScenario(scenarioKey);
     switchDemoScenario(scenarioKey);
@@ -318,7 +331,7 @@ export default function UnifiedDebugBanner() {
   // Avatar count display
   const avatarDisplay = `${userContext.avatars?.length || 0}/${subscription.subscriptionPlan?.avatar_limit || 'N/A'}`;
 
-  const handleQuickScenarioChange = (event: any) => {
+  const handleQuickScenarioChange = (event: SelectChangeEvent<string>) => {
     const scenarioKey = event.target.value as string;
     setSelectedScenario(scenarioKey);
     switchDemoScenario(scenarioKey);
@@ -423,10 +436,10 @@ export default function UnifiedDebugBanner() {
         onClose={() => setDebugPopupOpen(false)}
         closeAfterTransition
       >
-        <DebugPopupContent 
+        <DebugPopupContent
           onClose={() => setDebugPopupOpen(false)}
-          userContext={userContext}
-          subscription={subscription}
+          userContext={userContext as {org: {name: string; subscriptionPlan?: {name?: string; tier?: string; avatar_limit?: number} | null} | null; avatars?: unknown[]}}
+          subscription={subscription as {hasFeature: (feature: string) => boolean; subscriptionPlan?: {avatar_limit?: number}; tier?: string}}
           loadingState={loadingState}
           hasIssues={hasIssues}
         />

@@ -234,6 +234,8 @@ const SubscriptionBadge = React.memo(({
   );
 });
 
+SubscriptionBadge.displayName = 'SubscriptionBadge';
+
 /**
  * Detailed popover showing subscription information
  */

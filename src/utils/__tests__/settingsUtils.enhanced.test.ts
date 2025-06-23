@@ -130,10 +130,10 @@ describe('SettingsUtils - Enhanced Tests', () => {
       const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       
       // Test with null settings
-      saveSettings('numbers', null as any);
+      saveSettings('numbers', null as unknown as Parameters<typeof saveSettings>[1]);
       
       // Test with undefined settings
-      saveSettings('numbers', undefined as any);
+      saveSettings('numbers', undefined as unknown as Parameters<typeof saveSettings>[1]);
       
       // Should not crash the application
       expect(consoleSpy).toHaveBeenCalled();

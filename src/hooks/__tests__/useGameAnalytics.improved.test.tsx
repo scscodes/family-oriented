@@ -122,7 +122,7 @@ describe('useGameAnalytics - Enhanced Tests', () => {
       await act(async () => {
         try {
           await result.current.startSession();
-        } catch (error) {
+        } catch {
           // Expected to fail
         }
       });

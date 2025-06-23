@@ -50,7 +50,7 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export default function SettingsPage() {
-  const { settings, updateSettings, resetSettings } = useSettings();
+  const { settings } = useSettings();
   const [localSettings, setLocalSettings] = useState<GlobalSettings>(settings);
   const [tabValue, setTabValue] = useState(0);
 

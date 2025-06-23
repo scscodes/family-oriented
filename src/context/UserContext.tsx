@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
 import { logger } from '@/utils/logger';
-import { useRouter } from 'next/navigation';
+
 
 import { 
   getDemoConfig, 
@@ -109,8 +109,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [org, setOrg] = useState<OrgInfo | null>(null);
-  const router = useRouter();
-  const [demoMode, setDemoMode] = useState<boolean>(false);
   
   // View As state
   const [viewAsRole, setViewAsRole] = useState<string | null>(null);
@@ -237,10 +235,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId);
       if (userPoliciesError) throw userPoliciesError;
       
-      const userRoles: Role[] = (userPolicies || []).map((up: any) => ({
+      const userRoles: Role[] = (userPolicies || []).map((up: { permission_policies: { id: string; policy_name: string; description: string | null } }) => ({
         id: up.permission_policies.id,
         name: up.permission_policies.policy_name,
-        description: up.permission_policies.description,
+        description: up.permission_policies.description || undefined,
       }));
       setRoles(userRoles);
       
@@ -256,11 +254,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Enhanced demo user/org/roles fallback
   const loadDemoUserContext = useCallback(async () => {
+    // Get demo configuration first (can be controlled via environment variables or localStorage)
+    const demoConfig = getDemoConfig();
+    console.log('Demo configuration loaded:', demoConfig);
+    
     try {
       setUserLoading(true);
       setRolesLoading(true);
       setAvatarsLoading(true);
-      setDemoMode(true);
       
       // Try to load demo user/org/roles from DB, fallback to hardcoded
       try {
@@ -298,10 +299,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
             .from('user_policies')
             .select('policy_id, permission_policies(id, policy_name, description)')
             .eq('user_id', demoUser.id);
-          demoRoles = (userPolicies || []).map((up: any) => ({
+          demoRoles = (userPolicies || []).map((up: { permission_policies: { id: string; policy_name: string; description: string | null } }) => ({
             id: up.permission_policies.id,
             name: up.permission_policies.policy_name,
-            description: up.permission_policies.description,
+            description: up.permission_policies.description || undefined,
           }));
         }
         
@@ -313,9 +314,22 @@ export function UserProvider({ children }: { children: ReactNode }) {
             app_metadata: {},
             user_metadata: {},
             aud: 'authenticated'
-          } as any;
+          } as User;
           setUser(supabaseUser);
-          setUserProfile(demoUser);
+          setUserProfile({
+            id: demoConfig.id,
+            email: demoConfig.email,
+            first_name: demoConfig.name?.split(' ')[0] || null,
+            last_name: demoConfig.name?.split(' ').slice(1).join(' ') || null,
+            org_id: `${demoConfig.id}-org`,
+            account_type: 'demo',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            last_login: new Date().toISOString(),
+            phone: null,
+            timezone: null,
+            locale: 'en'
+          } as UserProfile);
           
           // Always ensure demo org with subscription plan exists
           const ensuredDemoOrg = demoOrg && demoPlan ? 
@@ -349,19 +363,31 @@ export function UserProvider({ children }: { children: ReactNode }) {
       // Fallback to configurable demo context
       console.log('UserContext: Creating demo user from configuration');
       
-      // Get demo configuration (can be controlled via environment variables or localStorage)
-      const demoConfig = getDemoConfig();
-      console.log('Demo configuration loaded:', demoConfig);
-      
       // Create demo user
-      const demoUser = { id: demoConfig.id, email: demoConfig.email, name: demoConfig.name } as any;
-      setUser(demoUser);
-      setUserProfile({ 
+      const demoUser = { 
         id: demoConfig.id, 
         email: demoConfig.email, 
         name: demoConfig.name,
-        org_id: `${demoConfig.id}-org` 
-      } as any);
+        app_metadata: {},
+        user_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString()
+      } as User;
+      setUser(demoUser);
+      setUserProfile({
+        id: demoConfig.id,
+        email: demoConfig.email,
+        first_name: demoConfig.name?.split(' ')[0] || null,
+        last_name: demoConfig.name?.split(' ').slice(1).join(' ') || null,
+        org_id: `${demoConfig.id}-org`,
+        account_type: 'demo',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        last_login: new Date().toISOString(),
+        phone: null,
+        timezone: null,
+        locale: 'en'
+      } as UserProfile);
       
       // Create demo organization with appropriate subscription plan
       const subscriptionPlan = createDemoSubscriptionPlan(demoConfig);

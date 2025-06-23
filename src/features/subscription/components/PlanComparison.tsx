@@ -11,7 +11,6 @@ import {
   CardContent,
   Typography,
   Button,
-  Grid,
   Chip,
   List,
   ListItem,
@@ -178,7 +177,7 @@ const TransitionDialog: React.FC<TransitionDialogProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          {analysis.isUpgrade ? <Upgrade /> : <ArrowDownward />}
+          {analysis.isUpgrade ? <Upgrade /> : <ArrowDownward />}
           {analysis.isUpgrade ? 'Upgrade' : 'Change'} to {getTierDisplayName(analysis.toTier)}
         </Box>
       </DialogTitle>
@@ -229,7 +228,7 @@ const TransitionDialog: React.FC<TransitionDialogProps> = ({
               {analysis.featureChanges.gained.length > 0 && (
                 <Box sx={{ mb: 1 }}>
                   <Typography variant="subtitle2" color="success.main" gutterBottom>
-                    Features you'll gain:
+                    Features you&apos;ll gain:
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {analysis.featureChanges.gained.map((feature) => (
@@ -248,7 +247,7 @@ const TransitionDialog: React.FC<TransitionDialogProps> = ({
               {analysis.featureChanges.lost.length > 0 && (
                 <Box>
                   <Typography variant="subtitle2" color="error.main" gutterBottom>
-                    Features you'll lose:
+                    Features you&apos;ll lose:
                   </Typography>
                   <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                     {analysis.featureChanges.lost.map((feature) => (
@@ -314,7 +313,7 @@ const TransitionDialog: React.FC<TransitionDialogProps> = ({
           onClick={onConfirm}
           variant="contained"
           disabled={loading || !analysis.canTransition}
-                      startIcon={loading ? <CircularProgress size={16} /> : (analysis.isUpgrade ? <Upgrade /> : <ArrowDownward />)}
+          startIcon={loading ? <CircularProgress size={16} /> : (analysis.isUpgrade ? <Upgrade /> : <ArrowDownward />)}
         >
           {loading ? 'Processing...' : `Confirm ${analysis.isUpgrade ? 'Upgrade' : 'Change'}`}
         </Button>
