@@ -40,8 +40,6 @@ import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
 import { useDemo } from '@/context/DemoContext';
 import DemoTransitionPreview from './DemoTransitionPreview';
 
-
-
 /**
  * Detect if we're in development/demo environment
  */
@@ -325,8 +323,9 @@ export default function UnifiedDebugBanner() {
   const userContext = useUser();
   const subscription = useSubscription();
   
-  // Use demo context for scenario management
+  // Always call the hook unconditionally but handle the case where it's not available
   let demoContext: ReturnType<typeof useDemo> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let availableScenarios: Array<{ key: string; label: string; description: string; config: any }> = [];
   
   try {
@@ -489,9 +488,9 @@ export default function UnifiedDebugBanner() {
             <MenuItem value="" disabled sx={{ fontSize: '0.65rem' }}>
               Switch Mode
             </MenuItem>
-            {availableScenarios.map((scenario: { key: string; label: string; description: string; config: any }) => (
+            {availableScenarios.map((scenario) => (
               <MenuItem key={scenario.key} value={scenario.key} sx={{ fontSize: '0.65rem' }}>
-                {scenario.config.tier.toUpperCase()}: {scenario.config.name}
+                {(scenario.config?.tier || '').toUpperCase()}: {scenario.config?.name || scenario.label}
               </MenuItem>
             ))}
           </Select>

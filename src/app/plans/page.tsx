@@ -53,7 +53,7 @@ const featureDescriptions: Record<string, string> = {
   analytics: 'Track learning progress and performance metrics',
   user_management: 'Add and manage multiple users and roles',
   premium_themes: 'Access exclusive themes and customization options',
-  custom_branding: 'White-label the platform with your organization\'s branding',
+  custom_branding: 'White-label the platform with your organization&apos;s branding',
   collections: 'Create and organize custom game collections',
   scheduling: 'Schedule learning sessions and set automatic reminders',
   bulk_operations: 'Perform operations on multiple users at once',
@@ -244,7 +244,7 @@ const PlanCard: React.FC<PlanCardProps> = ({ tier, isRecommended, isCurrentPlan 
 };
 
 export default function PlansPage() {
-  const { user, org } = useUser();
+  const { org } = useUser();
   const { themeConfig } = useEnhancedTheme();
   
   const currentTier = org?.subscriptionPlan?.tier as SubscriptionTier | undefined;

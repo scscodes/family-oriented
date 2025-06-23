@@ -1,7 +1,6 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
-import { Box } from '@mui/material';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
@@ -14,7 +13,7 @@ import {
   createDemoAvatars, 
   createDemoRoles 
 } from '@/utils/demoConfig';
-import { useDemo, useDemoConfig } from './DemoContext';
+import { useDemo } from './DemoContext';
 
 // Types
 type Avatar = Database['public']['Tables']['avatars']['Row'];
@@ -111,7 +110,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [org, setOrg] = useState<OrgInfo | null>(null);
-  const [demoMode, setDemoMode] = useState<boolean>(false);
   
   // View As state
   const [viewAsRole, setViewAsRole] = useState<string | null>(null);
@@ -123,12 +121,13 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [avatarsLoading, setAvatarsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
 
-  // Get demo context for smooth transitions
+  // Always call the hook unconditionally, but handle the error if not in demo context
   let demoContext: ReturnType<typeof useDemo> | null = null;
   try {
     demoContext = useDemo();
   } catch {
-    // Not in demo mode or provider not available
+    // Not in demo mode or provider not available - this is fine
+    demoContext = null;
   }
 
   // Create stable loading state object using individual primitives
@@ -273,7 +272,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setUserLoading(true);
       setRolesLoading(true);
       setAvatarsLoading(true);
-      setDemoMode(true);
       
       // Try to load demo user/org/roles from DB, fallback to hardcoded
       try {
@@ -437,7 +435,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setAvatarsLoading(false);
       setIsInitialized(true);
     }
-  }, [supabase, loadAvatars]);
+  }, [supabase, loadAvatars, demoContext]);
 
   // Main initialization effect - runs only once
   useEffect(() => {

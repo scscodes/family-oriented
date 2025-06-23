@@ -7,7 +7,7 @@
  */
 
 import { mockDataGenerator } from './mockDataGenerator';
-import { getDemoConfig, getAvailableScenarios } from './demoConfig';
+import { getDemoConfig, getAvailableScenarios, type DemoUserConfig } from './demoConfig';
 import { logger } from './logger';
 
 interface PopulationResult {
@@ -71,7 +71,7 @@ export class DemoAnalyticsPopulator {
   /**
    * Populate analytics data for a specific demo scenario
    */
-  async populateScenario(config: any): Promise<{ avatarsProcessed: number; totalSessions: number }> {
+  async populateScenario(config: DemoUserConfig): Promise<{ avatarsProcessed: number; totalSessions: number }> {
     let avatarsProcessed = 0;
     let totalSessions = 0;
 
@@ -159,8 +159,6 @@ export class DemoAnalyticsPopulator {
 
           // Check if this avatar has analytics data
           try {
-            const { mockDataGenerator: generator } = await import('./mockDataGenerator');
-            
             // This is a simple check - we could enhance it to actually query the database
             // For now, we assume all demo avatars need data since this is a new system
             result.missingProgress.push(avatarId);
