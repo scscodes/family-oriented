@@ -1,0 +1,42 @@
+22e11f6e7d184f505861ea645d18e8ae
+/**
+ * Application-wide constants
+ */ // Game timing constants (in milliseconds)
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+function _export(target, all) {
+    for(var name in all)Object.defineProperty(target, name, {
+        enumerable: true,
+        get: all[name]
+    });
+}
+_export(exports, {
+    GAME_DEFAULTS: function() {
+        return GAME_DEFAULTS;
+    },
+    GAME_TIMINGS: function() {
+        return GAME_TIMINGS;
+    },
+    UI_CONSTANTS: function() {
+        return UI_CONSTANTS;
+    }
+});
+const GAME_TIMINGS = {
+    /** Time to show correct answer before moving to next question */ CORRECT_ANSWER_DELAY: 1500,
+    /** Time to show incorrect feedback before allowing next attempt */ INCORRECT_ANSWER_DELAY: 500,
+    /** Maximum attempts to find unique values before giving up */ MAX_UNIQUE_ATTEMPTS: 100
+};
+const GAME_DEFAULTS = {
+    /** Default number of questions per game session */ QUESTIONS_PER_SESSION: 10,
+    /** Default number of answer options */ OPTIONS_COUNT: 4,
+    /** Default minimum number for number games */ MIN_NUMBER: 1,
+    /** Default maximum number for number games */ MAX_NUMBER: 50
+};
+const UI_CONSTANTS = {
+    /** Standard icon size for shape games */ SHAPE_ICON_SIZE: 80,
+    /** Maximum width for game containers */ MAX_CONTAINER_WIDTH: 'lg'
+};
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkQ6XFxQcm9qZWN0c1xcZmFtaWx5LW9yaWVudGVkXFxzcmNcXHV0aWxzXFxjb25zdGFudHMudHMiXSwic291cmNlc0NvbnRlbnQiOlsiLyoqXHJcbiAqIEFwcGxpY2F0aW9uLXdpZGUgY29uc3RhbnRzXHJcbiAqL1xyXG5cclxuLy8gR2FtZSB0aW1pbmcgY29uc3RhbnRzIChpbiBtaWxsaXNlY29uZHMpXHJcbmV4cG9ydCBjb25zdCBHQU1FX1RJTUlOR1MgPSB7XHJcbiAgLyoqIFRpbWUgdG8gc2hvdyBjb3JyZWN0IGFuc3dlciBiZWZvcmUgbW92aW5nIHRvIG5leHQgcXVlc3Rpb24gKi9cclxuICBDT1JSRUNUX0FOU1dFUl9ERUxBWTogMTUwMCxcclxuICAvKiogVGltZSB0byBzaG93IGluY29ycmVjdCBmZWVkYmFjayBiZWZvcmUgYWxsb3dpbmcgbmV4dCBhdHRlbXB0ICovXHJcbiAgSU5DT1JSRUNUX0FOU1dFUl9ERUxBWTogNTAwLFxyXG4gIC8qKiBNYXhpbXVtIGF0dGVtcHRzIHRvIGZpbmQgdW5pcXVlIHZhbHVlcyBiZWZvcmUgZ2l2aW5nIHVwICovXHJcbiAgTUFYX1VOSVFVRV9BVFRFTVBUUzogMTAwLFxyXG59IGFzIGNvbnN0O1xyXG5cclxuLy8gRGVmYXVsdCBnYW1lIHNldHRpbmdzXHJcbmV4cG9ydCBjb25zdCBHQU1FX0RFRkFVTFRTID0ge1xyXG4gIC8qKiBEZWZhdWx0IG51bWJlciBvZiBxdWVzdGlvbnMgcGVyIGdhbWUgc2Vzc2lvbiAqL1xyXG4gIFFVRVNUSU9OU19QRVJfU0VTU0lPTjogMTAsXHJcbiAgLyoqIERlZmF1bHQgbnVtYmVyIG9mIGFuc3dlciBvcHRpb25zICovXHJcbiAgT1BUSU9OU19DT1VOVDogNCxcclxuICAvKiogRGVmYXVsdCBtaW5pbXVtIG51bWJlciBmb3IgbnVtYmVyIGdhbWVzICovXHJcbiAgTUlOX05VTUJFUjogMSxcclxuICAvKiogRGVmYXVsdCBtYXhpbXVtIG51bWJlciBmb3IgbnVtYmVyIGdhbWVzICovXHJcbiAgTUFYX05VTUJFUjogNTAsXHJcbn0gYXMgY29uc3Q7XHJcblxyXG4vLyBVSSBjb25zdGFudHNcclxuZXhwb3J0IGNvbnN0IFVJX0NPTlNUQU5UUyA9IHtcclxuICAvKiogU3RhbmRhcmQgaWNvbiBzaXplIGZvciBzaGFwZSBnYW1lcyAqL1xyXG4gIFNIQVBFX0lDT05fU0laRTogODAsXHJcbiAgLyoqIE1heGltdW0gd2lkdGggZm9yIGdhbWUgY29udGFpbmVycyAqL1xyXG4gIE1BWF9DT05UQUlORVJfV0lEVEg6ICdsZycsXHJcbn0gYXMgY29uc3Q7ICJdLCJuYW1lcyI6WyJHQU1FX0RFRkFVTFRTIiwiR0FNRV9USU1JTkdTIiwiVUlfQ09OU1RBTlRTIiwiQ09SUkVDVF9BTlNXRVJfREVMQVkiLCJJTkNPUlJFQ1RfQU5TV0VSX0RFTEFZIiwiTUFYX1VOSVFVRV9BVFRFTVBUUyIsIlFVRVNUSU9OU19QRVJfU0VTU0lPTiIsIk9QVElPTlNfQ09VTlQiLCJNSU5fTlVNQkVSIiwiTUFYX05VTUJFUiIsIlNIQVBFX0lDT05fU0laRSIsIk1BWF9DT05UQUlORVJfV0lEVEgiXSwibWFwcGluZ3MiOiJBQUFBOztDQUVDLEdBRUQsMENBQTBDOzs7Ozs7Ozs7Ozs7SUFXN0JBLGFBQWE7ZUFBYkE7O0lBVkFDLFlBQVk7ZUFBWkE7O0lBc0JBQyxZQUFZO2VBQVpBOzs7QUF0Qk4sTUFBTUQsZUFBZTtJQUMxQiwrREFBK0QsR0FDL0RFLHNCQUFzQjtJQUN0QixpRUFBaUUsR0FDakVDLHdCQUF3QjtJQUN4Qiw0REFBNEQsR0FDNURDLHFCQUFxQjtBQUN2QjtBQUdPLE1BQU1MLGdCQUFnQjtJQUMzQixpREFBaUQsR0FDakRNLHVCQUF1QjtJQUN2QixxQ0FBcUMsR0FDckNDLGVBQWU7SUFDZiw0Q0FBNEMsR0FDNUNDLFlBQVk7SUFDWiw0Q0FBNEMsR0FDNUNDLFlBQVk7QUFDZDtBQUdPLE1BQU1QLGVBQWU7SUFDMUIsdUNBQXVDLEdBQ3ZDUSxpQkFBaUI7SUFDakIsc0NBQXNDLEdBQ3RDQyxxQkFBcUI7QUFDdkIifQ==

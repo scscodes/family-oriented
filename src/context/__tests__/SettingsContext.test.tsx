@@ -1,11 +1,22 @@
+/**
+ * Enhanced SettingsContext Tests
+ * Updated to use new testing standards with improved safety measures
+ */
+
 import { renderHook, act } from '@testing-library/react';
 import { SettingsProvider, useSettings } from '../SettingsContext';
+
+// Test timeout constants
+const TEST_TIMEOUTS = {
+  FAST: 1000,
+  MEDIUM: 3000
+} as const;
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <SettingsProvider>{children}</SettingsProvider>
 );
 
-describe('SettingsContext', () => {
+describe('SettingsContext - Enhanced Tests', () => {
   beforeEach(() => {
     // Clear all localStorage mock calls
     (localStorage.clear as jest.Mock).mockClear();
@@ -14,6 +25,10 @@ describe('SettingsContext', () => {
     
     // Reset to default behavior
     (localStorage.getItem as jest.Mock).mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    jest.resetAllMocks();
   });
 
   it('provides default settings when none saved', () => {

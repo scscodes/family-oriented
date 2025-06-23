@@ -1,8 +1,16 @@
 /**
- * Basic validation tests for analytics service
+ * Enhanced Analytics Service Tests
+ * Updated with timeout protection, error boundary testing, and performance validation
  */
 
 import { analyticsService } from '../analyticsService';
+
+// Test timeout constants
+const TEST_TIMEOUTS = {
+  FAST: 2000,
+  MEDIUM: 5000,
+  SLOW: 8000
+} as const;
 
 // Mock all async Supabase calls
 beforeAll(() => {
@@ -31,21 +39,45 @@ beforeAll(() => {
   }));
 });
 
-describe('Analytics Service Validation', () => {
+describe('Analytics Service - Enhanced Validation', () => {
   const testAvatarId = '00000000-0000-0000-0000-000000000005';
   const testGameId = 'numbers' as const;
   const testSettings = { difficulty: 'easy', questionsPerSession: 5 };
 
-  test('should start a game session successfully', async () => {
-    const sessionId = await analyticsService.startGameSession(
-      testAvatarId, 
-      testGameId, 
-      testSettings
-    );
-    expect(sessionId).toBeDefined();
-    expect(typeof sessionId).toBe('string');
-    expect(sessionId.length).toBeGreaterThan(0);
+  // Enhanced setup and cleanup
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
+
+  afterEach(() => {
+    jest.resetAllMocks();
+  });
+
+  describe('Session Management', () => {
+    test('should start a game session with timeout protection', async () => {
+      const startTime = performance.now();
+      
+      const sessionPromise = analyticsService.startGameSession(
+        testAvatarId, 
+        testGameId, 
+        testSettings
+      );
+      
+      // Add timeout protection
+      const sessionId = await Promise.race([
+        sessionPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Session start timeout')), TEST_TIMEOUTS.FAST)
+        )
+      ]);
+      
+      const executionTime = performance.now() - startTime;
+      
+      expect(sessionId).toBeDefined();
+      expect(typeof sessionId).toBe('string');
+      expect(sessionId.length).toBeGreaterThan(0);
+      expect(executionTime).toBeLessThan(1000); // Performance check
+    }, TEST_TIMEOUTS.MEDIUM);
 
   test('should track events without errors', async () => {
     const sessionId = await analyticsService.startGameSession(
