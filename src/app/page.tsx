@@ -15,6 +15,8 @@ import SchoolIcon from '@mui/icons-material/School';
 import FamilyRestroomIcon from '@mui/icons-material/FamilyRestroom';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import BusinessIcon from '@mui/icons-material/Business';
+import CheckCircle from '@mui/icons-material/CheckCircle';
 import { SUBJECTS, gameDiscovery } from "@/utils/gameData";
 
 import ThemeSelector from "@/shared/components/forms/ThemeSelector";
@@ -83,7 +85,6 @@ function NavigationBar() {
       </Typography>
       
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <SubscriptionBadge variant="compact" />
         <ThemeSelector />
         <ProfileMenu />
       </Box>
@@ -546,6 +547,209 @@ export default function Home() {
           </Box>
         </Container>
       </Box>
+
+      {/* Subscription Plans Promotion Section */}
+      <Container maxWidth="lg" sx={{ py: 8 }}>
+        <Box textAlign="center" mb={6}>
+          <Typography variant="h3" component="h2" gutterBottom sx={{ 
+            fontWeight: 700,
+            color: headingColors.h3
+          }}>
+            Unlock Premium Learning Features
+          </Typography>
+          <Typography variant="h6" color="text.secondary" sx={{ maxWidth: '700px', mx: 'auto' }}>
+            Choose the perfect plan for your family or organization and unlock advanced features, 
+            unlimited access, and premium educational content
+          </Typography>
+        </Box>
+
+                 <Box sx={{ 
+           display: 'flex', 
+           flexDirection: { xs: 'column', md: 'row' },
+           gap: 4,
+           mb: 6
+         }}>
+          {/* Personal Plan Preview */}
+          <Card sx={{ 
+            flex: 1,
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            '&:hover': { 
+              transform: 'translateY(-4px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+            }
+          }}>
+            <CardContent sx={{ p: 4, textAlign: 'center' }}>
+              <FamilyRestroomIcon sx={{ fontSize: 50, color: headingColors.h5, mb: 2 }} />
+              <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
+                Personal Plan
+              </Typography>
+              <Typography variant="h4" color="primary" gutterBottom sx={{ fontWeight: 700 }}>
+                $9.99<Typography component="span" variant="body2" color="text.secondary">/mo</Typography>
+              </Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
+                Perfect for families with up to 5 children
+              </Typography>
+              <Box sx={{ textAlign: 'left', mb: 3 }}>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  5 children profiles
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Progress tracking & analytics
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Custom game collections
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  1,000 sessions per month
+                </Typography>
+              </Box>
+              <Button 
+                component={Link}
+                href="/plans"
+                variant="outlined" 
+                fullWidth
+                sx={{ fontWeight: 600 }}
+              >
+                Learn More
+              </Button>
+            </CardContent>
+          </Card>
+
+                    {/* Professional Plan Preview */}
+          <Card sx={{ 
+            flex: 1,
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            '&:hover': { 
+              transform: 'translateY(-4px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+            }
+          }}>
+            <CardContent sx={{ p: 4, textAlign: 'center' }}>
+              <SchoolIcon sx={{ fontSize: 50, color: headingColors.h5, mb: 2 }} />
+              <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
+                Professional Plan
+              </Typography>
+              <Typography variant="h4" color="primary" gutterBottom sx={{ fontWeight: 700 }}>
+                $19.99<Typography component="span" variant="body2" color="text.secondary">/mo</Typography>
+              </Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
+                For educators and small organizations
+              </Typography>
+              <Box sx={{ textAlign: 'left', mb: 3 }}>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  30 children profiles
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  User management & roles
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Premium themes & scheduling
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  5,000 sessions per month
+                </Typography>
+              </Box>
+              <Button 
+                component={Link}
+                href="/plans"
+                variant="outlined" 
+                fullWidth
+                sx={{ fontWeight: 600 }}
+              >
+                Learn More
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Enterprise Plan Preview */}
+          <Card sx={{ 
+            flex: 1,
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+            '&:hover': { 
+              transform: 'translateY(-4px)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+            }
+          }}>
+            <CardContent sx={{ p: 4, textAlign: 'center' }}>
+              <BusinessIcon sx={{ fontSize: 50, color: headingColors.h5, mb: 2 }} />
+              <Typography variant="h5" component="h3" gutterBottom sx={{ fontWeight: 600 }}>
+                Enterprise Plan
+              </Typography>
+              <Typography variant="h4" color="primary" gutterBottom sx={{ fontWeight: 700 }}>
+                $49.99<Typography component="span" variant="body2" color="text.secondary">/mo</Typography>
+              </Typography>
+              <Typography color="text.secondary" sx={{ mb: 3 }}>
+                For large organizations with unlimited access
+              </Typography>
+              <Box sx={{ textAlign: 'left', mb: 3 }}>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Unlimited children profiles
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Custom branding & API access
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Advanced reporting & bulk ops
+                </Typography>
+                <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center' }}>
+                  <CheckCircle fontSize="small" color="success" sx={{ mr: 1 }} />
+                  Unlimited sessions
+                </Typography>
+              </Box>
+              <Button 
+                component={Link}
+                href="/plans"
+                variant="outlined" 
+                fullWidth
+                sx={{ fontWeight: 600 }}
+              >
+                Learn More
+              </Button>
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Box textAlign="center">
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+            All plans include our complete library of educational games, family-safe content, and 24/7 support
+          </Typography>
+          <Button
+            component={Link}
+            href="/plans"
+            variant="outlined"
+            size="large"
+            sx={{ 
+              py: 1.5, 
+              px: 4, 
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              mr: 2
+            }}
+          >
+            Compare All Plans
+          </Button>
+          <Button
+            component={Link}
+            href="/dashboard"
+            variant="text"
+            size="large"
+            sx={{ py: 1.5, px: 4, fontSize: '1.1rem' }}
+          >
+            Start Free Trial →
+          </Button>
+        </Box>
+      </Container>
 
       {/* CTA Section */}
       <Box sx={{
