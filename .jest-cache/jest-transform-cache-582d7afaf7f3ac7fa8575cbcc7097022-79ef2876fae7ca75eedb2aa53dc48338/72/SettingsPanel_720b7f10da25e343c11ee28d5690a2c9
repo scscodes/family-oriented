@@ -1,0 +1,198 @@
+9bb7c27feee59ee46e3d40af0ebc5ee3
+"use client";
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+Object.defineProperty(exports, /**
+ * Settings panel component for configuring game parameters
+ */ "default", {
+    enumerable: true,
+    get: function() {
+        return SettingsPanel;
+    }
+});
+const _jsxruntime = require("react/jsx-runtime");
+const _react = /*#__PURE__*/ _interop_require_wildcard(require("react"));
+const _settingsUtils = require("../../../utils/settingsUtils");
+function _getRequireWildcardCache(nodeInterop) {
+    if (typeof WeakMap !== "function") return null;
+    var cacheBabelInterop = new WeakMap();
+    var cacheNodeInterop = new WeakMap();
+    return (_getRequireWildcardCache = function(nodeInterop) {
+        return nodeInterop ? cacheNodeInterop : cacheBabelInterop;
+    })(nodeInterop);
+}
+function _interop_require_wildcard(obj, nodeInterop) {
+    if (!nodeInterop && obj && obj.__esModule) {
+        return obj;
+    }
+    if (obj === null || typeof obj !== "object" && typeof obj !== "function") {
+        return {
+            default: obj
+        };
+    }
+    var cache = _getRequireWildcardCache(nodeInterop);
+    if (cache && cache.has(obj)) {
+        return cache.get(obj);
+    }
+    var newObj = {
+        __proto__: null
+    };
+    var hasPropertyDescriptor = Object.defineProperty && Object.getOwnPropertyDescriptor;
+    for(var key in obj){
+        if (key !== "default" && Object.prototype.hasOwnProperty.call(obj, key)) {
+            var desc = hasPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : null;
+            if (desc && (desc.get || desc.set)) {
+                Object.defineProperty(newObj, key, desc);
+            } else {
+                newObj[key] = obj[key];
+            }
+        }
+    }
+    newObj.default = obj;
+    if (cache) {
+        cache.set(obj, newObj);
+    }
+    return newObj;
+}
+function SettingsPanel({ gameType, onSettingsChange, isOpen, onClose }) {
+    const [settings, setSettings] = (0, _react.useState)(_settingsUtils.DEFAULT_SETTINGS[gameType]);
+    const [showNumberRange, setShowNumberRange] = (0, _react.useState)(gameType === 'numbers');
+    // Load settings when component mounts or gameType changes
+    (0, _react.useEffect)(()=>{
+        const loadedSettings = (0, _settingsUtils.getSettings)(gameType);
+        setSettings(loadedSettings);
+        setShowNumberRange(gameType === 'numbers');
+    }, [
+        gameType
+    ]);
+    const handleChange = (field, value)=>{
+        const updatedSettings = {
+            ...settings
+        };
+        if (field === 'numberRange') {
+            updatedSettings.numberRange = value;
+        } else if (field === 'questionCount') {
+            updatedSettings.questionCount = value;
+        } else if (field === 'optionsCount') {
+            updatedSettings.optionsCount = value;
+        }
+        setSettings(updatedSettings);
+    };
+    const handleSave = ()=>{
+        (0, _settingsUtils.saveSettings)(gameType, settings);
+        onSettingsChange(settings);
+        onClose();
+    };
+    if (!isOpen) return null;
+    return /*#__PURE__*/ (0, _jsxruntime.jsx)("div", {
+        children: /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+            children: [
+                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                    children: [
+                        /*#__PURE__*/ (0, _jsxruntime.jsx)("h2", {
+                            children: "Game Settings"
+                        }),
+                        /*#__PURE__*/ (0, _jsxruntime.jsx)("button", {
+                            onClick: onClose,
+                            children: "Close"
+                        })
+                    ]
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                    children: [
+                        showNumberRange && /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                            children: [
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)("label", {
+                                    children: "Number Range"
+                                }),
+                                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                    children: [
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("label", {
+                                                    children: "Min"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("input", {
+                                                    type: "number",
+                                                    value: settings.numberRange.min,
+                                                    onChange: (e)=>handleChange('numberRange', {
+                                                            ...settings.numberRange,
+                                                            min: Math.max(1, parseInt(e.target.value) || 1)
+                                                        }),
+                                                    min: "1"
+                                                })
+                                            ]
+                                        }),
+                                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                                            children: [
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("label", {
+                                                    children: "Max"
+                                                }),
+                                                /*#__PURE__*/ (0, _jsxruntime.jsx)("input", {
+                                                    type: "number",
+                                                    value: settings.numberRange.max,
+                                                    onChange: (e)=>handleChange('numberRange', {
+                                                            ...settings.numberRange,
+                                                            max: Math.max(settings.numberRange.min, parseInt(e.target.value) || settings.numberRange.min)
+                                                        }),
+                                                    min: settings.numberRange.min
+                                                })
+                                            ]
+                                        })
+                                    ]
+                                })
+                            ]
+                        }),
+                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                            children: [
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)("label", {
+                                    children: "Number of Questions"
+                                }),
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)("input", {
+                                    type: "number",
+                                    value: settings.questionCount,
+                                    onChange: (e)=>handleChange('questionCount', Math.max(1, parseInt(e.target.value) || 1)),
+                                    min: "1",
+                                    max: "50"
+                                })
+                            ]
+                        }),
+                        /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                            children: [
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)("label", {
+                                    children: "Number of Answer Choices"
+                                }),
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)("input", {
+                                    type: "number",
+                                    value: settings.optionsCount,
+                                    onChange: (e)=>handleChange('optionsCount', Math.max(2, Math.min(6, parseInt(e.target.value) || 2))),
+                                    min: "2",
+                                    max: "6"
+                                }),
+                                /*#__PURE__*/ (0, _jsxruntime.jsx)("p", {
+                                    children: "Min: 2, Max: 6 answer choices"
+                                })
+                            ]
+                        })
+                    ]
+                }),
+                /*#__PURE__*/ (0, _jsxruntime.jsxs)("div", {
+                    children: [
+                        /*#__PURE__*/ (0, _jsxruntime.jsx)("button", {
+                            onClick: onClose,
+                            children: "Cancel"
+                        }),
+                        /*#__PURE__*/ (0, _jsxruntime.jsx)("button", {
+                            onClick: handleSave,
+                            children: "Save Settings"
+                        })
+                    ]
+                })
+            ]
+        })
+    });
+}
+
+//# sourceMappingURL=data:application/json;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIkM6XFxyZXBvc1xcZmFtaWx5LW9yaWVudGVkXFxzcmNcXHNoYXJlZFxcY29tcG9uZW50c1xcZm9ybXNcXFNldHRpbmdzUGFuZWwudHN4Il0sInNvdXJjZXNDb250ZW50IjpbIlwidXNlIGNsaWVudFwiO1xyXG5cclxuaW1wb3J0IFJlYWN0LCB7IHVzZVN0YXRlLCB1c2VFZmZlY3QgfSBmcm9tIFwicmVhY3RcIjtcclxuaW1wb3J0IHsgR2FtZVNldHRpbmdzLCBERUZBVUxUX1NFVFRJTkdTLCBnZXRTZXR0aW5ncywgc2F2ZVNldHRpbmdzIH0gZnJvbSBcIkAvdXRpbHMvc2V0dGluZ3NVdGlsc1wiO1xyXG5pbXBvcnQgeyBHYW1lVHlwZSB9IGZyb20gXCJAL3V0aWxzL2dhbWVVdGlsc1wiO1xyXG5cclxuaW50ZXJmYWNlIFNldHRpbmdzUGFuZWxQcm9wcyB7XHJcbiAgZ2FtZVR5cGU6IEdhbWVUeXBlO1xyXG4gIG9uU2V0dGluZ3NDaGFuZ2U6IChzZXR0aW5nczogR2FtZVNldHRpbmdzKSA9PiB2b2lkO1xyXG4gIGlzT3BlbjogYm9vbGVhbjtcclxuICBvbkNsb3NlOiAoKSA9PiB2b2lkO1xyXG59XHJcblxyXG4vKipcclxuICogU2V0dGluZ3MgcGFuZWwgY29tcG9uZW50IGZvciBjb25maWd1cmluZyBnYW1lIHBhcmFtZXRlcnNcclxuICovXHJcbmV4cG9ydCBkZWZhdWx0IGZ1bmN0aW9uIFNldHRpbmdzUGFuZWwoeyBcclxuICBnYW1lVHlwZSwgXHJcbiAgb25TZXR0aW5nc0NoYW5nZSwgXHJcbiAgaXNPcGVuLCBcclxuICBvbkNsb3NlXHJcbn06IFNldHRpbmdzUGFuZWxQcm9wcykge1xyXG4gIGNvbnN0IFtzZXR0aW5ncywgc2V0U2V0dGluZ3NdID0gdXNlU3RhdGU8R2FtZVNldHRpbmdzPihERUZBVUxUX1NFVFRJTkdTW2dhbWVUeXBlXSk7XHJcbiAgY29uc3QgW3Nob3dOdW1iZXJSYW5nZSwgc2V0U2hvd051bWJlclJhbmdlXSA9IHVzZVN0YXRlKGdhbWVUeXBlID09PSAnbnVtYmVycycpO1xyXG4gIFxyXG4gIC8vIExvYWQgc2V0dGluZ3Mgd2hlbiBjb21wb25lbnQgbW91bnRzIG9yIGdhbWVUeXBlIGNoYW5nZXNcclxuICB1c2VFZmZlY3QoKCkgPT4ge1xyXG4gICAgY29uc3QgbG9hZGVkU2V0dGluZ3MgPSBnZXRTZXR0aW5ncyhnYW1lVHlwZSk7XHJcbiAgICBzZXRTZXR0aW5ncyhsb2FkZWRTZXR0aW5ncyk7XHJcbiAgICBzZXRTaG93TnVtYmVyUmFuZ2UoZ2FtZVR5cGUgPT09ICdudW1iZXJzJyk7XHJcbiAgfSwgW2dhbWVUeXBlXSk7XHJcbiAgXHJcbiAgdHlwZSBTZXR0aW5nc0ZpZWxkID0gJ251bWJlclJhbmdlJyB8ICdxdWVzdGlvbkNvdW50JyB8ICdvcHRpb25zQ291bnQnO1xyXG5cclxuICBjb25zdCBoYW5kbGVDaGFuZ2UgPSAoXHJcbiAgICBmaWVsZDogU2V0dGluZ3NGaWVsZCxcclxuICAgIHZhbHVlOiBudW1iZXIgfCB7IG1pbjogbnVtYmVyOyBtYXg6IG51bWJlciB9XHJcbiAgKSA9PiB7XHJcbiAgICBjb25zdCB1cGRhdGVkU2V0dGluZ3MgPSB7IC4uLnNldHRpbmdzIH07XHJcbiAgICBcclxuICAgIGlmIChmaWVsZCA9PT0gJ251bWJlclJhbmdlJykge1xyXG4gICAgICB1cGRhdGVkU2V0dGluZ3MubnVtYmVyUmFuZ2UgPSB2YWx1ZSBhcyB7IG1pbjogbnVtYmVyOyBtYXg6IG51bWJlciB9O1xyXG4gICAgfSBlbHNlIGlmIChmaWVsZCA9PT0gJ3F1ZXN0aW9uQ291bnQnKSB7XHJcbiAgICAgIHVwZGF0ZWRTZXR0aW5ncy5xdWVzdGlvbkNvdW50ID0gdmFsdWUgYXMgbnVtYmVyO1xyXG4gICAgfSBlbHNlIGlmIChmaWVsZCA9PT0gJ29wdGlvbnNDb3VudCcpIHtcclxuICAgICAgdXBkYXRlZFNldHRpbmdzLm9wdGlvbnNDb3VudCA9IHZhbHVlIGFzIG51bWJlcjtcclxuICAgIH1cclxuICAgIFxyXG4gICAgc2V0U2V0dGluZ3ModXBkYXRlZFNldHRpbmdzKTtcclxuICB9O1xyXG4gIFxyXG4gIGNvbnN0IGhhbmRsZVNhdmUgPSAoKSA9PiB7XHJcbiAgICBzYXZlU2V0dGluZ3MoZ2FtZVR5cGUsIHNldHRpbmdzKTtcclxuICAgIG9uU2V0dGluZ3NDaGFuZ2Uoc2V0dGluZ3MpO1xyXG4gICAgb25DbG9zZSgpO1xyXG4gIH07XHJcbiAgXHJcbiAgaWYgKCFpc09wZW4pIHJldHVybiBudWxsO1xyXG4gIFxyXG4gIHJldHVybiAoXHJcbiAgICA8ZGl2PlxyXG4gICAgICA8ZGl2PlxyXG4gICAgICAgIDxkaXY+XHJcbiAgICAgICAgICA8aDI+R2FtZSBTZXR0aW5nczwvaDI+XHJcbiAgICAgICAgICA8YnV0dG9uIG9uQ2xpY2s9e29uQ2xvc2V9PkNsb3NlPC9idXR0b24+XHJcbiAgICAgICAgPC9kaXY+XHJcbiAgICAgICAgXHJcbiAgICAgICAgPGRpdj5cclxuICAgICAgICAgIHsvKiBOdW1iZXIgUmFuZ2UgU2V0dGluZ3MgKi99XHJcbiAgICAgICAgICB7c2hvd051bWJlclJhbmdlICYmIChcclxuICAgICAgICAgICAgPGRpdj5cclxuICAgICAgICAgICAgICA8bGFiZWw+TnVtYmVyIFJhbmdlPC9sYWJlbD5cclxuICAgICAgICAgICAgICA8ZGl2PlxyXG4gICAgICAgICAgICAgICAgPGRpdj5cclxuICAgICAgICAgICAgICAgICAgPGxhYmVsPk1pbjwvbGFiZWw+XHJcbiAgICAgICAgICAgICAgICAgIDxpbnB1dCBcclxuICAgICAgICAgICAgICAgICAgICB0eXBlPVwibnVtYmVyXCIgXHJcbiAgICAgICAgICAgICAgICAgICAgdmFsdWU9e3NldHRpbmdzLm51bWJlclJhbmdlLm1pbn1cclxuICAgICAgICAgICAgICAgICAgICBvbkNoYW5nZT17KGUpID0+IGhhbmRsZUNoYW5nZSgnbnVtYmVyUmFuZ2UnLCB7XHJcbiAgICAgICAgICAgICAgICAgICAgICAuLi5zZXR0aW5ncy5udW1iZXJSYW5nZSxcclxuICAgICAgICAgICAgICAgICAgICAgIG1pbjogTWF0aC5tYXgoMSwgcGFyc2VJbnQoZS50YXJnZXQudmFsdWUpIHx8IDEpXHJcbiAgICAgICAgICAgICAgICAgICAgfSl9XHJcbiAgICAgICAgICAgICAgICAgICAgbWluPVwiMVwiXHJcbiAgICAgICAgICAgICAgICAgIC8+XHJcbiAgICAgICAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICAgICAgICAgIDxkaXY+XHJcbiAgICAgICAgICAgICAgICAgIDxsYWJlbD5NYXg8L2xhYmVsPlxyXG4gICAgICAgICAgICAgICAgICA8aW5wdXQgXHJcbiAgICAgICAgICAgICAgICAgICAgdHlwZT1cIm51bWJlclwiIFxyXG4gICAgICAgICAgICAgICAgICAgIHZhbHVlPXtzZXR0aW5ncy5udW1iZXJSYW5nZS5tYXh9XHJcbiAgICAgICAgICAgICAgICAgICAgb25DaGFuZ2U9eyhlKSA9PiBoYW5kbGVDaGFuZ2UoJ251bWJlclJhbmdlJywge1xyXG4gICAgICAgICAgICAgICAgICAgICAgLi4uc2V0dGluZ3MubnVtYmVyUmFuZ2UsXHJcbiAgICAgICAgICAgICAgICAgICAgICBtYXg6IE1hdGgubWF4KHNldHRpbmdzLm51bWJlclJhbmdlLm1pbiwgcGFyc2VJbnQoZS50YXJnZXQudmFsdWUpIHx8IHNldHRpbmdzLm51bWJlclJhbmdlLm1pbilcclxuICAgICAgICAgICAgICAgICAgICB9KX1cclxuICAgICAgICAgICAgICAgICAgICBtaW49e3NldHRpbmdzLm51bWJlclJhbmdlLm1pbn1cclxuICAgICAgICAgICAgICAgICAgLz5cclxuICAgICAgICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICAgICl9XHJcbiAgICAgICAgICBcclxuICAgICAgICAgIHsvKiBRdWVzdGlvbiBDb3VudCBTZXR0aW5nICovfVxyXG4gICAgICAgICAgPGRpdj5cclxuICAgICAgICAgICAgPGxhYmVsPk51bWJlciBvZiBRdWVzdGlvbnM8L2xhYmVsPlxyXG4gICAgICAgICAgICA8aW5wdXQgXHJcbiAgICAgICAgICAgICAgdHlwZT1cIm51bWJlclwiIFxyXG4gICAgICAgICAgICAgIHZhbHVlPXtzZXR0aW5ncy5xdWVzdGlvbkNvdW50fVxyXG4gICAgICAgICAgICAgIG9uQ2hhbmdlPXsoZSkgPT4gaGFuZGxlQ2hhbmdlKCdxdWVzdGlvbkNvdW50JywgTWF0aC5tYXgoMSwgcGFyc2VJbnQoZS50YXJnZXQudmFsdWUpIHx8IDEpKX1cclxuICAgICAgICAgICAgICBtaW49XCIxXCJcclxuICAgICAgICAgICAgICBtYXg9XCI1MFwiXHJcbiAgICAgICAgICAgIC8+XHJcbiAgICAgICAgICA8L2Rpdj5cclxuICAgICAgICAgIFxyXG4gICAgICAgICAgey8qIE9wdGlvbnMgQ291bnQgU2V0dGluZyAqL31cclxuICAgICAgICAgIDxkaXY+XHJcbiAgICAgICAgICAgIDxsYWJlbD5OdW1iZXIgb2YgQW5zd2VyIENob2ljZXM8L2xhYmVsPlxyXG4gICAgICAgICAgICA8aW5wdXQgXHJcbiAgICAgICAgICAgICAgdHlwZT1cIm51bWJlclwiIFxyXG4gICAgICAgICAgICAgIHZhbHVlPXtzZXR0aW5ncy5vcHRpb25zQ291bnR9XHJcbiAgICAgICAgICAgICAgb25DaGFuZ2U9eyhlKSA9PiBoYW5kbGVDaGFuZ2UoJ29wdGlvbnNDb3VudCcsIE1hdGgubWF4KDIsIE1hdGgubWluKDYsIHBhcnNlSW50KGUudGFyZ2V0LnZhbHVlKSB8fCAyKSkpfVxyXG4gICAgICAgICAgICAgIG1pbj1cIjJcIlxyXG4gICAgICAgICAgICAgIG1heD1cIjZcIlxyXG4gICAgICAgICAgICAvPlxyXG4gICAgICAgICAgICA8cD5NaW46IDIsIE1heDogNiBhbnN3ZXIgY2hvaWNlczwvcD5cclxuICAgICAgICAgIDwvZGl2PlxyXG4gICAgICAgIDwvZGl2PlxyXG4gICAgICAgIFxyXG4gICAgICAgIDxkaXY+XHJcbiAgICAgICAgICA8YnV0dG9uIG9uQ2xpY2s9e29uQ2xvc2V9PkNhbmNlbDwvYnV0dG9uPlxyXG4gICAgICAgICAgPGJ1dHRvbiBvbkNsaWNrPXtoYW5kbGVTYXZlfT5TYXZlIFNldHRpbmdzPC9idXR0b24+XHJcbiAgICAgICAgPC9kaXY+XHJcbiAgICAgIDwvZGl2PlxyXG4gICAgPC9kaXY+XHJcbiAgKTtcclxufSAiXSwibmFtZXMiOlsiU2V0dGluZ3NQYW5lbCIsImdhbWVUeXBlIiwib25TZXR0aW5nc0NoYW5nZSIsImlzT3BlbiIsIm9uQ2xvc2UiLCJzZXR0aW5ncyIsInNldFNldHRpbmdzIiwidXNlU3RhdGUiLCJERUZBVUxUX1NFVFRJTkdTIiwic2hvd051bWJlclJhbmdlIiwic2V0U2hvd051bWJlclJhbmdlIiwidXNlRWZmZWN0IiwibG9hZGVkU2V0dGluZ3MiLCJnZXRTZXR0aW5ncyIsImhhbmRsZUNoYW5nZSIsImZpZWxkIiwidmFsdWUiLCJ1cGRhdGVkU2V0dGluZ3MiLCJudW1iZXJSYW5nZSIsInF1ZXN0aW9uQ291bnQiLCJvcHRpb25zQ291bnQiLCJoYW5kbGVTYXZlIiwic2F2ZVNldHRpbmdzIiwiZGl2IiwiaDIiLCJidXR0b24iLCJvbkNsaWNrIiwibGFiZWwiLCJpbnB1dCIsInR5cGUiLCJtaW4iLCJvbkNoYW5nZSIsImUiLCJNYXRoIiwibWF4IiwicGFyc2VJbnQiLCJ0YXJnZXQiLCJwIl0sIm1hcHBpbmdzIjoiQUFBQTs7Ozs7K0JBYUE7O0NBRUMsR0FDRDs7O2VBQXdCQTs7OzsrREFkbUI7K0JBQytCOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7QUFhM0QsU0FBU0EsY0FBYyxFQUNwQ0MsUUFBUSxFQUNSQyxnQkFBZ0IsRUFDaEJDLE1BQU0sRUFDTkMsT0FBTyxFQUNZO0lBQ25CLE1BQU0sQ0FBQ0MsVUFBVUMsWUFBWSxHQUFHQyxJQUFBQSxlQUFRLEVBQWVDLCtCQUFnQixDQUFDUCxTQUFTO0lBQ2pGLE1BQU0sQ0FBQ1EsaUJBQWlCQyxtQkFBbUIsR0FBR0gsSUFBQUEsZUFBUSxFQUFDTixhQUFh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

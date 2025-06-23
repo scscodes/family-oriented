@@ -18,6 +18,7 @@ type AvatarProfile = {
 
 // Avatar profiles representing different learning levels and patterns
 const AVATAR_PROFILES: AvatarProfile[] = [
+  // Original hardcoded demo avatar (kept for backward compatibility)
   {
     id: '00000000-0000-0000-0000-000000000002', // Existing demo avatar
     name: 'My Child',
@@ -47,6 +48,222 @@ const AVATAR_PROFILES: AvatarProfile[] = [
     name: 'Math Enthusiast',
     level: 'intermediate',
     pattern: 'subject_focused'
+  },
+
+  // New demo scenario avatars - Personal Basic (2 avatars)
+  {
+    id: 'demo-personal-basic-avatar-1',
+    name: 'Demo Child 1',
+    level: 'beginner',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-personal-basic-avatar-2',
+    name: 'Demo Child 2',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+
+  // Personal Limit (5 avatars)
+  {
+    id: 'demo-personal-limit-avatar-1',
+    name: 'Demo Child 1',
+    level: 'beginner',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-personal-limit-avatar-2',
+    name: 'Demo Child 2',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-personal-limit-avatar-3',
+    name: 'Demo Child 3',
+    level: 'advanced',
+    pattern: 'high_performer'
+  },
+  {
+    id: 'demo-personal-limit-avatar-4',
+    name: 'Demo Child 4',
+    level: 'beginner',
+    pattern: 'needs_support'
+  },
+  {
+    id: 'demo-personal-limit-avatar-5',
+    name: 'Demo Child 5',
+    level: 'intermediate',
+    pattern: 'subject_focused'
+  },
+
+  // Professional Educator (15 avatars - representative sample)
+  {
+    id: 'demo-professional-educator-avatar-1',
+    name: 'Demo Child 1',
+    level: 'beginner',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-professional-educator-avatar-2',
+    name: 'Demo Child 2',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-professional-educator-avatar-3',
+    name: 'Demo Child 3',
+    level: 'advanced',
+    pattern: 'high_performer'
+  },
+  {
+    id: 'demo-professional-educator-avatar-4',
+    name: 'Demo Child 4',
+    level: 'beginner',
+    pattern: 'needs_support'
+  },
+  {
+    id: 'demo-professional-educator-avatar-5',
+    name: 'Demo Child 5',
+    level: 'intermediate',
+    pattern: 'subject_focused'
+  },
+  {
+    id: 'demo-professional-educator-avatar-6',
+    name: 'Demo Child 6',
+    level: 'advanced',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-professional-educator-avatar-7',
+    name: 'Demo Child 7',
+    level: 'beginner',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-professional-educator-avatar-8',
+    name: 'Demo Child 8',
+    level: 'intermediate',
+    pattern: 'high_performer'
+  },
+
+  // Professional Admin (25 avatars - representative sample)
+  {
+    id: 'demo-professional-admin-avatar-1',
+    name: 'Demo Child 1',
+    level: 'beginner',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-professional-admin-avatar-2',
+    name: 'Demo Child 2',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-professional-admin-avatar-3',
+    name: 'Demo Child 3',
+    level: 'advanced',
+    pattern: 'high_performer'
+  },
+  {
+    id: 'demo-professional-admin-avatar-4',
+    name: 'Demo Child 4',
+    level: 'beginner',
+    pattern: 'needs_support'
+  },
+  {
+    id: 'demo-professional-admin-avatar-5',
+    name: 'Demo Child 5',
+    level: 'intermediate',
+    pattern: 'subject_focused'
+  },
+  {
+    id: 'demo-professional-admin-avatar-10',
+    name: 'Demo Child 10',
+    level: 'advanced',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-professional-admin-avatar-15',
+    name: 'Demo Child 15',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-professional-admin-avatar-20',
+    name: 'Demo Child 20',
+    level: 'beginner',
+    pattern: 'high_performer'
+  },
+
+  // Enterprise Full (150 avatars - representative sample)
+  {
+    id: 'demo-enterprise-full-avatar-1',
+    name: 'Demo Child 1',
+    level: 'beginner',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-2',
+    name: 'Demo Child 2',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-3',
+    name: 'Demo Child 3',
+    level: 'advanced',
+    pattern: 'high_performer'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-4',
+    name: 'Demo Child 4',
+    level: 'beginner',
+    pattern: 'needs_support'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-5',
+    name: 'Demo Child 5',
+    level: 'intermediate',
+    pattern: 'subject_focused'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-25',
+    name: 'Demo Child 25',
+    level: 'advanced',
+    pattern: 'steady_improvement'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-50',
+    name: 'Demo Child 50',
+    level: 'intermediate',
+    pattern: 'steady_player'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-75',
+    name: 'Demo Child 75',
+    level: 'beginner',
+    pattern: 'high_performer'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-100',
+    name: 'Demo Child 100',
+    level: 'advanced',
+    pattern: 'needs_support'
+  },
+  {
+    id: 'demo-enterprise-full-avatar-125',
+    name: 'Demo Child 125',
+    level: 'intermediate',
+    pattern: 'subject_focused'
+  },
+
+  // Educator Only (0 avatars in demoConfig but we'll add some for testing)
+  {
+    id: 'demo-educator-only-avatar-1',
+    name: 'Test Student',
+    level: 'intermediate',
+    pattern: 'steady_player'
   }
 ] as const;
 

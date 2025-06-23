@@ -216,8 +216,13 @@ export function createDemoRoles(config: DemoUserConfig) {
 
 /**
  * Demo scenario switching for development
+ * 
+ * @deprecated Use DemoContext.switchScenario() instead for smooth transitions
+ * This function is kept for backward compatibility but will cause page reloads
  */
 export function switchDemoScenario(scenarioKey: string) {
+  console.warn('switchDemoScenario is deprecated. Use DemoContext.switchScenario() for smooth transitions.');
+  
   if (typeof window !== 'undefined') {
     // Store scenario preference
     localStorage.setItem('demo_scenario', scenarioKey);

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
+import { Box } from '@mui/material';
 import { createClient } from '@/lib/supabase/client';
 import { User } from '@supabase/supabase-js';
 import type { Database } from '@/lib/supabase/database.types';
@@ -13,6 +14,7 @@ import {
   createDemoAvatars, 
   createDemoRoles 
 } from '@/utils/demoConfig';
+import { useDemo, useDemoConfig } from './DemoContext';
 
 // Types
 type Avatar = Database['public']['Tables']['avatars']['Row'];
@@ -109,6 +111,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [org, setOrg] = useState<OrgInfo | null>(null);
+  const [demoMode, setDemoMode] = useState<boolean>(false);
   
   // View As state
   const [viewAsRole, setViewAsRole] = useState<string | null>(null);
@@ -119,6 +122,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [rolesLoading, setRolesLoading] = useState<boolean>(true);
   const [avatarsLoading, setAvatarsLoading] = useState<boolean>(true);
   const [isInitialized, setIsInitialized] = useState<boolean>(false);
+
+  // Get demo context for smooth transitions
+  let demoContext: ReturnType<typeof useDemo> | null = null;
+  try {
+    demoContext = useDemo();
+  } catch {
+    // Not in demo mode or provider not available
+  }
 
   // Create stable loading state object using individual primitives
   const loadingState = useMemo<LoadingState>(() => ({
@@ -254,14 +265,15 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
   // Enhanced demo user/org/roles fallback
   const loadDemoUserContext = useCallback(async () => {
-    // Get demo configuration first (can be controlled via environment variables or localStorage)
-    const demoConfig = getDemoConfig();
+    // Get demo configuration from DemoContext if available, otherwise fallback
+    const demoConfig = demoContext?.currentConfig || getDemoConfig();
     console.log('Demo configuration loaded:', demoConfig);
     
     try {
       setUserLoading(true);
       setRolesLoading(true);
       setAvatarsLoading(true);
+      setDemoMode(true);
       
       // Try to load demo user/org/roles from DB, fallback to hardcoded
       try {
@@ -498,6 +510,82 @@ export function UserProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, [supabase.auth, loadUserProfile, loadDemoUserContext, fetchRolesAndOrg, loadAvatars]);
+
+  // Listen for demo scenario changes from DemoContext
+  useEffect(() => {
+    if (!demoContext) return;
+
+    const handleDemoScenarioChange = async (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { config: newConfig } = customEvent.detail;
+      
+      try {
+        logger.info('Demo scenario changed, updating user context:', newConfig);
+        
+        // Update demo user context with new configuration
+        const demoUser = { 
+          id: newConfig.id, 
+          email: newConfig.email, 
+          name: newConfig.name,
+          app_metadata: {},
+          user_metadata: {},
+          aud: 'authenticated',
+          created_at: new Date().toISOString()
+        } as User;
+        setUser(demoUser);
+        
+        setUserProfile({
+          id: newConfig.id,
+          email: newConfig.email,
+          first_name: newConfig.name?.split(' ')[0] || null,
+          last_name: newConfig.name?.split(' ').slice(1).join(' ') || null,
+          org_id: `${newConfig.id}-org`,
+          account_type: 'demo',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          last_login: new Date().toISOString(),
+          phone: null,
+          timezone: null,
+          locale: 'en'
+        } as UserProfile);
+        
+        // Create demo organization with new subscription plan
+        const subscriptionPlan = createDemoSubscriptionPlan(newConfig);
+        const demoOrg = { 
+          id: `${newConfig.id}-org`, 
+          name: newConfig.orgName, 
+          subscriptionPlan 
+        };
+        setOrg(demoOrg);
+        
+        // Create demo roles
+        const demoRoles = createDemoRoles(newConfig);
+        setRoles(demoRoles);
+        
+        // Create demo avatars
+        const demoAvatars = createDemoAvatars(newConfig);
+        setAvatars(demoAvatars);
+        if (demoAvatars.length > 0) {
+          setCurrentAvatar(demoAvatars[0]);
+        }
+        
+        logger.info('Demo user context updated successfully for new scenario');
+        
+      } catch (err) {
+        logger.error('Failed to update user context for new demo scenario:', err);
+        setError('Failed to switch demo scenario');
+      }
+    };
+
+    // Add event listener for demo scenario changes
+    if (typeof window !== 'undefined') {
+      window.addEventListener('demoScenarioChanged', handleDemoScenarioChange);
+      
+      return () => {
+        window.removeEventListener('demoScenarioChanged', handleDemoScenarioChange);
+      };
+    }
+  }, [demoContext]);
 
   // Utility functions
   const hasRole = useCallback((roleName: string) => {

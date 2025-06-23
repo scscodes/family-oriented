@@ -37,7 +37,8 @@ import {
 import { useUser } from '@/context/UserContext';
 import { useSubscription } from '@/hooks/useSubscription';
 import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
-import { getAvailableScenarios, switchDemoScenario } from '@/utils/demoConfig';
+import { useDemo } from '@/context/DemoContext';
+import DemoTransitionPreview from './DemoTransitionPreview';
 
 
 
@@ -87,13 +88,21 @@ function DebugPopupContent({
   };
   hasIssues: boolean;
 }) {
-  const availableScenarios = getAvailableScenarios();
+  const demoContext = useDemo();
+  const { availableScenarios, switchScenario, isTransitioning, error, clearError } = demoContext;
   const [selectedScenario, setSelectedScenario] = useState('');
+  const [previewScenario, setPreviewScenario] = useState<string | null>(null);
 
-  const handleScenarioChange = (event: SelectChangeEvent<string>) => {
+  const handleScenarioChange = async (event: SelectChangeEvent<string>) => {
     const scenarioKey = event.target.value as string;
     setSelectedScenario(scenarioKey);
-    switchDemoScenario(scenarioKey);
+    
+    try {
+      clearError();
+      await switchScenario(scenarioKey);
+    } catch (err) {
+      console.error('Failed to switch scenario:', err);
+    }
   };
 
   const handleRefresh = () => {
@@ -169,22 +178,42 @@ function DebugPopupContent({
 
           <Divider sx={{ mb: 2 }} />
 
+          {/* Demo Context Error Display */}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                Demo Error: {error}
+              </Typography>
+            </Alert>
+          )}
+
           {/* Scenario Switcher */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom>
               Demo Scenario Switcher
+              {isTransitioning && (
+                <Typography variant="caption" sx={{ ml: 1, color: 'info.main' }}>
+                  🔄 Switching...
+                </Typography>
+              )}
             </Typography>
             <FormControl fullWidth size="small">
               <Select
                 value={selectedScenario}
                 onChange={handleScenarioChange}
                 displayEmpty
+                disabled={isTransitioning}
               >
                 <MenuItem value="" disabled>
-                  Switch to Different Scenario
+                  {isTransitioning ? 'Switching Scenario...' : 'Switch to Different Scenario'}
                 </MenuItem>
-                {availableScenarios.map((scenario) => (
-                  <MenuItem key={scenario.key} value={scenario.key}>
+                {availableScenarios.map((scenario: { key: string; label: string; description: string }) => (
+                  <MenuItem 
+                    key={scenario.key} 
+                    value={scenario.key}
+                    onMouseEnter={() => setPreviewScenario(scenario.key)}
+                    onMouseLeave={() => setPreviewScenario(null)}
+                  >
                     {scenario.label}
                     <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
                       ({scenario.description})
@@ -193,6 +222,16 @@ function DebugPopupContent({
                 ))}
               </Select>
             </FormControl>
+            
+            {/* Transition Preview */}
+            {previewScenario && previewScenario !== demoContext.currentScenario && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, border: 1, borderColor: 'grey.200' }}>
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 600, mb: 1, display: 'block' }}>
+                  Preview Changes:
+                </Typography>
+                <DemoTransitionPreview targetScenarioKey={previewScenario} />
+              </Box>
+            )}
           </Box>
 
           <Divider sx={{ mb: 2 }} />
@@ -285,10 +324,25 @@ export default function UnifiedDebugBanner() {
   const { isHydrated: themeHydrated } = useEnhancedTheme();
   const userContext = useUser();
   const subscription = useSubscription();
-  const availableScenarios = getAvailableScenarios();
+  
+  // Use demo context for scenario management
+  let demoContext: ReturnType<typeof useDemo> | null = null;
+  let availableScenarios: Array<{ key: string; label: string; description: string; config: any }> = [];
+  
+  try {
+    demoContext = useDemo();
+    availableScenarios = demoContext.availableScenarios;
+  } catch {
+    // Not in demo mode or provider not available
+    availableScenarios = [];
+  }
 
   const { loadingState } = userContext;
   const hasIssues = !userContext.org || !subscription.subscriptionPlan || !subscription.tier;
+  
+  // Include demo context issues in overall health check
+  const hasDemoIssues = demoContext?.error !== null;
+  const isTransitioning = demoContext?.isTransitioning || false;
 
   // Hydration status icons
   const hydrationStatus = useMemo(() => {
@@ -331,10 +385,18 @@ export default function UnifiedDebugBanner() {
   // Avatar count display
   const avatarDisplay = `${userContext.avatars?.length || 0}/${subscription.subscriptionPlan?.avatar_limit || 'N/A'}`;
 
-  const handleQuickScenarioChange = (event: SelectChangeEvent<string>) => {
+  const handleQuickScenarioChange = async (event: SelectChangeEvent<string>) => {
     const scenarioKey = event.target.value as string;
     setSelectedScenario(scenarioKey);
-    switchDemoScenario(scenarioKey);
+    
+    if (demoContext) {
+      try {
+        demoContext.clearError();
+        await demoContext.switchScenario(scenarioKey);
+      } catch (err) {
+        console.error('Failed to switch scenario:', err);
+      }
+    }
   };
 
   return (
@@ -345,14 +407,16 @@ export default function UnifiedDebugBanner() {
         top: 8, 
         left: '50%',
         transform: 'translateX(-50%)',
-        bgcolor: hasIssues ? 'error.light' : 'warning.main',
+        bgcolor: hasIssues || hasDemoIssues ? 'error.light' : isTransitioning ? 'info.light' : 'warning.main',
         color: 'black',
         border: 1,
-        borderColor: hasIssues ? 'error.dark' : 'warning.dark',
+        borderColor: hasIssues || hasDemoIssues ? 'error.dark' : isTransitioning ? 'info.dark' : 'warning.dark',
         borderRadius: 1,
         zIndex: 100, // Lower z-index to avoid conflicts with navigation
         p: 0.5,
-        boxShadow: 2
+        boxShadow: 2,
+        opacity: isTransitioning ? 0.8 : 1,
+        transition: 'all 0.3s ease'
       }}>
         <Stack direction="row" alignItems="center" spacing={1} sx={{ fontSize: '0.75rem' }}>
           {/* Debug indicator */}
@@ -385,9 +449,24 @@ export default function UnifiedDebugBanner() {
             <Box sx={{ fontFamily: 'monospace' }}>🔑{rolesDisplay}</Box>
           </Tooltip>
           
+          {/* Transition indicator */}
+          {isTransitioning && (
+            <Tooltip title="Switching demo scenario..." arrow>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                fontSize: '0.7rem',
+                fontFamily: 'monospace',
+                animation: 'pulse 1.5s infinite'
+              }}>
+                🔄
+              </Box>
+            </Tooltip>
+          )}
+          
           {/* Issue indicator */}
-          {hasIssues && (
-            <Tooltip title="System issues detected - click settings for details" arrow>
+          {(hasIssues || hasDemoIssues) && (
+            <Tooltip title={`System issues detected${hasDemoIssues ? ` - Demo: ${demoContext?.error}` : ''} - click settings for details`} arrow>
               <Warning sx={{ fontSize: 16, color: 'error.main' }} />
             </Tooltip>
           )}
@@ -410,7 +489,7 @@ export default function UnifiedDebugBanner() {
             <MenuItem value="" disabled sx={{ fontSize: '0.65rem' }}>
               Switch Mode
             </MenuItem>
-            {availableScenarios.map(scenario => (
+            {availableScenarios.map((scenario: { key: string; label: string; description: string; config: any }) => (
               <MenuItem key={scenario.key} value={scenario.key} sx={{ fontSize: '0.65rem' }}>
                 {scenario.config.tier.toUpperCase()}: {scenario.config.name}
               </MenuItem>

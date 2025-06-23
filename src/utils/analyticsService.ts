@@ -240,95 +240,120 @@ export class SupabaseAnalyticsService {
   }
 
   /**
-   * Get learning progress for an avatar (Supabase-integrated)
+   * Get learning progress for an avatar (Smart routing: demo-first approach)
    */
   async getAvatarProgress(avatarId: string): Promise<LearningProgressData[]> {
-    const { data, error } = await this.supabase
-      .from('learning_progress')
-      .select('*')
-      .eq('avatar_id', avatarId)
-      .order('last_played', { ascending: false });
+    logger.debug(`[Analytics] Getting avatar progress for: ${avatarId}`);
+    
+    // Smart routing - check if we should use database or demo data
+    if (!this.shouldUseDatabase(avatarId)) {
+      logger.info(`[Analytics] Using demo data for avatar: ${avatarId}`);
+      return this.generateDemoProgress(avatarId);
+    }
+    
+    // Real user - use database
+    logger.debug(`[Analytics] Using database for real user avatar: ${avatarId}`);
+    
+    try {
+      const { data, error } = await this.supabase
+        .from('learning_progress')
+        .select('*')
+        .eq('avatar_id', avatarId)
+        .order('last_played', { ascending: false });
 
-    if (error) throw error;
+      if (error) {
+        logger.error(`[Analytics] Database error for avatar ${avatarId}:`, error);
+        throw error;
+      }
 
-    // Transform Supabase data to our interface
-    return (data || []).map(row => ({
-      avatarId: row.avatar_id,
-      gameId: row.game_type as GameType,
-      skillLevel: row.skill_level as 'beginner' | 'intermediate' | 'advanced',
-      masteryScore: row.mastery_score || 0,
-      learningObjectivesMet: row.learning_objectives_met || [],
-      prerequisiteCompletion: (row.prerequisite_completion as Record<string, boolean>) || {},
-      lastPlayed: new Date(row.last_played),
-      totalSessions: row.total_sessions || 0,
-      averagePerformance: row.average_performance || 0,
-      improvementTrend: row.improvement_trend as 'improving' | 'stable' | 'declining'
-    }));
+      // Transform Supabase data to our interface
+      const progressData = (data || []).map(row => ({
+        avatarId: row.avatar_id,
+        gameId: row.game_type as GameType,
+        skillLevel: row.skill_level as 'beginner' | 'intermediate' | 'advanced',
+        masteryScore: row.mastery_score || 0,
+        learningObjectivesMet: row.learning_objectives_met || [],
+        prerequisiteCompletion: (row.prerequisite_completion as Record<string, boolean>) || {},
+        lastPlayed: new Date(row.last_played),
+        totalSessions: row.total_sessions || 0,
+        averagePerformance: row.average_performance || 0,
+        improvementTrend: row.improvement_trend as 'improving' | 'stable' | 'declining'
+      }));
+
+      logger.debug(`[Analytics] Found ${progressData.length} progress records for avatar ${avatarId}`);
+      return progressData;
+      
+    } catch (error) {
+      logger.error(`[Analytics] Error in getAvatarProgress for ${avatarId}:`, error);
+      throw error;
+    }
   }
 
   /**
-   * Get game sessions for an avatar (Supabase-integrated)
+   * Get game sessions for an avatar (Smart routing: demo-first approach)
    */
   async getAvatarSessions(avatarId: string, limit?: number): Promise<GameSessionData[]> {
-    logger.debug('=== GETTING AVATAR SESSIONS ===');
-    logger.debug('Querying sessions for avatar ID:', avatarId);
+    logger.debug(`[Analytics] Getting avatar sessions for: ${avatarId}`);
     
-    let query = this.supabase
-      .from('game_sessions')
-      .select('*')
-      .eq('avatar_id', avatarId)
-      .order('session_start', { ascending: false });
-
-    if (limit) {
-      query = query.limit(limit);
+    // Smart routing - check if we should use database or demo data
+    if (!this.shouldUseDatabase(avatarId)) {
+      logger.info(`[Analytics] Using demo session data for avatar: ${avatarId}`);
+      return this.generateDemoSessions(avatarId, limit);
     }
+    
+    // Real user - use database
+    logger.debug(`[Analytics] Using database for real user avatar: ${avatarId}`);
+    
+    try {
+      let query = this.supabase
+        .from('game_sessions')
+        .select('*')
+        .eq('avatar_id', avatarId)
+        .order('session_start', { ascending: false });
 
-    const { data, error } = await query;
-    if (error) {
-      logger.error('Error fetching sessions:', error);
+      if (limit) {
+        query = query.limit(limit);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        logger.error(`[Analytics] Database error getting sessions for avatar ${avatarId}:`, error);
+        throw error;
+      }
+
+      logger.debug(`[Analytics] Raw session data from database:`, data);
+      logger.debug(`[Analytics] Number of sessions found: ${data?.length || 0}`);
+
+      // Transform Supabase data to our interface
+      const transformedData = (data || []).map(row => ({
+        id: row.id,
+        avatarId: row.avatar_id,
+        orgId: row.org_id || undefined,
+        gameId: row.game_type as GameType,
+        sessionStart: new Date(row.session_start),
+        sessionEnd: row.session_end ? new Date(row.session_end) : undefined,
+        totalDuration: row.total_duration || 0,
+        questionsAttempted: row.questions_attempted || 0,
+        questionsCorrect: row.questions_correct || 0,
+        completionStatus: row.completion_status as 'completed' | 'abandoned' | 'in_progress',
+        difficultyLevel: row.difficulty_level,
+        settingsUsed: (row.settings_used as Record<string, unknown>) || {},
+        scoreData: row.score_data as {
+          finalScore: number;
+          accuracy: number;
+          questionsCorrect: number;
+          questionsAttempted: number;
+          completionRate: number;
+        }
+      }));
+
+      logger.debug(`[Analytics] Transformed ${transformedData.length} session records for avatar ${avatarId}`);
+      return transformedData;
+      
+    } catch (error) {
+      logger.error(`[Analytics] Error in getAvatarSessions for ${avatarId}:`, error);
       throw error;
     }
-
-    logger.debug('Raw session data from database:', data);
-    logger.debug('Number of sessions found:', data?.length || 0);
-
-    // Also check all sessions in database to see what avatar IDs exist
-    const { data: allSessions } = await this.supabase
-      .from('game_sessions')
-      .select('avatar_id, game_type, id')
-      .limit(10);
-    
-    logger.debug('Sample of all sessions in database:', allSessions);
-    const uniqueAvatarIds = [...new Set(allSessions?.map(s => s.avatar_id) || [])];
-    logger.debug('Unique avatar IDs that have sessions:', uniqueAvatarIds);
-
-    // Transform Supabase data to our interface
-    const transformedData = (data || []).map(row => ({
-      id: row.id,
-      avatarId: row.avatar_id,
-      orgId: row.org_id || undefined,
-      gameId: row.game_type as GameType,
-      sessionStart: new Date(row.session_start),
-      sessionEnd: row.session_end ? new Date(row.session_end) : undefined,
-      totalDuration: row.total_duration || 0,
-      questionsAttempted: row.questions_attempted || 0,
-      questionsCorrect: row.questions_correct || 0,
-      completionStatus: row.completion_status as 'completed' | 'abandoned' | 'in_progress',
-      difficultyLevel: row.difficulty_level,
-      settingsUsed: (row.settings_used as Record<string, unknown>) || {},
-      scoreData: row.score_data as {
-        finalScore: number;
-        accuracy: number;
-        questionsCorrect: number;
-        questionsAttempted: number;
-        completionRate: number;
-      }
-    }));
-
-    logger.debug('Transformed session data:', transformedData);
-    logger.debug('=== END GETTING AVATAR SESSIONS ===');
-    
-    return transformedData;
   }
 
   /**
@@ -440,85 +465,88 @@ export class SupabaseAnalyticsService {
   }
 
   /**
-   * Get comprehensive performance metrics for an avatar
+   * Get comprehensive performance metrics for an avatar (Smart routing: demo-first approach)
    */
   async getPerformanceMetrics(avatarId: string): Promise<PerformanceMetrics> {
-    const [progress, sessions] = await Promise.all([
-      this.getAvatarProgress(avatarId),
-      this.getAvatarSessions(avatarId)
-    ]);
-
-    logger.debug('=== PERFORMANCE METRICS DEBUG ===');
-    logger.debug('Avatar ID:', avatarId);
-    logger.debug('Total sessions found:', sessions.length);
-    logger.debug('First few sessions:', sessions.slice(0, 3).map(s => ({
-      id: s.id,
-      gameId: s.gameId,
-      completionStatus: s.completionStatus,
-      totalDuration: s.totalDuration,
-      questionsAttempted: s.questionsAttempted,
-      questionsCorrect: s.questionsCorrect,
-      scoreData: s.scoreData
-    })));
-
-    // Basic metrics
-    const totalGamesPlayed = sessions.length;
-    logger.debug('Total games played:', totalGamesPlayed);
+    logger.debug(`[Analytics] Getting performance metrics for: ${avatarId}`);
     
-    const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
-    logger.debug('Completed sessions:', completedSessions.length);
-    logger.debug('Completed sessions details:', completedSessions.map(s => ({
-      gameId: s.gameId,
-      totalDuration: s.totalDuration,
-      scoreData: s.scoreData
-    })));
+    // Smart routing - check if we should use database or demo data
+    if (!this.shouldUseDatabase(avatarId)) {
+      logger.info(`[Analytics] Using demo metrics for avatar: ${avatarId}`);
+      return this.generateDemoMetrics(avatarId);
+    }
     
-    const averageSessionDuration = completedSessions.length > 0
-      ? completedSessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0) / completedSessions.length
-      : 0;
-    logger.debug('Average session duration (seconds):', averageSessionDuration);
+    // Real user - use database
+    logger.debug(`[Analytics] Using database for real user avatar: ${avatarId}`);
     
-    const overallCompletionRate = totalGamesPlayed > 0
-      ? completedSessions.length / totalGamesPlayed
-      : 0;
-    logger.debug('Overall completion rate:', overallCompletionRate);
+    try {
+      const [progress, sessions] = await Promise.all([
+        this.getAvatarProgress(avatarId),
+        this.getAvatarSessions(avatarId)
+      ]);
 
-    // Calculate skill level distribution
-    const skillLevelDistribution = progress.reduce((dist, p) => {
-      dist[p.skillLevel] = (dist[p.skillLevel] || 0) + 1;
-      return dist;
-    }, {} as Record<string, number>);
-    logger.debug('Skill level distribution:', skillLevelDistribution);
+      logger.debug('=== PERFORMANCE METRICS DEBUG ===');
+      logger.debug('Avatar ID:', avatarId);
+      logger.debug('Total sessions found:', sessions.length);
+      logger.debug('Progress records found:', progress.length);
 
-    // Calculate subject preferences based on play frequency and performance
-    const subjectPreferences = this.calculateSubjectPreferences(sessions);
-    logger.debug('Subject preferences:', subjectPreferences);
+      // Basic metrics
+      const totalGamesPlayed = sessions.length;
+      logger.debug('Total games played:', totalGamesPlayed);
+      
+      const completedSessions = sessions.filter(s => s.completionStatus === 'completed');
+      logger.debug('Completed sessions:', completedSessions.length);
+      
+      const averageSessionDuration = completedSessions.length > 0
+        ? completedSessions.reduce((sum, s) => sum + (s.totalDuration || 0), 0) / completedSessions.length
+        : 0;
+      logger.debug('Average session duration (seconds):', averageSessionDuration);
+      
+      const overallCompletionRate = totalGamesPlayed > 0
+        ? completedSessions.length / totalGamesPlayed
+        : 0;
+      logger.debug('Overall completion rate:', overallCompletionRate);
 
-    // Calculate learning velocity (objectives mastered per week)
-    const learningVelocity = this.calculateLearningVelocity(progress);
-    logger.debug('Learning velocity:', learningVelocity);
+      // Calculate skill level distribution
+      const skillLevelDistribution = progress.reduce((dist, p) => {
+        dist[p.skillLevel] = (dist[p.skillLevel] || 0) + 1;
+        return dist;
+      }, {} as Record<string, number>);
+      logger.debug('Skill level distribution:', skillLevelDistribution);
 
-    // Calculate engagement score based on various factors
-    const engagementScore = this.calculateEngagementScore(sessions);
-    logger.debug('Engagement score calculation details:');
-    logger.debug('- Sessions for engagement:', sessions.length);
-    logger.debug('- Completed for engagement:', completedSessions.length);
-    logger.debug('- Final engagement score:', engagementScore);
+      // Calculate subject preferences based on play frequency and performance
+      const subjectPreferences = this.calculateSubjectPreferences(sessions);
+      logger.debug('Subject preferences:', subjectPreferences);
 
-    const metrics = {
-      totalGamesPlayed,
-      averageSessionDuration,
-      overallCompletionRate,
-      skillLevelDistribution,
-      subjectPreferences,
-      learningVelocity,
-      engagementScore
-    };
+      // Calculate learning velocity (objectives mastered per week)
+      const learningVelocity = this.calculateLearningVelocity(progress);
+      logger.debug('Learning velocity:', learningVelocity);
 
-    logger.debug('=== FINAL CALCULATED METRICS ===');
-    logger.debug(metrics);
-    logger.debug('=== END DEBUG ===');
-    return metrics;
+      // Calculate engagement score based on various factors
+      const engagementScore = this.calculateEngagementScore(sessions);
+      logger.debug('Engagement score calculation details:');
+      logger.debug('- Sessions for engagement:', sessions.length);
+      logger.debug('- Completed for engagement:', completedSessions.length);
+      logger.debug('- Final engagement score:', engagementScore);
+
+      const metrics = {
+        totalGamesPlayed,
+        averageSessionDuration,
+        overallCompletionRate,
+        skillLevelDistribution,
+        subjectPreferences,
+        learningVelocity,
+        engagementScore
+      };
+
+      logger.debug('=== FINAL CALCULATED METRICS ===');
+      logger.debug(metrics);
+      return metrics;
+      
+    } catch (error) {
+      logger.error(`[Analytics] Error getting data for performance metrics for ${avatarId}:`, error);
+      throw error;
+    }
   }
 
   /**
@@ -908,44 +936,203 @@ export class SupabaseAnalyticsService {
     ];
   }
 
-  // Additional helper methods (preserved from original implementation)
-  private calculateWeeksActive(): number {
-    // Get first and last session dates from the database
-    const firstSession = this.getFirstSessionDate();
-    const lastSession = this.getLastSessionDate();
+  /**
+   * Check if we're in demo mode - either by avatar ID or environment
+   */
+  private isDemoMode(): boolean {
+    // Check environment variable for global demo mode
+    if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+      return true;
+    }
     
-    if (!firstSession || !lastSession) {
-      return 0;
+    // Check if we have a demo scenario set
+    if (typeof window !== 'undefined') {
+      const demoScenario = localStorage.getItem('demo_scenario');
+      if (demoScenario) {
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if an avatar ID belongs to a demo scenario
+   */
+  private isDemoAvatar(avatarId: string): boolean {
+    return avatarId.startsWith('demo-') || avatarId.startsWith('00000000-0000-0000-0000');
+  }
+
+  /**
+   * Smart analytics routing - demo first, then database
+   */
+  private shouldUseDatabase(avatarId: string): boolean {
+    // If it's clearly a demo avatar, skip database
+    if (this.isDemoAvatar(avatarId)) {
+      return false;
+    }
+    
+    // If we're in global demo mode, skip database
+    if (this.isDemoMode()) {
+      return false;
+    }
+    
+    // Otherwise, use database for real users
+    return true;
+  }
+
+  /**
+   * Generate demo progress data for demo avatars when no real data exists
+   */
+  private generateDemoProgress(avatarId: string): LearningProgressData[] {
+    // Determine demo avatar characteristics based on ID
+    const demoProfile = this.getDemoAvatarProfile(avatarId);
+    const gameTypes: GameType[] = ['numbers', 'letters', 'colors', 'shapes', 'math'];
+    
+    return gameTypes.slice(0, 3).map((gameId, index) => {
+      const baseScore = demoProfile.baseScore + (Math.random() - 0.5) * 20;
+      const masteryScore = Math.max(0, Math.min(100, baseScore));
+      
+      return {
+        avatarId,
+        gameId,
+        skillLevel: demoProfile.skillLevel,
+        masteryScore: Math.round(masteryScore),
+        learningObjectivesMet: this.generateLearningObjectives(gameId, masteryScore),
+        prerequisiteCompletion: { 'basic_understanding': true },
+        lastPlayed: new Date(Date.now() - (index * 24 * 60 * 60 * 1000)), // Spread over last few days
+        totalSessions: Math.floor(Math.random() * 10) + 3,
+        averagePerformance: Math.round(masteryScore * 0.9),
+        improvementTrend: demoProfile.trend
+      };
+    });
+  }
+
+  /**
+   * Generate demo performance metrics when no real data exists
+   */
+  private generateDemoMetrics(avatarId: string): PerformanceMetrics {
+    const demoProfile = this.getDemoAvatarProfile(avatarId);
+    
+    return {
+      totalGamesPlayed: Math.floor(Math.random() * 15) + 5,
+      averageSessionDuration: 120 + Math.random() * 180, // 2-5 minutes
+      overallCompletionRate: 0.7 + Math.random() * 0.25, // 70-95%
+      skillLevelDistribution: {
+        'beginner': demoProfile.skillLevel === 'beginner' ? 3 : 1,
+        'intermediate': demoProfile.skillLevel === 'intermediate' ? 3 : 1,
+        'advanced': demoProfile.skillLevel === 'advanced' ? 3 : 0
+      },
+      subjectPreferences: {
+        'Mathematics': 0.4 + Math.random() * 0.3,
+        'Language Arts': 0.3 + Math.random() * 0.3,
+        'Visual Arts': 0.2 + Math.random() * 0.2
+      },
+      learningVelocity: 2 + Math.random() * 3, // 2-5 objectives per week
+      engagementScore: demoProfile.baseScore + Math.random() * 15
+    };
+  }
+
+  /**
+   * Get demo avatar profile characteristics based on avatar ID
+   */
+  private getDemoAvatarProfile(avatarId: string): {
+    skillLevel: 'beginner' | 'intermediate' | 'advanced';
+    baseScore: number;
+    trend: 'improving' | 'stable' | 'declining';
+  } {
+    // Customize based on avatar ID patterns
+    if (avatarId.includes('personal-basic') || avatarId.includes('avatar-1')) {
+      return { skillLevel: 'beginner', baseScore: 60, trend: 'improving' };
+    } else if (avatarId.includes('personal-limit-avatar-3') || avatarId.includes('professional') || avatarId.includes('enterprise')) {
+      return { skillLevel: 'advanced', baseScore: 85, trend: 'stable' };
+    } else if (avatarId.includes('avatar-4') || avatarId.includes('00000000-0000-0000-0000-000000000013')) {
+      return { skillLevel: 'beginner', baseScore: 45, trend: 'improving' };
     }
 
-    const weeksDiff = Math.ceil(
-      (lastSession.getTime() - firstSession.getTime()) / (7 * 24 * 60 * 60 * 1000)
-    );
+    // Default profile
+    return {
+      skillLevel: 'intermediate',
+      baseScore: 70,
+      trend: 'stable'
+    };
+  }
+
+  /**
+   * Generate learning objectives based on game and mastery score
+   */
+  private generateLearningObjectives(gameId: GameType, masteryScore: number): string[] {
+    const objectiveMap: Record<GameType, string[]> = {
+      'numbers': ['Count 1-10', 'Number recognition', 'Basic arithmetic'],
+      'letters': ['Letter recognition', 'Letter sounds', 'Basic reading'],
+      'colors': ['Color identification', 'Color matching', 'Color mixing'],
+      'shapes': ['Shape recognition', 'Shape sorting', 'Pattern matching'],
+      'math': ['Addition', 'Subtraction', 'Problem solving'],
+      'patterns': ['Pattern recognition', 'Sequence completion'],
+      'rhyming': ['Rhyme identification', 'Sound patterns'],
+      'fill-in-the-blank': ['Reading comprehension', 'Vocabulary'],
+      'geography': ['Location awareness', 'Map reading'],
+      'alphabet-sequence': ['Alphabet order', 'Letter sequence'],
+      'number-sequence': ['Number order', 'Counting sequence']
+    };
+
+    const objectives = objectiveMap[gameId] || ['Basic skills'];
+    const masteryRatio = masteryScore / 100;
+    const achievedCount = Math.floor(objectives.length * masteryRatio);
     
-    return Math.max(1, weeksDiff); // Minimum 1 week to avoid division by zero
+    return objectives.slice(0, Math.max(1, achievedCount));
   }
 
-  private calculatePlayConsistency(): number {
-    // Legacy method - return default value
-    return 0.5; // Default for new users
+  /**
+   * Generate demo sessions data for demo avatars
+   */
+  private generateDemoSessions(avatarId: string, limit?: number): GameSessionData[] {
+    const demoProfile = this.getDemoAvatarProfile(avatarId);
+    const gameTypes: GameType[] = ['numbers', 'letters', 'colors', 'shapes', 'math'];
+    const maxSessions = limit || 8; // Default to 8 sessions if no limit specified
+    
+    const sessions: GameSessionData[] = [];
+    
+    for (let i = 0; i < maxSessions; i++) {
+      const gameId = gameTypes[i % gameTypes.length];
+      const isCompleted = Math.random() > 0.2; // 80% completion rate
+      const questionsAttempted = 5 + Math.floor(Math.random() * 10); // 5-15 questions
+      const baseAccuracy = demoProfile.baseScore / 100;
+      const questionsCorrect = Math.floor(questionsAttempted * (baseAccuracy + (Math.random() - 0.5) * 0.3));
+      const sessionDuration = 60 + Math.random() * 240; // 1-5 minutes
+      
+      // Create session date (spread over last few weeks)
+      const sessionDate = new Date(Date.now() - (i * 2 * 24 * 60 * 60 * 1000)); // Every 2 days
+      
+      sessions.push({
+        id: `demo-session-${avatarId}-${i}`,
+        avatarId,
+        gameId,
+        sessionStart: sessionDate,
+        sessionEnd: isCompleted ? new Date(sessionDate.getTime() + sessionDuration * 1000) : undefined,
+        totalDuration: Math.floor(sessionDuration),
+        questionsAttempted,
+        questionsCorrect: Math.max(0, Math.min(questionsAttempted, questionsCorrect)),
+        completionStatus: isCompleted ? 'completed' : (Math.random() > 0.5 ? 'abandoned' : 'in_progress'),
+        difficultyLevel: demoProfile.skillLevel,
+        settingsUsed: {
+          difficulty: demoProfile.skillLevel,
+          hints_enabled: true,
+          sound_enabled: true
+        },
+        scoreData: {
+          finalScore: Math.round(baseAccuracy * 100 + (Math.random() - 0.5) * 20),
+          accuracy: questionsCorrect / questionsAttempted,
+          questionsCorrect,
+          questionsAttempted,
+          completionRate: isCompleted ? 1 : Math.random() * 0.8
+        }
+      });
+    }
+    
+    // Sort by session start time (newest first)
+    return sessions.sort((a, b) => b.sessionStart.getTime() - a.sessionStart.getTime());
   }
-
-  private calculateSubjectEffectiveness(): number {
-    // Legacy method - return default value
-    return 0;
-  }
-
-  private getFirstSessionDate(): Date | null {
-    // Legacy method - return null
-    return null;
-  }
-
-  private getLastSessionDate(): Date | null {
-    // Legacy method - return null
-    return null;
-  }
-
-
 }
 
 // Export singleton instance

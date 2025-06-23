@@ -17,6 +17,7 @@ export const asyncUtils = {
     const startTime = Date.now();
     
     while (!condition() && Date.now() - startTime < timeout) {
+      // Simple delay using Promise and setTimeout
       await new Promise(resolve => setTimeout(resolve, interval));
     }
     
@@ -59,5 +60,12 @@ export const asyncUtils = {
     );
     
     return Promise.race([promise, timeoutPromise]);
+  },
+
+  /**
+   * Flushes all promises - useful for ensuring all async operations complete
+   */
+  flushPromises: async (): Promise<void> => {
+    return new Promise(resolve => setTimeout(resolve, 0));
   }
 }; 

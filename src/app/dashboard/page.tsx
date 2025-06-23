@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useAvatar, useUser, useRoleGuard } from "@/context/UserContext";
+import { useDemo } from "@/context/DemoContext";
 import { analyticsService, type LearningProgressData, type PerformanceMetrics } from "@/utils/analyticsService";
 import { logger } from "@/utils/logger";
 import { 
@@ -36,20 +37,24 @@ const DashboardCharts = dynamic(() => import('@/features/analytics/components/Da
 function useIsDashboardReady() {
   const { isHydrated } = useEnhancedTheme();
   const { loadingState } = useUser();
+  const { isTransitioning } = useDemo();
   
-  return isHydrated && loadingState.isReady;
+  // Wait for theme, user context, and no ongoing demo transitions
+  return isHydrated && loadingState.isReady && !isTransitioning;
 }
 
 /**
  * User Dashboard page for learning progress, recommendations, and metrics.
  * Focuses on robust data flow and error handling.
  * Uses role guard to prevent flashing of admin-only content.
+ * Enhanced with demo context awareness for smooth scenario switching.
  */
 export default function DashboardPage() {
   const isDashboardReady = useIsDashboardReady();
   const { currentAvatar } = useAvatar();
-  const { error: userError } = useUser();
+  const { error: userError, loadingState } = useUser();
   const { hasRole, isReady } = useRoleGuard();
+  const { isTransitioning, currentScenario, error: demoError } = useDemo();
   const { } = useSubscription();
   const avatarId = currentAvatar?.id;
 
@@ -57,13 +62,35 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastLoadedAvatarId, setLastLoadedAvatarId] = useState<string | null>(null);
 
-
-
+  // Enhanced analytics loading with demo scenario awareness
   useEffect(() => {
     const loadData = async () => {
+      // Don't load during demo transitions
+      if (isTransitioning) {
+        logger.debug('Skipping analytics load during demo transition');
+        return;
+      }
+
+      // Wait for user context to be ready
+      if (!loadingState.isReady) {
+        logger.debug('Waiting for user context to be ready');
+        return;
+      }
+
       if (!avatarId) {
+        logger.debug('No avatar ID, clearing dashboard data');
+        setProgress(null);
+        setMetrics(null);
         setDashboardLoading(false);
+        setLastLoadedAvatarId(null);
+        return;
+      }
+
+      // Skip if already loaded for this avatar (prevents unnecessary reloads)
+      if (lastLoadedAvatarId === avatarId) {
+        logger.debug('Analytics already loaded for this avatar:', avatarId);
         return;
       }
 
@@ -71,30 +98,65 @@ export default function DashboardPage() {
       setError(null);
 
       try {
-        logger.info('🔄 Loading analytics data for avatar:', avatarId);
+        logger.info('🔄 Loading analytics data for avatar:', avatarId, 'in scenario:', currentScenario);
 
         const [progressData, metricsData] = await Promise.all([
           analyticsService.getAvatarProgress(avatarId),
           analyticsService.getPerformanceMetrics(avatarId)
         ]);
 
-        logger.debug('📊 Analytics data loaded:', { 
-          progress: progressData, 
-          metrics: metricsData 
+        logger.debug('📊 Analytics data loaded successfully:', { 
+          progress: progressData?.length || 0, 
+          metrics: metricsData?.totalGamesPlayed || 0,
+          avatarId,
+          scenario: currentScenario
         });
 
         setProgress(progressData);
         setMetrics(metricsData);
+        setLastLoadedAvatarId(avatarId);
+        
       } catch (err) {
-        logger.error('❌ Error loading analytics data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load analytics data');
+        logger.error('❌ Error loading analytics data:', {
+          error: err,
+          avatarId,
+          scenario: currentScenario,
+          isDemo: avatarId?.startsWith('demo-') || avatarId?.startsWith('00000000')
+        });
+        
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load analytics data';
+        setError(`Analytics Error: ${errorMessage}`);
+        
+        // Clear data on error
+        setProgress(null);
+        setMetrics(null);
+        setLastLoadedAvatarId(null);
       } finally {
         setDashboardLoading(false);
       }
     };
 
     loadData();
-  }, [avatarId]);
+  }, [avatarId, isTransitioning, loadingState.isReady, currentScenario, lastLoadedAvatarId]);
+
+  // Reset loading state when demo scenario changes
+  useEffect(() => {
+    if (isTransitioning) {
+      logger.debug('Demo transition started, resetting dashboard state');
+      setError(null);
+      setLastLoadedAvatarId(null); // Force reload after transition
+    }
+  }, [isTransitioning]);
+
+  // Handle demo scenario transition loading
+  if (isTransitioning) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <CircularProgress />
+        <Typography variant="body2" sx={{ ml: 2 }}>Switching demo scenario...</Typography>
+      </Box>
+    );
+  }
 
   // Wait for full hydration before showing dashboard
   if (!isDashboardReady) {
@@ -106,39 +168,88 @@ export default function DashboardPage() {
     );
   }
 
-  if (userError) {
+  // Handle demo context errors
+  if (demoError) {
     return (
       <Box sx={{ p: 2 }}>
         <Alert severity="error">
-          {userError} <br />
+          Demo Error: {demoError}
+          <br />
           <Button variant="outlined" sx={{ mt: 1 }} onClick={() => window.location.reload()}>
-            Reload
+            Reload Page
           </Button>
         </Alert>
       </Box>
     );
   }
 
-  if (!avatarId) {
+  // Handle user context errors
+  if (userError) {
     return (
-      <Alert severity="info">
-        Please select or create an avatar to view your dashboard.
-      </Alert>
-    );
-  }
-
-  if (dashboardLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
-        <CircularProgress />
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error">
+          User Context Error: {userError}
+          <br />
+          <Button variant="outlined" sx={{ mt: 1 }} onClick={() => window.location.reload()}>
+            Reload Page
+          </Button>
+        </Alert>
       </Box>
     );
   }
 
+  // Handle no avatar case
+  if (!avatarId) {
+    return (
+      <Alert severity="info" sx={{ m: 2 }}>
+        No avatar selected. Please create or select an avatar to view your dashboard.
+        {currentScenario && (
+          <Typography variant="body2" sx={{ mt: 1, fontStyle: 'italic' }}>
+            Current demo scenario: {currentScenario}
+          </Typography>
+        )}
+      </Alert>
+    );
+  }
+
+  // Handle loading state
+  if (dashboardLoading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
+        <CircularProgress />
+        <Typography variant="body2" sx={{ ml: 2 }}>
+          Loading analytics for {currentAvatar?.name || 'avatar'}...
+        </Typography>
+      </Box>
+    );
+  }
+
+  // Handle analytics errors
   if (error) {
     return (
       <Box sx={{ p: 2 }}>
-        <Alert severity="error">{error}</Alert>
+        <Alert 
+          severity="warning" 
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              onClick={() => {
+                setError(null);
+                setLastLoadedAvatarId(null);
+              }}
+            >
+              Retry
+            </Button>
+          }
+        >
+          {error}
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            Avatar: {currentAvatar?.name} ({avatarId})
+            <br />
+            Scenario: {currentScenario}
+          </Typography>
+        </Alert>
       </Box>
     );
   }
@@ -147,9 +258,14 @@ export default function DashboardPage() {
     <Box sx={{ p: 3 }}>
       {/* Header with Subscription Badge */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4" component="h1">
-          Analytics Dashboard
-        </Typography>
+        <Box>
+          <Typography variant="h4" component="h1">
+            Analytics Dashboard
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {currentAvatar?.name} • {currentScenario}
+          </Typography>
+        </Box>
         <SubscriptionBadge variant="basic" />
       </Box>
 
@@ -215,16 +331,50 @@ export default function DashboardPage() {
               <Typography variant="h6" gutterBottom>
                 Learning Progress
               </Typography>
-              {/* Existing analytics components */}
+              {progress && progress.length > 0 ? (
+                <Box>
+                  {progress.map((p, index) => (
+                    <Box key={index} sx={{ mb: 2 }}>
+                      <Typography variant="body1">{p.gameId}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Mastery: {p.masteryScore}% • Level: {p.skillLevel}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No progress data available yet. Play some games to see your progress!
+                </Typography>
+              )}
             </CardContent>
           </Card>
           
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Recent Activity
+                Performance Summary
               </Typography>
-              {/* Existing activity components */}
+              {metrics ? (
+                <Box>
+                  <Typography variant="body2">
+                    Games Played: {metrics.totalGamesPlayed}
+                  </Typography>
+                  <Typography variant="body2">
+                    Avg Session: {Math.round(metrics.averageSessionDuration / 60)} minutes
+                  </Typography>
+                  <Typography variant="body2">
+                    Completion Rate: {Math.round(metrics.overallCompletionRate * 100)}%
+                  </Typography>
+                  <Typography variant="body2">
+                    Engagement Score: {Math.round(metrics.engagementScore)}%
+                  </Typography>
+                </Box>
+              ) : (
+                <Typography variant="body2" color="text.secondary">
+                  No performance data available yet.
+                </Typography>
+              )}
             </CardContent>
           </Card>
         </Box>

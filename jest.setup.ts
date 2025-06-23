@@ -137,7 +137,7 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
-// Cleanup after each test
+// Cleanup after each test - simplified to avoid timer conflicts
 afterEach(() => {
   // Clear all mocks
   jest.clearAllMocks();
@@ -145,11 +145,6 @@ afterEach(() => {
   // Reset localStorage
   localStorageMock.clear();
   
-  // Clear any pending timers safely
-  try {
-    jest.runOnlyPendingTimers();
-    jest.useRealTimers();
-  } catch {
-    // Ignore errors if timers aren't mocked
-  }
+  // Note: Removed all timer-related cleanup to avoid conflicts with Jest's fake timers
+  // Individual tests should handle their own timer cleanup if needed
 });

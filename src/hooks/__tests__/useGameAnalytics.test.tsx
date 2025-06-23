@@ -1,6 +1,6 @@
 /**
  * Enhanced useGameAnalytics Hook Tests
- * Updated to use new testing standards with timeout protection and safety measures
+ * Updated to use new testing standards with simplified approach
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
@@ -53,7 +53,6 @@ beforeEach(() => {
 // Cleanup after each test
 afterEach(() => {
   jest.resetAllMocks();
-  jest.useRealTimers();
 });
 
 describe('useGameAnalytics - Enhanced Tests', () => {
@@ -62,22 +61,16 @@ describe('useGameAnalytics - Enhanced Tests', () => {
   );
 
   describe('Session Management', () => {
-    it('should start a session with timeout protection', async () => {
+    it('should start a session successfully', async () => {
       const { result } = renderHook(() => useGameAnalytics({
         gameType: MOCK_DATA.gameType,
         avatarId: MOCK_DATA.avatarId,
         autoTrack: false
       }), { wrapper });
 
-      // Start session with timeout protection
+      // Start session without timeout complexity
       await act(async () => {
-        const startPromise = result.current.startSession();
-        await Promise.race([
-          startPromise,
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Session start timeout')), TEST_TIMEOUTS.FAST)
-          )
-        ]);
+        await result.current.startSession();
       });
 
       expect(mockAnalyticsService.startGameSession).toHaveBeenCalledWith(

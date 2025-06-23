@@ -32,7 +32,7 @@ import {
   CloudDownload
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
-import { TIER_CONFIGURATIONS, type SubscriptionTier } from '@/utils/subscriptionService';
+import { TIER_CONFIGURATIONS, type SubscriptionTier, type SubscriptionFeature } from '@/utils/subscriptionService';
 import { useUser } from '@/context/UserContext';
 import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
 
@@ -335,12 +335,12 @@ export default function PlansPage() {
                     <Box component="tr" key={feature} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
                       <Box component="td" sx={{ p: 3 }}>
                         <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          {featureDescriptions[feature]}
+                          {featureDescriptions[feature as SubscriptionFeature]}
                         </Typography>
                       </Box>
                       {(['personal', 'professional', 'enterprise'] as SubscriptionTier[]).map((tier) => (
                         <Box component="td" key={tier} sx={{ p: 3, textAlign: 'center' }}>
-                          {TIER_CONFIGURATIONS[tier].features[feature as keyof typeof TIER_CONFIGURATIONS[tier]['features']] ? (
+                          {TIER_CONFIGURATIONS[tier].features[feature as SubscriptionFeature] ? (
                             <CheckCircle color="success" />
                           ) : (
                             <Typography variant="body2" color="text.disabled">
