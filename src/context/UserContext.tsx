@@ -438,6 +438,64 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [supabase, loadAvatars, demoContext]);
 
+  // Check if we're on a protected route (for redirect logic)
+  const isProtectedRoute = useCallback((pathname?: string): boolean => {
+    const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '');
+    const protectedPaths = [
+      '/dashboard',
+      '/settings',
+      '/collections',
+      '/plans',
+      '/user-management'
+    ];
+    return protectedPaths.some(protectedPath => path.startsWith(protectedPath));
+  }, []);
+
+  // Check if we're on a public route that should show demo mode
+  const isPublicDemoRoute = useCallback((pathname?: string): boolean => {
+    const path = pathname || (typeof window !== 'undefined' ? window.location.pathname : '');
+    const publicDemoPaths = [
+      '/', // Home page
+      '/games' // Game pages for demonstration
+    ];
+    return publicDemoPaths.some(publicPath => 
+      path === publicPath || (publicPath === '/games' && path.startsWith('/games/'))
+    );
+  }, []);
+
+  // Handle redirect logic for unauthenticated users
+  const handleUnauthenticatedAccess = useCallback(() => {
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+    
+    if (isProtectedRoute(currentPath)) {
+      // Redirect to login with return URL for protected routes
+      const returnUrl = encodeURIComponent(currentPath + (typeof window !== 'undefined' ? window.location.search : ''));
+      const loginUrl = `/login?redirectTo=${returnUrl}`;
+      
+      logger.info('Redirecting unauthenticated user to login', { 
+        from: currentPath, 
+        to: loginUrl 
+      });
+      
+      if (typeof window !== 'undefined') {
+        window.location.href = loginUrl;
+      }
+      return;
+    }
+
+    if (isPublicDemoRoute(currentPath)) {
+      // Load demo mode for public pages
+      logger.info('Loading demo mode for public route', { path: currentPath });
+      loadDemoUserContext();
+    } else {
+      // For other routes, just set loading to false without demo mode
+      setUserLoading(false);
+      setRolesLoading(false);
+      setAvatarsLoading(false);
+      setIsInitialized(true);
+    }
+  }, [isProtectedRoute, isPublicDemoRoute, loadDemoUserContext]);
+
   // Main initialization effect - runs only once
   useEffect(() => {
     if (initializationRef.current) return;
@@ -451,8 +509,55 @@ export function UserProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           // Real user authentication
+          logger.info('Authenticated user session found', { userId: session.user.id });
           setUser(session.user);
           setUserLoading(false);
+          
+          try {
+            await loadUserProfile(session.user.id);
+            
+            // Load roles and avatars in parallel
+            await Promise.all([
+              fetchRolesAndOrg(session.user.id),
+              loadAvatars(session.user.id)
+            ]);
+            setIsInitialized(true);
+            logger.info('User context loaded successfully');
+          } catch (profileError) {
+            logger.error('Error loading user profile or data:', profileError);
+            // Handle new user case - profile might not exist yet
+            if (profileError && typeof profileError === 'object' && 'code' in profileError && profileError.code === 'PGRST116') {
+              logger.info('New user detected, creating profile...');
+              // For new users, we'll let the registration hook handle profile creation
+              setError('User profile not found. Please complete registration.');
+            } else {
+              setError('Failed to load user data. Please try signing in again.');
+            }
+            setIsInitialized(true);
+          }
+        } else {
+          // No session - handle based on route type
+          logger.info('No user session found');
+          handleUnauthenticatedAccess();
+        }
+      } catch (err) {
+        logger.error('Error during user initialization:', err);
+        setError('Failed to initialize user session.');
+        handleUnauthenticatedAccess();
+      }
+    };
+    
+    loadUser();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      logger.info('Auth state changed', { event, hasSession: !!session });
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+        setUserLoading(false);
+        
+        try {
           await loadUserProfile(session.user.id);
           
           // Load roles and avatars in parallel
@@ -461,54 +566,52 @@ export function UserProvider({ children }: { children: ReactNode }) {
             loadAvatars(session.user.id)
           ]);
           setIsInitialized(true);
-        } else {
-          // No session - load demo mode for development
-          logger.info('No user session found, loading demo mode');
-          console.log('UserContext: Starting demo mode load');
-          await loadDemoUserContext();
-          console.log('UserContext: Demo mode load completed');
+          logger.info('User signed in and context loaded');
+        } catch (profileError) {
+          logger.error('Error loading profile after sign in:', profileError);
+          setError('Failed to load user data after sign in.');
+          setIsInitialized(true);
         }
-      } catch (err) {
-        logger.error('Error loading user:', err);
-        setError('Failed to load user context.');
-        setUserLoading(false);
-        setRolesLoading(false);
-        setAvatarsLoading(false);
-        setIsInitialized(true);
-      }
-    };
-    
-    loadUser();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setUser(session.user);
-        setUserLoading(false);
-        await loadUserProfile(session.user.id);
-        
-        // Load roles and avatars in parallel
-        await Promise.all([
-          fetchRolesAndOrg(session.user.id),
-          loadAvatars(session.user.id)
-        ]);
-        setIsInitialized(true);
       } else if (event === 'SIGNED_OUT') {
+        logger.info('User signed out, clearing context');
         setUser(null);
         setUserProfile(null);
         setAvatars([]);
         setCurrentAvatar(null);
         setRoles([]);
         setOrg(null);
-        // Load demo user for continued development
-        await loadDemoUserContext();
+        setError(null);
+        
+        // Reset view as state
+        setViewAsRole(null);
+        setViewAsAvatar(null);
+        
+        // Handle post-logout routing
+        const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+        if (isProtectedRoute(currentPath)) {
+          // Redirect to home page after logout from protected routes
+          logger.info('Redirecting to home after logout from protected route');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/';
+          }
+        } else {
+          // Handle demo mode for public routes after logout
+          handleUnauthenticatedAccess();
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
+        logger.info('Auth token refreshed');
+      } else if (event === 'USER_UPDATED') {
+        logger.info('User updated, refreshing profile');
+        if (session?.user) {
+          await loadUserProfile(session.user.id);
+        }
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase.auth, loadUserProfile, loadDemoUserContext, fetchRolesAndOrg, loadAvatars]);
+  }, [supabase.auth, loadUserProfile, fetchRolesAndOrg, loadAvatars, handleUnauthenticatedAccess, isProtectedRoute]);
 
   // Listen for demo scenario changes from DemoContext
   useEffect(() => {
@@ -589,19 +692,61 @@ export function UserProvider({ children }: { children: ReactNode }) {
   // Utility functions
   const hasRole = useCallback((roleName: string) => {
     // Only return true if we're ready and actually have the role
-    return loadingState.isReady && roles.some(r => r.name === roleName);
-  }, [roles, loadingState.isReady]);
+    // For authenticated users, require actual roles. For demo mode, allow role checking.
+    if (!loadingState.isReady) return false;
+    
+    // If we have a real user, require actual roles
+    if (user && userProfile?.account_type !== 'demo') {
+      return roles.some(r => r.name === roleName);
+    }
+    
+    // For demo mode or no user, allow role checking for public demo routes
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (isPublicDemoRoute(currentPath)) {
+      return roles.some(r => r.name === roleName);
+    }
+    
+    // For protected routes without authentication, deny access
+    return false;
+  }, [roles, loadingState.isReady, user, userProfile, isPublicDemoRoute]);
   
   const canAccess = useCallback((feature: string) => {
     // Only return true if we're ready and have access
-    if (!loadingState.isReady || !org?.subscriptionPlan) return false;
-    const features = org.subscriptionPlan.features_included || {};
-    return features[feature] === true;
-  }, [org, loadingState.isReady]);
+    if (!loadingState.isReady) return false;
+    
+    // For real authenticated users, check actual subscription
+    if (user && userProfile?.account_type !== 'demo') {
+      if (!org?.subscriptionPlan) return false;
+      const features = org.subscriptionPlan.features_included || {};
+      return features[feature] === true;
+    }
+    
+    // For demo mode on public routes, allow feature access
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (isPublicDemoRoute(currentPath) && org?.subscriptionPlan) {
+      const features = org.subscriptionPlan.features_included || {};
+      return features[feature] === true;
+    }
+    
+    // For protected routes without authentication, deny access
+    return false;
+  }, [org, loadingState.isReady, user, userProfile, isPublicDemoRoute]);
   
   const getTierLimit = useCallback((feature: string) => {
-    return org?.subscriptionPlan?.[`${feature}_limit`];
-  }, [org]);
+    // For authenticated users, return actual limits
+    if (user && userProfile?.account_type !== 'demo') {
+      return org?.subscriptionPlan?.[`${feature}_limit`];
+    }
+    
+    // For demo mode on public routes, return demo limits
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (isPublicDemoRoute(currentPath)) {
+      return org?.subscriptionPlan?.[`${feature}_limit`];
+    }
+    
+    // For protected routes without authentication, return no limits
+    return undefined;
+  }, [org, user, userProfile, isPublicDemoRoute]);
 
   // Create a new avatar with subscription limit checking
   const createAvatar = async (name: string): Promise<Avatar | null> => {
