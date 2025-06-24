@@ -15,8 +15,10 @@ interface AuthLoadingState {
 }
 
 // User-friendly error messages
-const getAuthErrorMessage = (error: any): string => {
-  const errorCode = error?.code || error?.message || 'unknown_error';
+const getAuthErrorMessage = (error: unknown): string => {
+  const errorCode = (error as { code?: string; message?: string })?.code || 
+                   (error as { code?: string; message?: string })?.message || 
+                   'unknown_error';
   
   const errorMessages: Record<string, string> = {
     'invalid_credentials': 'Invalid email or password. Please check your credentials and try again.',

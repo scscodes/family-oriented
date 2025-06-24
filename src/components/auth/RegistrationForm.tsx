@@ -233,7 +233,7 @@ export default function RegistrationForm({ onSuccess, onStepChange }: Registrati
       } else {
         router.push('/verify-email?message=' + encodeURIComponent('Check your email for a verification link'));
       }
-    } catch (error) {
+    } catch {
       setAuthError('An unexpected error occurred. Please try again.');
     }
   };

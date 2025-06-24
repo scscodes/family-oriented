@@ -99,9 +99,9 @@ export default function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
       } else {
         router.push(finalRedirectTo);
       }
-    } catch (error) {
-      setAuthError('An unexpected error occurred. Please try again.');
-    }
+      } catch {
+    setAuthError('An unexpected error occurred. Please try again.');
+  }
   };
 
   const handleTogglePasswordVisibility = () => {
@@ -315,7 +315,7 @@ export default function LoginForm({ onSuccess, redirectTo }: LoginFormProps) {
       {/* Sign Up Link */}
       <Box sx={{ textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link
             href="/signup"
             sx={{

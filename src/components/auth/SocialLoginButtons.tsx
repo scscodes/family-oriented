@@ -35,7 +35,7 @@ const SocialButton = styled(Button)(({ theme }) => ({
   },
 }));
 
-const IconWrapper = styled(Box)(({ theme }) => ({
+const IconWrapper = styled(Box)(() => ({
   width: 20,
   height: 20,
   display: 'flex',

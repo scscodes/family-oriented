@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Box, Typography, useTheme, alpha } from '@mui/material';
+import { Box, Typography, alpha } from '@mui/material';
 import { useRouter } from 'next/navigation';
 import { styled } from '@mui/material/styles';
 
@@ -46,7 +46,7 @@ export default function AuthHeader({
   title = 'Family Learning Platform',
   subtitle = 'Educational games and activities for children'
 }: AuthHeaderProps) {
-  const theme = useTheme();
+
   const router = useRouter();
 
   const handleLogoClick = () => {
