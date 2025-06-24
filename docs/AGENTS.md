@@ -2,7 +2,7 @@
 title: "AGENTS - AI/Coding Assistant Reference"
 description: "Optimized reference for AI models and coding assistants"
 version: "2.0.0"
-last_updated: "2024-01-16"
+last_updated: "2024-01-17"
 category: "AI Reference"
 tags: ["AI", "Agents", "Architecture", "Constraints", "Development", "Critical"]
 complexity: "Essential"
@@ -42,6 +42,12 @@ src/context/UserContext.tsx        // User state & role management
 src/utils/subscriptionService.ts   // Tier management & feature gating
 src/hooks/useSubscription.tsx       // Subscription hooks & utilities
 
+// AUTHENTICATION SYSTEM
+src/hooks/useAuth.ts                // Authentication operations
+src/hooks/useRegistration.ts        // Complete registration flow
+src/utils/authErrors.ts             // Centralized error handling
+src/components/auth/                // Authentication UI components
+
 // THEME & UI SYSTEM
 src/theme/EnhancedThemeProvider.tsx // Theme + hydration coordination
 src/shared/components/index.ts      // UI component exports
@@ -59,6 +65,16 @@ src/app/games/page.tsx             // Game discovery browser
 src/features/games/GameContainer.tsx // Game wrapper component
 src/features/games/discovery/      // Game discovery components
 src/app/dashboard/page.tsx         // Analytics dashboard
+```
+
+### Key Authentication Files
+```typescript
+src/app/(auth)/login/page.tsx      // Login page
+src/app/(auth)/signup/page.tsx     // Registration page  
+src/app/(auth)/verify-email/page.tsx // Email verification
+src/components/auth/LoginForm.tsx  // Login form component
+src/components/auth/RegistrationForm.tsx // Registration form
+src/components/auth/TierSelectionStep.tsx // Subscription tier selection
 ```
 
 ## 🏗️ Context Provider Pattern (CRITICAL)
