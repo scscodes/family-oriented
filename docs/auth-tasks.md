@@ -24,14 +24,14 @@ This document tracks the implementation of the complete authentication system in
 
 | Category | Total Tasks | Complete | In Progress | Not Started |
 |----------|-------------|----------|-------------|-------------|
-| **Core Auth** | 15 | 5 | 0 | 10 |
+| **Core Auth** | 15 | 8 | 0 | 7 |
 | **Route Protection** | 8 | 0 | 0 | 8 |
 | **Password Recovery** | 6 | 0 | 0 | 6 |
 | **Social Login** | 5 | 0 | 0 | 5 |
 | **Onboarding** | 7 | 0 | 0 | 7 |
 | **Security** | 4 | 0 | 0 | 4 |
 | **Testing** | 6 | 0 | 0 | 6 |
-| **Total** | **51** | **5** | **0** | **46** |
+| **Total** | **51** | **8** | **0** | **43** |
 
 ---
 
@@ -111,49 +111,49 @@ This document tracks the implementation of the complete authentication system in
   - [x] Form stepper component for multi-step flow
 
 ### AUTH-006: Tier Selection Component
-- **Status**: ❌ Not Started
+- **Status**: ✅ Complete
 - **Priority**: Critical
 - **Estimate**: 6 hours
-- **Dependencies**: AUTH-005
+- **Dependencies**: AUTH-005 ✅
 - **Files**: `src/components/auth/TierSelectionStep.tsx`
 - **Description**: Interactive tier selection with feature comparison
 - **Acceptance Criteria**:
-  - [ ] Three-tier display (Personal, Professional, Enterprise)
-  - [ ] Feature comparison table
-  - [ ] Pricing display with monthly/yearly toggle
-  - [ ] Trial period information
-  - [ ] Clear upgrade/downgrade messaging
-  - [ ] Default tier selection based on user type
+  - [x] Three-tier display (Personal, Professional, Enterprise)
+  - [x] Feature comparison table
+  - [x] Pricing display with monthly/yearly toggle
+  - [x] Trial period information
+  - [x] Clear upgrade/downgrade messaging
+  - [x] Default tier selection based on user type
 
 ### AUTH-007: Registration Complete Hook
-- **Status**: ❌ Not Started
+- **Status**: ✅ Complete
 - **Priority**: Critical
 - **Estimate**: 5 hours
-- **Dependencies**: AUTH-006
+- **Dependencies**: AUTH-006 ✅
 - **Files**: `src/hooks/useRegistration.ts`
 - **Description**: Handle complete registration flow including organization and subscription setup
 - **Acceptance Criteria**:
-  - [ ] Create Supabase auth user
-  - [ ] Create user profile in database
-  - [ ] Create organization for non-personal tiers
-  - [ ] Link subscription plan to organization
-  - [ ] Set appropriate user roles and permissions
-  - [ ] Handle registration errors gracefully
+  - [x] Create Supabase auth user
+  - [x] Create user profile in database
+  - [x] Create organization for non-personal tiers
+  - [x] Link subscription plan to organization
+  - [x] Set appropriate user roles and permissions
+  - [x] Handle registration errors gracefully
 
 ### AUTH-008: Registration Page Implementation
-- **Status**: ❌ Not Started
+- **Status**: ✅ Complete
 - **Priority**: Critical
 - **Estimate**: 5 hours
-- **Dependencies**: AUTH-007
-- **Files**: `src/app/(auth)/signup/page.tsx`
+- **Dependencies**: AUTH-007 ✅
+- **Files**: `src/app/(auth)/signup/page.tsx`, `src/app/(auth)/signup/SignUpPageClient.tsx`
 - **Description**: Complete registration page with multi-step flow
 - **Acceptance Criteria**:
-  - [ ] Step navigation (Details → Tier → Verification)
-  - [ ] Progress indicator
-  - [ ] Form data persistence between steps
-  - [ ] Email verification step
-  - [ ] Success state with next steps
-  - [ ] Link back to login page
+  - [x] Step navigation (Details → Tier → Verification)
+  - [x] Progress indicator
+  - [x] Form data persistence between steps
+  - [x] Email verification step
+  - [x] Success state with next steps
+  - [x] Link back to login page
 
 ### AUTH-009: Email Verification Handling
 - **Status**: ❌ Not Started
