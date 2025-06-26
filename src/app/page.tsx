@@ -23,7 +23,7 @@ import ThemeSelector from "@/shared/components/forms/ThemeSelector";
 import { useState, useMemo } from 'react';
 import { GameWizardDialog } from '@/features/games/discovery/GameWizardDialog';
 import SearchIcon from '@mui/icons-material/Search';
-import ProfileMenu from '@/shared/menus/ProfileMenu';
+import { ProfileMenu } from '@/shared/menus/ProfileMenu';
 import { useUser } from '@/context/UserContext';
 import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
 

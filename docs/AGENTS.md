@@ -43,10 +43,10 @@ src/utils/subscriptionService.ts   // Tier management & feature gating
 src/hooks/useSubscription.tsx       // Subscription hooks & utilities
 
 // AUTHENTICATION SYSTEM
-src/hooks/useAuth.ts                // Authentication operations
-src/hooks/useRegistration.ts        // Complete registration flow
-src/utils/authErrors.ts             // Centralized error handling
-src/components/auth/                // Authentication UI components
+src/features/account/hooks/useAuth.ts                // Authentication operations
+src/features/account/hooks/useRegistration.ts        // Complete registration flow
+src/features/account/utils/authErrors.ts             // Centralized error handling
+src/features/account/components/auth/                // Authentication UI components
 
 // THEME & UI SYSTEM
 src/theme/EnhancedThemeProvider.tsx // Theme + hydration coordination
