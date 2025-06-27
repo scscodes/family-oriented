@@ -2,18 +2,37 @@
 
 Enterprise-scale educational platform with **flat game discovery engine**. Built with Next.js, React, and TypeScript, featuring 11 games across 4 academic subjects with advanced filtering and accessibility.
 
-**🎯 Latest Innovation (v2.0.0)**: Enterprise-scale restructuring with flat game discovery engine and AI-optimized documentation (67% size reduction).
+**🎯 Latest Innovation (v2.0.0)**: Enterprise-scale restructuring with flat game discovery engine and AI-optimized documentation.
 
-## Quick Start
+## 📋 Table of Contents
+
+- [🚀 Quick Start](#-quick-start)
+- [🔧 Environment Setup](#-environment-setup)
+- [🎮 Current Games](#-current-games-11-total)
+- [🏗️ Key Features](#️-key-features)
+- [🛠️ Development Commands](#️-development-commands)
+- [📁 Key File Structure](#-key-file-structure)
+- [🎯 Adding New Games](#-adding-new-games)
+- [📚 Documentation](#-documentation)
+- [🤝 Contributing](#-contributing)
+- [🚀 Recent Major Updates](#-recent-major-updates-v200)
+
+## 🚀 Quick Start
 
 ```bash
+# Clone and install
+git clone <repository-url>
+cd family-oriented
 npm install
-npm run dev     # Development server
-npm test        # Run tests  
-npm run build   # Production build
+
+# Start development
+npm run dev
 ```
 
-### Environment Setup
+Access the application at http://localhost:3000
+
+## 🔧 Environment Setup
+
 Create `.env.local` file in project root:
 
 ```bash
@@ -21,13 +40,20 @@ Create `.env.local` file in project root:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
 
-# Optional: Development features
-NEXT_PUBLIC_LOG_LEVEL=info
+# Optional development features
+NEXT_PUBLIC_LOG_LEVEL=info                    # error, warn, info, debug
+NEXT_PUBLIC_DEMO_SCENARIO=professional        # personal, professional, enterprise
+NEXT_PUBLIC_DEBUG_MODE=true                   # true, false
+```
+
+### Demo Mode Setup (No Supabase Required)
+```bash
+# Quick demo without database setup
 NEXT_PUBLIC_DEMO_SCENARIO=professional
 NEXT_PUBLIC_DEBUG_MODE=true
 ```
 
-📋 **Complete Setup Guide**: See [docs/environment-setup.md](docs/environment-setup.md) for full configuration options, demo modes, and troubleshooting.
+**📋 Complete Setup Guide**: See [docs/setup.md](docs/setup.md) for detailed configuration and troubleshooting.
 
 ## 🎮 Current Games (11 Total)
 - **Mathematics (3)**: Numbers, Addition, Subtraction
@@ -51,22 +77,44 @@ NEXT_PUBLIC_DEBUG_MODE=true
 
 ### Modern Architecture
 - **Next.js 14+** with App Router and Server Components
-- **Material UI 5+** with design tokens and styled components
+- **React 18+** with TypeScript strict mode
+- **Supabase** for authentication, database, and real-time features
+- **Material-UI 5+** with design tokens and styled components
 - **Centralized utilities** for consistent algorithms and constants
 - **Modular game system** for easy extensibility
 
-## 📚 Documentation
+## 🛠️ Development Commands
 
-**📖 [Complete Documentation Hub](docs/README.md)** - Comprehensive setup and development guides
+```bash
+npm run dev           # Start Next.js development server
+npm run build         # Validate production build
+npm test              # Run Jest test suite
+npm run lint          # Check code style
+```
 
-### 🎯 Essential Guides
-- **[Environment Setup](docs/environment-setup.md)** - Complete `.env.local` configuration guide
-- **[Development Guide](docs/development.md)** - Complete development reference  
-- **[Quick Reference](docs/quick-reference.md)** - Ultra-compact AI context (30-second overview)
-- **[Technical Reference](docs/technical-reference.md)** - Deep architecture and advanced patterns
-- **[Tasks & Roadmap](docs/tasks.md)** - Project planning and implementation specs
+## 📁 Key File Structure
 
-## 🛠️ Adding New Games
+```
+src/
+├── utils/
+│   ├── gameData.ts                    # 🎯 Core game registry & discovery
+│   ├── gameUtils.ts                   # Question generation logic
+│   ├── subscriptionService.ts         # Tier management & feature gating
+│   └── analyticsService.ts            # Learning progress analytics
+├── components/
+│   ├── GameMenu.tsx                   # Subject-organized navigation
+│   ├── billing/                       # Subscription management UI
+│   └── dashboard/                     # Analytics components
+├── app/
+│   ├── games/                         # Game pages
+│   ├── dashboard/                     # Analytics dashboard
+│   └── settings/                      # User preferences
+├── context/                           # React context providers
+├── hooks/                             # Custom React hooks
+└── theme/                             # Design system & tokens
+```
+
+## 🎯 Adding New Games
 
 ```typescript
 // 1. Add to GAMES array with rich metadata
@@ -84,15 +132,25 @@ questionGenerators['newGame'] = (settings) => [...questions];
 // 3. Add game page in src/app/games/new-game/
 ```
 
-## 🤝 Contributing
+## 📚 Documentation
 
-See [docs/development.md](docs/development.md) for complete development guidelines and [docs/quick-reference.md](docs/quick-reference.md) for rapid AI context.
+### For Developers
+- **[Setup Guide](docs/setup.md)** - Complete environment configuration and troubleshooting
+- **[Tasks & Roadmap](docs/tasks.md)** - Project planning and implementation specifications
+- **[Subscription Analysis](docs/subscription-tier-analysis.md)** - Business tier implementation details
+
+### For AI Agents
+- **[AGENTS.md](docs/AGENTS.md)** - Essential reference for AI coding assistants (3-minute read)
+- **[Auth Tasks](docs/auth-tasks.md)** - Detailed authentication implementation tracking
+
+## 🤝 Contributing
 
 **Key Standards:**
 - **Type Safety**: Explicit TypeScript, zero `any` types, strict compilation
 - **Accessibility**: WCAG 2.1 AA compliance, comprehensive screen reader support
 - **Game Discovery**: Use flat structure with rich metadata and tag system
-- **Documentation**: Update relevant docs, maintain AI-efficient structure
+- **Layout**: Use CSS Grid with Box (NO Material-UI Grid components)
+- **Context Order**: Theme → User → Settings (prevents hydration issues)
 
 ## 🚀 Recent Major Updates (v2.0.0)
 
@@ -103,10 +161,9 @@ See [docs/development.md](docs/development.md) for complete development guidelin
 - **Subject Organization**: Mathematics, Language Arts, Visual Arts, Social Studies
 
 ### Documentation Optimization
-- **AI-Efficient Structure**: 67% size reduction (154KB → 50KB) with zero information loss
-- **Consolidated References**: 6 focused docs replacing 15+ scattered files
-- **Strategic Separation**: Quick context vs. detailed enterprise specifications
-- **Cross-Referenced**: Clear "when to use" guidance for optimal AI context
+- **AI-Efficient Structure**: Consolidated documentation with zero information loss
+- **Single Source of Truth**: Root README contains all essential information
+- **Progressive Disclosure**: Quick start → detailed guides → specialized docs
 
 ---
 
