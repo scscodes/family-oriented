@@ -34,10 +34,10 @@ import {
   AdminPanelSettings,
   Close
 } from '@mui/icons-material';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/stores/hooks';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
-import { useDemo } from '@/context/DemoContext';
+import { useEnhancedTheme } from '@/stores/hooks';
+import { useDemo } from '@/stores/hooks';
 import DemoTransitionPreview from './DemoTransitionPreview';
 
 /**
@@ -87,17 +87,23 @@ function DebugPopupContent({
   hasIssues: boolean;
 }) {
   const demoContext = useDemo();
-  const { availableScenarios, switchScenario, isTransitioning, error, clearError } = demoContext;
+  const { transitionToScenario, isTransitioning, error, currentScenario } = demoContext;
   const [selectedScenario, setSelectedScenario] = useState('');
   const [previewScenario, setPreviewScenario] = useState<string | null>(null);
+  
+  // Define available scenarios
+  const availableScenarios = [
+    { key: 'personal', label: 'Personal', description: '5 avatars, basic features' },
+    { key: 'professional', label: 'Professional', description: '30 avatars, advanced features' },
+    { key: 'enterprise', label: 'Enterprise', description: 'Unlimited avatars, all features' }
+  ];
 
   const handleScenarioChange = async (event: SelectChangeEvent<string>) => {
-    const scenarioKey = event.target.value as string;
+    const scenarioKey = event.target.value as 'personal' | 'professional' | 'enterprise';
     setSelectedScenario(scenarioKey);
     
     try {
-      clearError();
-      await switchScenario(scenarioKey);
+      await transitionToScenario(scenarioKey);
     } catch (err) {
       console.error('Failed to switch scenario:', err);
     }
@@ -205,7 +211,7 @@ function DebugPopupContent({
                 <MenuItem value="" disabled>
                   {isTransitioning ? 'Switching Scenario...' : 'Switch to Different Scenario'}
                 </MenuItem>
-                {availableScenarios.map((scenario: { key: string; label: string; description: string }) => (
+                {availableScenarios.map((scenario) => (
                   <MenuItem 
                     key={scenario.key} 
                     value={scenario.key}
@@ -325,17 +331,20 @@ export default function UnifiedDebugBanner() {
   
   // Always call useDemo hook at top level to avoid conditional hook calls
   let demoContext: ReturnType<typeof useDemo> | null = null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let availableScenarios: Array<{ key: string; label: string; description: string; config: any }> = [];
   
   try {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     demoContext = useDemo();
-    availableScenarios = demoContext.availableScenarios;
   } catch {
     // Not in demo mode or provider not available
-    availableScenarios = [];
   }
+
+  // Define available scenarios
+  const availableScenarios = [
+    { key: 'personal', label: 'Personal', description: '5 avatars, basic features' },
+    { key: 'professional', label: 'Professional', description: '30 avatars, advanced features' },
+    { key: 'enterprise', label: 'Enterprise', description: 'Unlimited avatars, all features' }
+  ];
 
   const { loadingState } = userContext;
   const hasIssues = !userContext.org || !subscription.subscriptionPlan || !subscription.tier;
@@ -386,13 +395,12 @@ export default function UnifiedDebugBanner() {
   const avatarDisplay = `${userContext.avatars?.length || 0}/${subscription.subscriptionPlan?.avatar_limit || 'N/A'}`;
 
   const handleQuickScenarioChange = async (event: SelectChangeEvent<string>) => {
-    const scenarioKey = event.target.value as string;
+    const scenarioKey = event.target.value as 'personal' | 'professional' | 'enterprise';
     setSelectedScenario(scenarioKey);
     
     if (demoContext) {
       try {
-        demoContext.clearError();
-        await demoContext.switchScenario(scenarioKey);
+        await demoContext.transitionToScenario(scenarioKey);
       } catch (err) {
         console.error('Failed to switch scenario:', err);
       }
@@ -491,7 +499,7 @@ export default function UnifiedDebugBanner() {
             </MenuItem>
             {availableScenarios.map((scenario) => (
               <MenuItem key={scenario.key} value={scenario.key} sx={{ fontSize: '0.65rem' }}>
-                {(scenario.config?.tier || '').toUpperCase()}: {scenario.config?.name || scenario.label}
+                {scenario.key.toUpperCase()}: {scenario.label}
               </MenuItem>
             ))}
           </Select>

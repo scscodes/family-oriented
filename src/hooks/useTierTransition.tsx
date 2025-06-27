@@ -7,7 +7,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/stores/hooks';
 import { useSubscription } from '@/hooks/useSubscription';
 import { 
   SubscriptionService, 

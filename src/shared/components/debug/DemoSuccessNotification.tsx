@@ -11,31 +11,35 @@ import {
   Alert,
   Typography
 } from '@mui/material';
-import { useDemo } from '@/context/DemoContext';
+import { useDemo } from '@/stores/hooks';
 import { TIER_CONFIGURATIONS } from '@/utils/subscriptionService';
 
 export default function DemoSuccessNotification() {
   const { currentConfig, isTransitioning } = useDemo();
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [previousTransitioning, setPreviousTransitioning] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [lastConfigTier, setLastConfigTier] = useState<string | null>(null);
 
-  // Show success notification when transition completes
   useEffect(() => {
-    if (previousTransitioning && !isTransitioning) {
-      setShowSuccess(true);
+    // Show notification when config changes and we're not transitioning
+    if (currentConfig && !isTransitioning && currentConfig.tier !== lastConfigTier) {
+      setOpen(true);
+      setLastConfigTier(currentConfig.tier);
     }
-    setPreviousTransitioning(isTransitioning);
-  }, [isTransitioning, previousTransitioning]);
+  }, [currentConfig, isTransitioning, lastConfigTier]);
 
   const handleClose = () => {
-    setShowSuccess(false);
+    setOpen(false);
   };
+
+  if (!currentConfig) {
+    return null;
+  }
 
   const tierConfig = TIER_CONFIGURATIONS[currentConfig.tier];
 
   return (
     <Snackbar
-      open={showSuccess}
+      open={open}
       autoHideDuration={3000}
       onClose={handleClose}
       anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
@@ -51,7 +55,7 @@ export default function DemoSuccessNotification() {
           🎉 Switched to <strong>{tierConfig.displayName}</strong>
         </Typography>
         <Typography variant="caption" display="block">
-          {currentConfig.name} • {currentConfig.avatarCount} avatars • {currentConfig.orgName}
+          {currentConfig.name} • {currentConfig.avatarLimit} avatars • {currentConfig.orgName}
         </Typography>
       </Alert>
     </Snackbar>

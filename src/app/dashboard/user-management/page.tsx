@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { useUser, useAvatar, useRoleGuard } from '@/context/UserContext';
+import { useUser, useAvatar, useRoleGuard } from '@/stores/hooks';
 import { useSubscription } from '@/hooks/useSubscription';
 import { Box, Typography, Paper, Button, List, ListItem, ListItemText, Chip, CircularProgress, Alert } from '@mui/material';
 import ViewAs from '@/features/account/components/ViewAs';
@@ -16,9 +16,9 @@ import ViewAs from '@/features/account/components/ViewAs';
  * - Uses role guard to prevent flashing and ensure secure access
  */
 export default function UserManagementDashboard() {
-  const { org } = useUser();
+  const { org, loadingState } = useUser();
   const { avatars, createAvatar } = useAvatar();
-  const { hasRole, isReady } = useRoleGuard();
+  const { hasRole } = useRoleGuard();
   const { canAccessFeature, canCreateAvatar, formatFeatureMessage } = useSubscription();
   const [users, setUsers] = useState<Array<{
     id: string;
@@ -31,7 +31,7 @@ export default function UserManagementDashboard() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      if (!org || !isReady) {
+      if (!org || !loadingState.isReady) {
         setLoading(false);
         return;
       }
@@ -54,10 +54,10 @@ export default function UserManagementDashboard() {
       }
     };
     fetchUsers();
-  }, [org, isReady]);
+  }, [org, loadingState.isReady]);
 
   // Show loading state while role check is happening
-  if (!isReady) {
+  if (!loadingState.isReady) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
         <CircularProgress />

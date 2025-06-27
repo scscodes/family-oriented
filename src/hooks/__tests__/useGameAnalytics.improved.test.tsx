@@ -9,10 +9,11 @@
  * - Better test isolation
  */
 
-import { renderHook, act, waitFor } from '@testing-library/react';
+import { renderHook, act, waitFor, RenderResult } from '@testing-library/react';
+import React, { ReactNode } from 'react';
 import { useGameAnalytics } from '../useGameAnalytics';
 import { analyticsService } from '@/utils/analyticsService';
-import { SettingsProvider } from '@/context/SettingsContext';
+import { renderWithProviders } from '@/utils/__tests__/react-test-utils';
 
 // Mock the analytics service
 jest.mock('@/utils/analyticsService');
@@ -53,10 +54,10 @@ const MOCK_DATA = {
 } as const;
 
 describe('useGameAnalytics - Enhanced Tests', () => {
-  // Test wrapper with providers
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SettingsProvider>{children}</SettingsProvider>
-  );
+  /**
+   * Test wrapper to provide required context
+   */
+  const wrapper = ({ children }: { children: ReactNode }) => children;
 
   // Setup fresh mocks before each test
   beforeEach(() => {

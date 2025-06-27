@@ -43,3 +43,6 @@ next-env.d.ts
 
 # Jest cache
 .jest-cache
+
+# SWC cache
+.swc

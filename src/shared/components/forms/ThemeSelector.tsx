@@ -10,7 +10,7 @@ import {
   Tooltip
 } from '@mui/material';
 import FormatPaintIcon from '@mui/icons-material/FormatPaint';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+import { useEnhancedTheme } from '@/stores/hooks';
 import { type ThemeVariant } from '@/theme/theme';
 
 /**

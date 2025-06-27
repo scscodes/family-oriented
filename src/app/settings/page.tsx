@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSettings, GlobalSettings } from '@/context/SettingsContext';
+import { useSettings } from '@/stores/hooks';
 import { 
   Container, 
   Typography, 
@@ -20,7 +20,10 @@ import {
   Divider,
   Card,
   CardContent,
-  Stack
+  Stack,
+  Grid,
+  Chip,
+  Alert
 } from '@mui/material';
 import { FeatureGate, SubscriptionBadge, FeatureAvailabilityChip } from '@/shared/components';
 import SubscriptionStatus from '@/features/account/components/SubscriptionStatus';
@@ -51,7 +54,7 @@ function TabPanel(props: TabPanelProps) {
 
 export default function SettingsPage() {
   const { settings } = useSettings();
-  const [localSettings, setLocalSettings] = useState<GlobalSettings>(settings);
+  const [localSettings, setLocalSettings] = useState(settings);
   const [tabValue, setTabValue] = useState(0);
 
   // Update local settings when global settings change
@@ -59,13 +62,9 @@ export default function SettingsPage() {
     setLocalSettings(settings);
   }, [settings]);
 
-
-
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
   };
-
-
 
   const handleLocalChange = (
     path: string,

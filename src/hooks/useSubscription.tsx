@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useCallback } from 'react';
-import { useUser } from '@/context/UserContext';
+import { useUser } from '@/stores/hooks';
 import { 
   SubscriptionService, 
   type SubscriptionFeature, 

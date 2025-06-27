@@ -10,7 +10,7 @@ import ResponsiveAttemptDisplay from "./ResponsiveAttemptDisplay";
 import ResponsiveOptionGrid from "@/shared/components/layout/ResponsiveOptionGrid";
 import { GAME_TIMINGS } from "@/utils/constants";
 import { useGameAnalytics } from '@/hooks/useGameAnalytics';
-import { useAvatar } from '@/context/UserContext';
+import { useAvatar } from '@/stores/hooks';
 
 // Define a generic attempt structure
 interface GenericAttempt {

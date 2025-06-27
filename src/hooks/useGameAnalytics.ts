@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { GameType } from '@/utils/gameUtils';
 import { analyticsService, GameSessionData, LearningPathRecommendation, PerformanceMetrics } from '@/utils/analyticsService';
-import { useSettings } from '@/context/SettingsContext';
+import { useSettings } from '@/stores/hooks';
 import { logger } from '@/utils/logger';
 
 interface UseGameAnalyticsOptions {

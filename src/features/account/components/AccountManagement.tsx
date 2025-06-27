@@ -54,9 +54,11 @@ import {
   PersonAdd,
   Warning,
   CheckCircle,
-  Info
+  Info,
+  CardMembership,
+  Lock
 } from '@mui/icons-material';
-import { useUser, useRoleGuard } from '@/context/UserContext';
+import { useUser, useRoleGuard } from '@/stores/hooks';
 import { useSubscription } from '@/hooks/useSubscription';
 import { createClient } from '@/lib/supabase/client';
 import { logger } from '@/utils/logger';
@@ -240,8 +242,8 @@ const UserRoleManager: React.FC<{
  * Main account management component
  */
 export default function AccountManagement() {
-  const { org, user } = useUser();
-  const { hasRole, isReady } = useRoleGuard();
+  const { org, user, loadingState } = useUser();
+  const { hasRole } = useRoleGuard();
   const { subscriptionPlan, tier } = useSubscription();
   
   const [currentTab, setCurrentTab] = useState(0);
@@ -257,7 +259,7 @@ export default function AccountManagement() {
   // Load organization settings and users
   useEffect(() => {
     const loadAccountData = async () => {
-      if (!org || !isReady) return;
+      if (!org || !loadingState.isReady) return;
       
       setLoading(true);
       try {
@@ -310,7 +312,7 @@ export default function AccountManagement() {
     };
     
     loadAccountData();
-  }, [org, isReady, supabase, user]);
+  }, [org, loadingState.isReady, supabase, user]);
 
   // Handle organization settings save
   const handleSaveOrgSettings = async () => {
@@ -361,7 +363,7 @@ export default function AccountManagement() {
     }
   };
 
-  if (!isReady) {
+  if (!loadingState.isReady) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
         <CircularProgress />

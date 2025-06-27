@@ -2,17 +2,30 @@ import { renderHook, act } from '@testing-library/react-hooks';
 import { useRegistration } from '../useRegistration';
 import { mockSupabaseClient } from '../../utils/auth-test-utils';
 
-jest.mock('@/lib/supabase/client', () => ({
-  createClient: jest.fn(() => mockSupabaseClient),
-}));
-
-const mockSignUp = jest.fn();
-
 jest.mock('../useAuth', () => ({
   useAuth: () => ({
-    signUp: mockSignUp,
+    signUp: jest.fn((email: string, password: string) => 
+      Promise.resolve({ success: true, user: { id: 'user123' } })
+    ),
   }),
 }));
+
+jest.mock('@/lib/supabase/client', () => ({
+  createClient: jest.fn(() => ({
+    auth: {
+      signUp: jest.fn(),
+    },
+    from: jest.fn(() => ({
+      insert: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      update: jest.fn().mockReturnThis(),
+      eq: jest.fn().mockReturnThis(),
+      single: jest.fn(),
+    })),
+  })),
+}));
+
+const mockSupabaseClient = createClient() as any;
 
 const mockRegistrationData = {
   firstName: 'John',
@@ -20,26 +33,26 @@ const mockRegistrationData = {
   email: 'john.doe@example.com',
   password: 'password123',
   organization: 'Test Org',
-  tier: 'professional',
-  billingCycle: 'monthly',
+  tier: 'personal',
+  billingCycle: 'monthly' as 'monthly' | 'yearly',
 };
 
-mockSupabaseClient.from = jest.fn(() => ({
-  insert: jest.fn(() => ({
-    select: jest.fn(() => ({
-      single: jest.fn(() => Promise.resolve({ data: { id: 'org-id' }, error: null }))
-    }))
-  })),
-  update: jest.fn(() => ({
-    eq: jest.fn(() => Promise.resolve({}))
-  }))
-}));
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockSupabaseClient.auth.signUp.mockResolvedValue({
+    data: { user: { id: 'user123' } },
+    error: null,
+  });
+  mockSupabaseClient.from = jest.fn(() => ({
+    insert: jest.fn().mockReturnThis(),
+    select: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    single: jest.fn().mockResolvedValue({ data: { id: 'org123' }, error: null }),
+  }));
+});
 
 describe('useRegistration', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it('should update registration data', () => {
     const { result } = renderHook(() => useRegistration());
 
@@ -51,8 +64,6 @@ describe('useRegistration', () => {
   });
 
   it('should complete registration successfully', async () => {
-    mockSignUp.mockResolvedValueOnce({ success: true, data: { user: { id: 'user-id' } } });
-
     const { result } = renderHook(() => useRegistration());
 
     act(() => {
@@ -65,13 +76,11 @@ describe('useRegistration', () => {
       expect(response.error).toBeUndefined();
     });
 
-    expect(mockSignUp).toHaveBeenCalledWith(mockRegistrationData.email, mockRegistrationData.password, expect.any(Object));
+    expect(mockSupabaseClient.auth.signUp).toHaveBeenCalledWith(mockRegistrationData.email, mockRegistrationData.password, expect.any(Object));
     expect(mockSupabaseClient.from).toHaveBeenCalledWith('organizations');
   });
 
   it('should handle registration error', async () => {
-    mockSignUp.mockResolvedValueOnce({ success: false, error: 'Registration failed' });
-
     const { result } = renderHook(() => useRegistration());
 
     act(() => {

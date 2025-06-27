@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import GameBoard from '@/features/games/components/GameBoard';
-import { useSettings } from '@/context/SettingsContext';
+import { useSettings } from '@/stores/hooks';
 import { GameQuestion, generateAdditionQuestions } from '@/utils/gameUtils';
 import MathVisualAid from '@/features/games/components/MathVisualAid';
 import { Box } from '@mui/material';

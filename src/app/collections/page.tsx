@@ -12,7 +12,7 @@ import {
   CardContent,
   Alert
 } from '@mui/material';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+import { useEnhancedTheme } from '@/stores/hooks';
 import { useSubscription } from '@/hooks/useSubscription';
 
 /**

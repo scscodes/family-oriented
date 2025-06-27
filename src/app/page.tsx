@@ -24,8 +24,8 @@ import { useState, useMemo } from 'react';
 import { GameWizardDialog } from '@/features/games/discovery/GameWizardDialog';
 import SearchIcon from '@mui/icons-material/Search';
 import { ProfileMenu } from '@/shared/menus/ProfileMenu';
-import { useUser } from '@/context/UserContext';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+import { useUser } from '@/stores/hooks';
+import { useEnhancedTheme } from '@/stores/hooks';
 
 
 
@@ -44,6 +44,7 @@ function useIsFullyHydrated() {
  */
 function NavigationBar() {
   const isFullyHydrated = useIsFullyHydrated();
+  const isDev = process.env.NODE_ENV === 'development';
   
   // Show loading state if contexts aren't ready
   if (!isFullyHydrated) {
@@ -84,6 +85,17 @@ function NavigationBar() {
       </Typography>
       
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {isDev && (
+          <Button
+            component={Link}
+            href="/dashboard"
+            variant="outlined"
+            size="small"
+            sx={{ fontWeight: 600 }}
+          >
+            Dashboard
+          </Button>
+        )}
         <ThemeSelector />
         <ProfileMenu />
       </Box>

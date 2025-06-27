@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { EnhancedThemeProvider } from "@/theme/EnhancedThemeProvider";
-import { SettingsProvider } from "@/context/SettingsContext";
-import { UserProvider } from "@/context/UserContext";
-import { DemoProvider } from "@/context/DemoContext";
-import UnifiedDebugBanner from "@/shared/components/debug/UnifiedDebugBanner";
-import DemoSuccessNotification from "@/shared/components/debug/DemoSuccessNotification";
+import { ZustandProvider } from "@/stores/ZustandProvider";
+import { ZustandThemeProvider } from "./ZustandThemeProvider";
+import ClientStyleRegistry from "@/lib/emotion/ClientStyleRegistry";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "This or That - Fun Learning Games for Kids",
@@ -19,18 +17,16 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <EnhancedThemeProvider>
-          <DemoProvider>
-                          <UserProvider>
-                <SettingsProvider>
-                  <UnifiedDebugBanner />
-                  <DemoSuccessNotification />
-                  {children}
-                </SettingsProvider>
-              </UserProvider>
-          </DemoProvider>
-        </EnhancedThemeProvider>
+        <ErrorBoundary>
+          <ClientStyleRegistry>
+            <ZustandProvider>
+              <ZustandThemeProvider>
+                {children}
+              </ZustandThemeProvider>
+            </ZustandProvider>
+          </ClientStyleRegistry>
+        </ErrorBoundary>
       </body>
     </html>
   );
-}
+} 

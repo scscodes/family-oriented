@@ -3,47 +3,45 @@
  * React-specific testing utilities and custom render functions
  */
 
-import { render, RenderOptions, RenderResult } from '@testing-library/react';
-import React, { ReactElement, ReactNode } from 'react';
-import { UserProvider } from '@/context/UserContext';
-import { SettingsProvider } from '@/context/SettingsContext';
-import ThemeProvider from '@/theme/ThemeProvider';
+import React from 'react';
+import { render, RenderOptions } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import { ZustandProvider } from '@/stores/ZustandProvider';
+import { ZustandThemeProvider } from '@/app/ZustandThemeProvider';
+import { createEnhancedTheme } from '@/theme/theme';
+import { mockFactories } from './test-factories';
 
 interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  includeProviders?: boolean;
-  userContextValue?: Record<string, unknown>;
-  settingsContextValue?: Record<string, unknown>;
+  // Can add custom options here if needed in the future
 }
 
-/**
- * Custom render function with providers for component testing
- */
-export const renderWithProviders = (
-  ui: ReactElement,
-  options: CustomRenderOptions = {}
-): RenderResult => {
-  const {
-    includeProviders = true,
-    userContextValue,
-    settingsContextValue,
-    ...renderOptions
-  } = options;
-
-  function Wrapper({ children }: { children: ReactNode }) {
-    if (!includeProviders) {
-      return <>{children}</>;
-    }
-
+// Enhanced render function with all providers
+export function renderWithProviders(
+  ui: React.ReactElement,
+  options?: CustomRenderOptions
+) {
+  const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     return (
-      <ThemeProvider>
-        <UserProvider value={userContextValue}>
-          <SettingsProvider value={settingsContextValue}>
-            {children}
-          </SettingsProvider>
-        </UserProvider>
-      </ThemeProvider>
+      <ZustandProvider>
+        <ZustandThemeProvider>
+          {children}
+        </ZustandThemeProvider>
+      </ZustandProvider>
     );
-  }
+  };
 
-  return render(ui, { wrapper: Wrapper, ...renderOptions });
-}; 
+  return render(ui, { wrapper: AllTheProviders, ...options });
+}
+
+// Simpler render with just MUI theme
+export function renderWithTheme(
+  ui: React.ReactElement,
+  theme = createEnhancedTheme('purple')
+) {
+  return render(
+    <ThemeProvider theme={theme}>{ui}</ThemeProvider>
+  );
+}
+
+// Export everything from React Testing Library
+export * from '@testing-library/react'; 

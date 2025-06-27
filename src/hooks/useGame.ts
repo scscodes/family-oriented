@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { GameType, GameQuestion, questionGenerators } from "@/utils/gameUtils";
-import { useSettings } from "@/context/SettingsContext";
+import { useSettings } from '@/stores/hooks';
 import { DEFAULT_SETTINGS } from "@/utils/settingsUtils";
 import { logger } from "@/utils/logger";
 

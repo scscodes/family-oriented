@@ -4,11 +4,20 @@
  */
 
 import { renderHook, act, waitFor } from '@testing-library/react';
+import React from 'react';
 import { useGameAnalytics } from '../useGameAnalytics';
 import { analyticsService } from '@/utils/analyticsService';
-import { SettingsProvider } from '@/context/SettingsContext';
 
-jest.mock('@/utils/analyticsService');
+// Mock the analytics service
+jest.mock('@/utils/analyticsService', () => ({
+  analyticsService: {
+    trackGameSession: jest.fn(),
+    trackQuestionAttempt: jest.fn(),
+    getAvatarProgress: jest.fn(),
+    getPerformanceMetrics: jest.fn(),
+    getLearningPathRecommendations: jest.fn(),
+  },
+}));
 
 // Test timeout constants
 const TEST_TIMEOUTS = {
@@ -55,10 +64,9 @@ afterEach(() => {
   jest.resetAllMocks();
 });
 
-describe('useGameAnalytics - Enhanced Tests', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SettingsProvider>{children}</SettingsProvider>
-  );
+describe('useGameAnalytics', () => {
+  // Test wrapper
+  const wrapper = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
   describe('Session Management', () => {
     it('should start a session successfully', async () => {

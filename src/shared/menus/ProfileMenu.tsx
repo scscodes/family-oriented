@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+'use client';
+
+import { useState } from 'react';
 import { Menu, MenuItem, IconButton, Avatar, Divider, ListItemIcon, ListItemText, Typography, Box, CircularProgress, Button } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import GroupIcon from '@mui/icons-material/Group';
@@ -6,8 +8,8 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import SwitchAccountIcon from '@mui/icons-material/SwitchAccount';
 import LoginIcon from '@mui/icons-material/Login';
-import { useUser, useAvatar, useRoleGuard } from '@/context/UserContext';
 import { useRouter } from 'next/navigation';
+import { useUser, useAvatar, useRoleGuard } from '@/stores/hooks';
 
 /**
  * Profile/account menu for global navigation and account actions

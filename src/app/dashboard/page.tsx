@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useAvatar, useUser, useRoleGuard } from "@/context/UserContext";
-import { useDemo } from "@/context/DemoContext";
+import { useAvatar, useUser, useRoleGuard } from "@/stores/hooks";
+import { useDemo } from '@/stores/hooks';
 import { analyticsService, type LearningProgressData, type PerformanceMetrics } from "@/utils/analyticsService";
 import { logger } from "@/utils/logger";
 import { 
@@ -19,7 +19,7 @@ import dynamic from 'next/dynamic';
 
 import { FeatureGate, UsageOverview, SubscriptionBadge } from '@/shared/components';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+import { useEnhancedTheme } from '@/stores/hooks';
 
 // Dynamically import DashboardCharts to avoid SSR issues with Chart.js
 const DashboardCharts = dynamic(() => import('@/features/analytics/components/DashboardCharts'), {
@@ -53,7 +53,7 @@ export default function DashboardPage() {
   const isDashboardReady = useIsDashboardReady();
   const { currentAvatar } = useAvatar();
   const { error: userError, loadingState } = useUser();
-  const { hasRole, isReady } = useRoleGuard();
+  const { hasRole } = useRoleGuard();
   const { isTransitioning, currentScenario, error: demoError } = useDemo();
   const { } = useSubscription();
   const avatarId = currentAvatar?.id;
@@ -381,7 +381,7 @@ export default function DashboardPage() {
       </FeatureGate>
 
       {/* User Management Access for Account Owners */}
-      {isReady && hasRole('account_owner') && (
+      {loadingState.isReady && hasRole('account_owner') && (
         <Card sx={{ mt: 3 }}>
           <CardContent>
             <FeatureGate 

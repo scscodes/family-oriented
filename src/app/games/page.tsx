@@ -25,7 +25,7 @@ import GameGrid from "@/features/games/discovery/GameGrid";
 import AccordionCategory from "@/features/games/discovery/AccordionCategory";
 import ActiveFiltersDisplay from "@/features/games/discovery/ActiveFiltersDisplay";
 import { SUBJECTS, gameDiscovery, Game, EnhancedGameFilter, SortOptions, ViewPreferences } from "@/utils/gameData";
-import { useEnhancedTheme } from "@/theme/EnhancedThemeProvider";
+import { useEnhancedTheme } from '@/stores/hooks';
 import ThemeSelector from "@/shared/components/forms/ThemeSelector";
 
 import { GameWizardResults } from '@/features/games/discovery/GameWizardResults';

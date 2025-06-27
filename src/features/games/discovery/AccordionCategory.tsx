@@ -2,7 +2,7 @@ import { Accordion, AccordionSummary, AccordionDetails, Typography, Box, Card, C
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Link from 'next/link';
 import { Game, SUBJECTS } from '@/utils/gameData';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+import { useEnhancedTheme } from '@/stores/hooks';
 
 /**
  * Accessible accordion for a subject with its games

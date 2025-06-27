@@ -33,8 +33,8 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { TIER_CONFIGURATIONS, type SubscriptionTier, type SubscriptionFeature } from '@/utils/subscriptionService';
-import { useUser } from '@/context/UserContext';
-import { useEnhancedTheme } from '@/theme/EnhancedThemeProvider';
+import { useUser } from '@/stores/hooks';
+import { useEnhancedTheme } from '@/stores/hooks';
 
 const featureIcons: Record<string, React.ElementType> = {
   analytics: Analytics,

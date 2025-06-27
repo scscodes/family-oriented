@@ -23,11 +23,10 @@ import {
   Cancel,
   Upgrade,
   ArrowDownward,
-  Person,
-  Security
+  Person
 } from '@mui/icons-material';
-import { useDemo } from '@/context/DemoContext';
-import { useUser } from '@/context/UserContext';
+import { useDemo } from '@/stores/hooks';
+import { useUser } from '@/stores/hooks';
 import { TIER_CONFIGURATIONS, type SubscriptionTier } from '@/utils/subscriptionService';
 import { DEMO_SCENARIOS } from '@/utils/demoConfig';
 
@@ -42,11 +41,11 @@ export default function DemoTransitionPreview({ targetScenarioKey }: DemoTransit
   const targetConfig = DEMO_SCENARIOS[targetScenarioKey];
   
   if (!targetConfig) {
-    return (
-      <Alert severity="error">
-        Unknown scenario: {targetScenarioKey}
-      </Alert>
-    );
+    return null;
+  }
+
+  if (!currentConfig) {
+    return null;
   }
 
   const currentTier = currentConfig.tier;
@@ -123,19 +122,6 @@ export default function DemoTransitionPreview({ targetScenarioKey }: DemoTransit
             Some avatars may need to be removed.
           </Alert>
         )}
-      </Box>
-
-      {/* Role Changes */}
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="subtitle2" gutterBottom>
-          Role Changes
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Security sx={{ fontSize: 16 }} />
-          <Typography variant="body2">
-            {currentConfig.roles.join(', ')} → {targetConfig.roles.join(', ')}
-          </Typography>
-        </Box>
       </Box>
 
       {/* Feature Changes */}
