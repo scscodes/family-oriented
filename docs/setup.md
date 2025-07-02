@@ -1,12 +1,12 @@
 ---
 title: "Setup & Troubleshooting Guide"
 description: "Complete environment setup and issue resolution guide"
-version: "2.0.0"
-last_updated: "2024-01-16"
+version: "2.1.0"
+last_updated: "2025-07-02"
 category: "Setup Guide"
-tags: ["Setup", "Environment", "Troubleshooting", "Configuration", "Issues"]
+tags: ["Setup", "Environment", "Troubleshooting", "Configuration", "Issues", "User Management", "Security"]
 complexity: "All Levels"
-audience: ["Developers", "DevOps", "QA Engineers"]
+audience: ["Developers", "DevOps", "QA Engineers", "System Administrators"]
 ---
 
 # 🚀 Setup & Troubleshooting Guide
@@ -138,7 +138,7 @@ NEXT_PUBLIC_LOG_LEVEL=info
 1. Create free account at [supabase.com](https://supabase.com)
 2. Create new project
 3. Copy environment variables from Settings → API
-4. Run database migrations: `npm run db:migrate` (if available)
+4. Run database migrations: `supabase db push`
 
 ### Option 2: Local Supabase Stack
 ```bash
@@ -204,6 +204,293 @@ NEXT_PUBLIC_DEMO_SCENARIO=enterprise
 
 ---
 
+## 🗄️ Database Schema & User Management
+
+### Core Tables
+
+The platform includes a comprehensive database schema supporting enterprise-grade user management:
+
+#### `user_invitations`
+Stores organization member invitations with secure token-based system.
+
+```sql
+CREATE TABLE user_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  email TEXT NOT NULL,
+  invited_by UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  roles TEXT[] DEFAULT '{}',
+  status TEXT CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled')) DEFAULT 'pending',
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  accepted_at TIMESTAMPTZ,
+  accepted_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  message TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `audit_logs`
+Comprehensive audit trail for all user management actions.
+
+```sql
+CREATE TABLE audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  action_type TEXT NOT NULL,
+  resource_type TEXT NOT NULL,
+  resource_id TEXT,
+  old_values JSONB,
+  new_values JSONB,
+  ip_address INET,
+  user_agent TEXT,
+  session_id TEXT,
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+#### `rate_limits`
+Tracks API usage and implements rate limiting.
+
+```sql
+CREATE TABLE rate_limits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  identifier TEXT NOT NULL,
+  identifier_type TEXT NOT NULL CHECK (identifier_type IN ('email', 'ip', 'user_id')),
+  action_type TEXT NOT NULL,
+  count INTEGER DEFAULT 1,
+  window_start TIMESTAMPTZ NOT NULL,
+  window_end TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(identifier, identifier_type, action_type, window_start)
+);
+```
+
+### Database Functions
+
+#### Token Generation
+```sql
+CREATE OR REPLACE FUNCTION generate_invitation_token()
+RETURNS TEXT AS $$
+BEGIN
+  RETURN encode(gen_random_bytes(32), 'hex');
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### Audit Logging
+```sql
+CREATE OR REPLACE FUNCTION log_audit_event(
+  p_org_id UUID,
+  p_user_id UUID,
+  p_action_type TEXT,
+  p_resource_type TEXT,
+  p_resource_id TEXT DEFAULT NULL,
+  p_old_values JSONB DEFAULT NULL,
+  p_new_values JSONB DEFAULT NULL,
+  p_ip_address INET DEFAULT NULL,
+  p_user_agent TEXT DEFAULT NULL,
+  p_session_id TEXT DEFAULT NULL,
+  p_metadata JSONB DEFAULT NULL
+)
+RETURNS UUID AS $$
+-- Implementation details...
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+#### Rate Limiting
+```sql
+CREATE OR REPLACE FUNCTION check_rate_limit(
+  p_identifier TEXT,
+  p_identifier_type TEXT,
+  p_action_type TEXT,
+  p_window_minutes INTEGER DEFAULT 60,
+  p_max_attempts INTEGER DEFAULT 10
+)
+RETURNS BOOLEAN AS $$
+-- Implementation details...
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### Row Level Security (RLS)
+
+All tables implement Row Level Security with appropriate policies:
+
+- **User Invitations**: Organization admins can manage invitations for their org
+- **Audit Logs**: Organization admins can view audit logs for their org
+- **Rate Limits**: System can manage rate limits (no auth check)
+
+---
+
+## 🔧 Services & API
+
+### User Management Services
+
+The platform includes comprehensive services for user management:
+
+#### Invitation Service (`src/utils/invitationService.ts`)
+Handles user invitations with secure token generation and email integration.
+
+```typescript
+import { invitationService } from '@/utils/invitationService';
+
+// Create invitation
+const result = await invitationService.createInvitation({
+  orgId: 'org-123',
+  email: 'user@example.com',
+  invitedBy: 'admin-user-id',
+  roles: ['member'],
+  message: 'Welcome to our organization!',
+  expiresInHours: 72
+});
+
+// Accept invitation
+const acceptResult = await invitationService.acceptInvitation({
+  token: 'invitation-token',
+  userId: 'new-user-id',
+  firstName: 'John',
+  lastName: 'Doe'
+});
+```
+
+#### Audit Service (`src/utils/auditService.ts`)
+Provides comprehensive audit logging for compliance and security.
+
+```typescript
+import { auditService, auditEvents } from '@/utils/auditService';
+
+// Log custom audit event
+await auditService.logEvent({
+  orgId: 'org-123',
+  userId: 'user-456',
+  actionType: 'user_invited',
+  resourceType: 'user_invitation',
+  resourceId: 'invitation-789',
+  newValues: { email: 'user@example.com' }
+});
+
+// Use convenience functions
+await auditEvents.userInvited({
+  orgId: 'org-123',
+  userId: 'admin-id',
+  resourceId: 'invitation-id',
+  newValues: { email: 'user@example.com' }
+});
+```
+
+#### Security Service (`src/utils/securityService.ts`)
+Implements security measures including rate limiting and activity detection.
+
+```typescript
+import { securityService, securityChecks } from '@/utils/securityService';
+
+// Check rate limit
+const rateLimit = await securityService.checkRateLimit(
+  'user@example.com',
+  'email',
+  'login'
+);
+
+// Detect suspicious activity
+const suspicious = await securityService.detectSuspiciousActivity(
+  'user@example.com',
+  'email',
+  'login_failed',
+  { ipAddress: '192.168.1.1' }
+);
+```
+
+#### User Management Service (`src/utils/userManagementService.ts`)
+High-level user management operations with integrated security and audit.
+
+```typescript
+import { userManagementService } from '@/utils/userManagementService';
+
+// Create user
+const userResult = await userManagementService.createUser({
+  email: 'user@example.com',
+  firstName: 'John',
+  lastName: 'Doe',
+  orgId: 'org-123',
+  accountType: 'organization_member'
+});
+
+// Bulk invite users
+const bulkResult = await userManagementService.bulkInviteUsers(
+  ['user1@example.com', 'user2@example.com'],
+  'org-123',
+  'admin-user-id',
+  ['member'],
+  'Welcome to our organization!'
+);
+```
+
+---
+
+## 🔒 Security Features
+
+### Rate Limiting
+
+Configurable rate limits for different actions:
+
+```typescript
+const defaultRateLimits = {
+  login: { windowMinutes: 15, maxAttempts: 5 },
+  invitation: { windowMinutes: 60, maxAttempts: 10 },
+  registration: { windowMinutes: 60, maxAttempts: 3 },
+  password_reset: { windowMinutes: 60, maxAttempts: 3 },
+  api_request: { windowMinutes: 1, maxAttempts: 100 }
+};
+```
+
+### Input Validation
+
+Comprehensive input validation for all user data:
+
+```typescript
+// Email validation
+const emailValidation = securityChecks.validateEmail('user@example.com');
+
+// Name validation
+const nameValidation = securityChecks.validateName('John Doe');
+
+// Phone validation
+const phoneValidation = securityChecks.validatePhone('+1234567890');
+```
+
+### Suspicious Activity Detection
+
+Automated detection of:
+- High-frequency actions
+- Multiple failed login attempts
+- Unusual IP patterns
+- Off-hours activity
+
+### Audit Trail
+
+The system maintains comprehensive audit logs for all user actions:
+
+```typescript
+type AuditActionType = 
+  | 'user_invited' | 'user_accepted_invitation' | 'user_declined_invitation'
+  | 'user_role_changed' | 'user_removed' | 'user_suspended' | 'user_reactivated'
+  | 'invitation_expired' | 'invitation_cancelled' | 'invitation_resent'
+  | 'login_attempt' | 'login_success' | 'login_failed' | 'logout'
+  | 'password_changed' | 'password_reset' | 'email_changed'
+  | 'organization_created' | 'organization_updated' | 'organization_deleted'
+  | 'subscription_changed' | 'billing_updated' | 'policy_changed'
+  | 'avatar_created' | 'avatar_updated' | 'avatar_deleted'
+  | 'game_session_started' | 'game_session_completed' | 'game_session_abandoned'
+  | 'data_exported' | 'data_imported' | 'settings_changed';
+```
+
+---
+
 ## 🧪 Testing Setup
 
 ### Running Tests
@@ -229,8 +516,19 @@ src/utils/__tests__/
 ├── test-factories.ts        # Mock data creation
 ├── test-helpers.ts          # Async utilities
 ├── react-test-utils.tsx     # React testing utilities
-└── mock-services.ts         # Service mocks
+├── mock-services.ts         # Service mocks
+├── invitationService.test.ts # Invitation service tests
+├── auditService.test.ts     # Audit service tests
+├── securityService.test.ts  # Security service tests
+└── userManagementService.test.ts # User management tests
 ```
+
+### User Management Test Coverage
+- Invitation service functionality
+- Security validation and rate limiting
+- Audit logging and retrieval
+- User management operations
+- Integration scenarios
 
 ---
 
@@ -410,6 +708,40 @@ export { default as UsageMeter, UsageOverview } from './gates/UsageMeter';
 export { default as FeatureGate } from './gates/FeatureGate';
 ```
 
+#### **Issue: Rate Limit Errors**
+
+**Symptoms**: Rate limit exceeded errors in user management
+
+**Solution**: Check rate limit configuration and adjust as needed
+```typescript
+// Check current rate limit settings
+const rateLimit = await securityService.checkRateLimit(
+  'user@example.com',
+  'email',
+  'invitation'
+);
+
+// Adjust rate limits if needed
+const customRateLimits = {
+  invitation: { windowMinutes: 120, maxAttempts: 20 }, // More lenient
+  login: { windowMinutes: 30, maxAttempts: 10 }        // More attempts
+};
+```
+
+#### **Issue: Audit Log Performance**
+
+**Symptoms**: Slow audit log queries
+
+**Solution**: Implement proper indexing and archiving
+```sql
+-- Add indexes for common audit log queries
+CREATE INDEX idx_audit_logs_org_id_created_at ON audit_logs(org_id, created_at);
+CREATE INDEX idx_audit_logs_user_id_action_type ON audit_logs(user_id, action_type);
+
+-- Archive old audit logs (7 years retention)
+SELECT cleanup_old_audit_logs(2555);
+```
+
 ---
 
 ## 🔧 Development Tools & Scripts
@@ -435,6 +767,7 @@ npm run test:coverage          # Generate coverage report
 npm run db:start               # Start local Supabase
 npm run db:stop                # Stop local Supabase
 npm run db:reset               # Reset local database
+supabase db push               # Push migrations to remote
 ```
 
 ### VS Code Configuration
@@ -471,6 +804,9 @@ Recommended VS Code settings (`.vscode/settings.json`):
 - [ ] User context loading properly without errors
 - [ ] Theme system working (no hydration mismatches)
 - [ ] Test suite passing completely
+- [ ] User management services functional
+- [ ] Audit logging working correctly
+- [ ] Rate limiting operational
 
 ### Debug Mode Features
 When `NEXT_PUBLIC_DEBUG_MODE=true`:
@@ -478,6 +814,7 @@ When `NEXT_PUBLIC_DEBUG_MODE=true`:
 - Enhanced console logging for troubleshooting
 - User context debugging information
 - Theme hydration status indicators
+- Security service status display
 
 ### Performance Validation
 ```bash
@@ -495,6 +832,33 @@ npx autocannon http://localhost:3000
 ---
 
 ## 🚀 Deployment
+
+### Database Migration
+
+Run the migration to create all necessary tables and functions:
+
+```bash
+# Link to remote Supabase project
+supabase link --project-ref YOUR_PROJECT_REF
+
+# Push migrations
+supabase db push
+```
+
+### Scheduled Tasks
+
+Set up scheduled cleanup tasks (requires pg_cron extension):
+
+```sql
+-- Clean up expired invitations every 6 hours
+SELECT cron.schedule('cleanup-expired-invitations', '0 */6 * * *', 'SELECT cleanup_expired_invitations();');
+
+-- Clean up old rate limits daily at 2 AM
+SELECT cron.schedule('cleanup-rate-limits', '0 2 * * *', 'SELECT cleanup_old_rate_limits();');
+
+-- Clean up old audit logs (7 years retention)
+SELECT cron.schedule('cleanup-audit-logs', '0 3 * * 0', 'SELECT cleanup_old_audit_logs(2555);');
+```
 
 ### Vercel Deployment
 1. Connect repository to Vercel
@@ -522,6 +886,40 @@ BASE_PATH=""  # If deploying to subdirectory
 
 ---
 
+## 🔒 Compliance & Security
+
+### GDPR Compliance
+
+The system supports GDPR requirements through:
+
+- **Data Export**: Complete user data export functionality
+- **Audit Trail**: Comprehensive logging of all data access and modifications
+- **Data Retention**: Configurable retention policies for audit logs
+- **Soft Deletion**: User data is marked as deleted rather than permanently removed
+
+### Data Export Example
+
+```typescript
+const userData = await userManagementService.exportUserData('user-id');
+// Returns complete user profile, activity, audit logs, avatars, and game sessions
+```
+
+### Security Monitoring
+
+- Rate limit violations trigger security alerts
+- Suspicious activity detection logs events
+- Failed authentication attempts are tracked
+- Unusual access patterns are flagged
+
+### Performance Monitoring
+
+- Database query performance metrics
+- API response time monitoring
+- Error rate tracking
+- Resource utilization monitoring
+
+---
+
 ## 📚 Additional Resources
 
 ### Framework Documentation
@@ -539,6 +937,11 @@ BASE_PATH=""  # If deploying to subdirectory
 - [Jest Documentation](https://jestjs.io/docs/getting-started)
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 - [Testing Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
+
+### Security Resources
+- [OWASP Security Guidelines](https://owasp.org/www-project-top-ten/)
+- [GDPR Compliance Guide](https://gdpr.eu/)
+- [Rate Limiting Best Practices](https://cloud.google.com/architecture/rate-limiting-strategies-techniques)
 
 ---
 
